@@ -1,0 +1,10 @@
+Siguientes features:
+-Con el control que se pueda hacer zoom in y zoom out
+
+-Al arrastrar una imagen externa podria abrir un modal para cargar la info y crear un nuevo elemento con la imagen. Esto podria andar al soltarlo en la lista de elemento o en el canvas. Y podria ser el mismo formulario que tendiamos en el abm de elementos.
+
+-Cada vez que actualizamos un elemento podriamos no guardar los cambios en el ejercicio pero y guandandolo en un estado de zustand
+
+-Se deberian poder crear tipos de elemento. Otra alternativa para esto o se puede hacer a la par de todas formas: ir guardando frecuencia de uso de elemntos por deporte (cant veces que se usa por ejercicio / clase)
+
+-Estaria bueno poder crear templates y a la hora de arrancar a crear un ejercicio poder seleccionar alguno, estos irian por deporte y podria haber algunos por defecto (ej: tenis de mesa: una mesa dos jugadores dos paletas), el user podria crear tambien su template personalizado

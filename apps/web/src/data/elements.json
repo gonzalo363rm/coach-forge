@@ -1,0 +1,42 @@
+[
+  {
+    "id": "table-tennis-table",
+    "type": "image",
+    "name": "Mesa de tenis de mesa",
+    "image": "/assets/images/defaults-elements/table-tennis-table.png",
+    "width": 274,
+    "height": 152.5
+  },
+  {
+    "id": "table-tennis-ball",
+    "type": "image",
+    "name": "Pelota tenis de mesa",
+    "image": "/assets/images/defaults-elements/table-tennis-ball.svg",
+    "width": 4,
+    "height": 4
+  },
+  {
+    "id": "table-tennis-paddle",
+    "type": "image",
+    "name": "Paleta tenis de mesa",
+    "image": "/assets/images/defaults-elements/table-tennis-paddle.svg",
+    "width": 15,
+    "height": 20
+  },
+  {
+    "id": "tennis-ball",
+    "type": "image",
+    "name": "Pelota tenis",
+    "image": "/assets/images/defaults-elements/tennis-ball.svg",
+    "width": 6.5,
+    "height": 6.5
+  },
+  {
+    "id": "ball-machine",
+    "type": "image",
+    "name": "Robot lanza pelotas",
+    "image": "https://cdn-icons-png.flaticon.com/512/3043/3043184.png",
+    "width": 45,
+    "height": 45
+  }
+]

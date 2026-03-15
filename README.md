@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coach Forge - Monorepo
 
-## Getting Started
+Monorepo para Coach Forge con aplicaciones web, mobile y backend.
 
-First, run the development server:
+## Estructura del Proyecto
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+coach-forge/
+├── apps/
+│   ├── web/          # Aplicación Next.js (Frontend Web)
+│   ├── mobile/       # Aplicación React Native (Mobile)
+│   └── backend/      # API Express (Backend)
+├── packages/
+│   └── shared/       # Código compartido (tipos, utilidades)
+└── package.json      # Configuración del monorepo
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Instalación
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Instalar dependencias en la raíz:
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Construir el package compartido:
+```bash
+npm run build:shared
+```
 
-## Learn More
+## Desarrollo
 
-To learn more about Next.js, take a look at the following resources:
+### Web (Next.js)
+```bash
+npm run dev:web
+```
+Abre [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Mobile (React Native)
+```bash
+npm run dev:mobile
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Backend (Express)
+```bash
+npm run dev:backend
+```
+Abre [http://localhost:3001](http://localhost:3001)
 
-## Deploy on Vercel
+## Editor de Gráficos
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+El editor de gráficos 2D permite:
+- ✅ Agregar elementos (rectángulos, círculos, elipses, líneas, texto)
+- ✅ Mover y redimensionar elementos
+- ✅ Editar propiedades (color, tamaño, opacidad)
+- ✅ Guardar/cargar como JSON
+- ✅ Compartir código entre web y mobile mediante `@coach-forge/shared`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Packages
+
+### `@coach-forge/shared`
+Package compartido que contiene:
+- Tipos TypeScript para elementos gráficos
+- Utilidades de serialización JSON
+- Lógica común entre web y mobile
+
+### `@coach-forge/web`
+Aplicación Next.js con editor de gráficos usando CanvasKit (skia).
+
+### `@coach-forge/mobile`
+Aplicación React Native con editor de gráficos usando react-native-skia.
+
+### `@coach-forge/backend`
+API Express para guardar/cargar canvas desde el servidor.
+
+## Tecnologías
+
+- **Web**: Next.js 16, React 19, CanvasKit, Tailwind CSS
+- **Mobile**: React Native, Expo, react-native-skia
+- **Backend**: Express, TypeScript
+- **Monorepo**: npm workspaces
