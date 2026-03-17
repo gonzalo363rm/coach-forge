@@ -185,7 +185,7 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
             canvasRef.current?.redraw()
         })
         return () => cancelAnimationFrame(raf)
-    }, [images, circles, rects, lines, arrows, tempArrow, tempShape, selectedArrowId, canvasSize, canvasBackgroundColor, canvasZoom])
+    }, [images, circles, rects, lines, arrows, tempArrow, tempShape, selectedArrowId, canvasSize, canvasBackgroundColor, canvasZoom, showTitleOverlay])
 
     useEffect(() => {
         if (!contextMenu.isOpen || !contextMenu.target) return
@@ -486,7 +486,7 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                     ? rects[contextMenu.target.index]
                     : contextMenu.target.type === "line"
                         ? lines[contextMenu.target.index]
-            : arrows[contextMenu.target.index]
+                        : arrows[contextMenu.target.index]
         : null
 
     useEffect(() => {
@@ -953,22 +953,20 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                             >
                                 <div className="flex items-center justify-between py-1">
                                     <span className="text-zinc-600 dark:text-zinc-300">Mostrar orden</span>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={showOrderOverlay}
-                        onClick={() => setShowOrderOverlay((prev) => !prev)}
-                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${
-                            showOrderOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
-                        }`}
-                    >
-                        <span
-                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                                showOrderOverlay ? "translate-x-5" : "translate-x-0"
-                            }`}
-                        />
-                    </button>
-                </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={showOrderOverlay}
+                                        onClick={() => setShowOrderOverlay((prev) => !prev)}
+                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showOrderOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
+                                            }`}
+                                    >
+                                        <span
+                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showOrderOverlay ? "translate-x-5" : "translate-x-0"
+                                                }`}
+                                        />
+                                    </button>
+                                </div>
                                 <div className="flex items-center justify-between py-1">
                                     <span className="text-zinc-600 dark:text-zinc-300">Mostrar titulos</span>
                                     <button
@@ -976,14 +974,12 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                                         role="switch"
                                         aria-checked={showTitleOverlay}
                                         onClick={() => setShowTitleOverlay((prev) => !prev)}
-                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${
-                                            showTitleOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
-                                        }`}
+                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showTitleOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
+                                            }`}
                                     >
                                         <span
-                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                                                showTitleOverlay ? "translate-x-5" : "translate-x-0"
-                                            }`}
+                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showTitleOverlay ? "translate-x-5" : "translate-x-0"
+                                                }`}
                                         />
                                     </button>
                                 </div>
@@ -1025,17 +1021,17 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                             </div>
                         )}
                     </div>
-                <SkiaCanvas
-                    ref={canvasRef}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
-                    onDraw={handleDraw}
-                    onPointerDown={handleCanvasPointerDown}
-                    onPointerMove={handleCanvasPointerMove}
-                    onPointerUp={pointer.handlePointerUp}
-                    onContextMenu={handleCanvasContextMenu}
-                    onDrop={handleCanvasDrop}
-                />
+                    <SkiaCanvas
+                        ref={canvasRef}
+                        width={canvasSize.width}
+                        height={canvasSize.height}
+                        onDraw={handleDraw}
+                        onPointerDown={handleCanvasPointerDown}
+                        onPointerMove={handleCanvasPointerMove}
+                        onPointerUp={pointer.handlePointerUp}
+                        onContextMenu={handleCanvasContextMenu}
+                        onDrop={handleCanvasDrop}
+                    />
 
                     {showOrderOverlay && (
                         <div className="pointer-events-none absolute inset-0 z-30">
@@ -1068,12 +1064,12 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                             defaultElementColor={getDefaultColorForTarget(contextMenu.target.type)}
                             onAssignedPlayersDraftChange={setAssignedPlayersDraft}
                             onAssignedPlayersCommit={() => {
-                                            const players = parsePlayersInput(assignedPlayersDraft)
-                                            updateContextElement((element) => ({
-                                                ...element,
-                                                assignedPlayers: players.length === 0 ? undefined : players,
-                                            }))
-                                        }}
+                                const players = parsePlayersInput(assignedPlayersDraft)
+                                updateContextElement((element) => ({
+                                    ...element,
+                                    assignedPlayers: players.length === 0 ? undefined : players,
+                                }))
+                            }}
                             onUpdate={updateContextElement}
                             onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))}
                             onDelete={deleteContextElement}
@@ -1082,14 +1078,14 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                         />
                     )}
 
-                                    <button
-                                        type="button"
+                    <button
+                        type="button"
                         aria-label="Redimensionar ancho"
                         onMouseDown={(event) => handleResizeStart(event, "width")}
                         className="absolute -right-2 top-1/2 z-40 h-16 w-3 -translate-y-1/2 cursor-ew-resize rounded-full bg-zinc-300/90 hover:bg-zinc-400 dark:bg-zinc-600/90 dark:hover:bg-zinc-500"
                     />
-                                    <button
-                                        type="button"
+                    <button
+                        type="button"
                         aria-label="Redimensionar alto"
                         onMouseDown={(event) => handleResizeStart(event, "height")}
                         className="absolute -bottom-2 left-1/2 z-40 h-3 w-16 -translate-x-1/2 cursor-ns-resize rounded-full bg-zinc-300/90 hover:bg-zinc-400 dark:bg-zinc-600/90 dark:hover:bg-zinc-500"
@@ -1100,7 +1096,7 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                         onMouseDown={(event) => handleResizeStart(event, "both")}
                         className="absolute -bottom-2 -right-2 z-50 h-4 w-4 cursor-nwse-resize rounded-sm bg-zinc-300/90 hover:bg-zinc-400 dark:bg-zinc-600/90 dark:hover:bg-zinc-500"
                     />
-                                </div>
+                </div>
                 <div className="text-right text-[11px] text-zinc-500 dark:text-zinc-400">
                     {canvasSize.width} x {canvasSize.height}
                 </div>

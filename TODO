@@ -1,6 +1,4 @@
 Siguientes features:
--Con el control que se pueda hacer zoom in y zoom out
-
 -Al arrastrar una imagen externa podria abrir un modal para cargar la info y crear un nuevo elemento con la imagen. Esto podria andar al soltarlo en la lista de elemento o en el canvas. Y podria ser el mismo formulario que tendiamos en el abm de elementos.
 
 -Cada vez que actualizamos un elemento podriamos no guardar los cambios en el ejercicio pero y guandandolo en un estado de zustand
