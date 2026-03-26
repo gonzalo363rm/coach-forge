@@ -1,6 +1,6 @@
 import type { Point } from "@/interfaces"
 
-export type ShapeTool = "circle" | "rect" | "square" | "line"
+export type ShapeTool = "circle" | "rect" | "square" | "line" | "dashed-line"
 
 export interface TempShape {
     tool: ShapeTool

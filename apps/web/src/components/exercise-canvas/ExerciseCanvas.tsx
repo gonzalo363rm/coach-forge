@@ -2,11 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import type { ArrowElementInstance, CircleElementInstance, ElementDefinition, ImageElementInstance, LineElementInstance, RectElementInstance, SkiaCanvasHandle, ToolType } from "@/interfaces"
+import type {
+    ArrowElementInstance,
+    CircleElementInstance,
+    ElementDefinition,
+    Exercise,
+    ExerciseCanvas as ExerciseCanvasPersisted,
+    ImageElementInstance,
+    LineElementInstance,
+    RectElementInstance,
+    SkiaCanvasHandle,
+    ToolType,
+} from "@/interfaces"
 import SkiaCanvas from "@/components/skia/SkiaCanvas"
 import { loadImageAsBytes } from "@/utils/image"
 import { ExerciseOrderPanel, type OrderedItemSummary } from "./ExerciseOrderPanel"
 import { ElementContextMenu } from "./ElementContextMenu"
+import { ResetConfirmModal } from "./ResetConfirmModal"
+import { SaveExerciseModal } from "./SaveExerciseModal"
 import {
     clampRotation,
     distanceToLine,
@@ -37,6 +50,8 @@ interface Props {
     currentTool: ToolType
     setCurrentTool: (tool: ToolType) => void
     selectedPaletteElement: ElementDefinition | null
+    isTemplateExercise?: boolean
+    onExerciseSave?: (exercise: Exercise) => void | Promise<void>
 }
 
 type DragTarget =
@@ -81,7 +96,7 @@ const MIN_CANVAS_HEIGHT = 400
 const MIN_CANVAS_ZOOM = 0.5
 const MAX_CANVAS_ZOOM = 2.5
 
-export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteElement }: Props) => {
+export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteElement, isTemplateExercise = false, onExerciseSave }: Props) => {
     const canvasRef = useRef<SkiaCanvasHandle>(null)
     const isCanvasHoveredRef = useRef(false)
     const draggingRef = useRef<DragTarget>(null)
@@ -108,6 +123,8 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
     const [playerFilter, setPlayerFilter] = useState("all")
     const [assignedPlayersDraft, setAssignedPlayersDraft] = useState("")
     const [selectedElement, setSelectedElement] = useState<ContextTarget>(null)
+    const [showResetModal, setShowResetModal] = useState(false)
+    const [showSaveModal, setShowSaveModal] = useState(false)
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         isOpen: false,
         x: 0,
@@ -921,6 +938,57 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
         nudgeZoom(direction)
     }, [nudgeZoom])
 
+    const clearCanvas = useCallback(() => {
+        setImages([])
+        setCircles([])
+        setRects([])
+        setLines([])
+        setArrows([])
+        setTempArrow(null)
+        setTempShape(null)
+        setSelectedArrowId(null)
+        setSelectedElement(null)
+        setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
+        setAssignedPlayersDraft("")
+    }, [])
+
+    const handleClearCanvasConfirm = useCallback(() => {
+        clearCanvas()
+        setShowResetModal(false)
+    }, [clearCanvas])
+
+    const handleResetTemplateConfirm = useCallback(() => {
+        // Placeholder: cuando conectemos templates reales, aca se restaura el snapshot original.
+        clearCanvas()
+        setShowResetModal(false)
+    }, [clearCanvas])
+
+    const exerciseCanvasData = useMemo((): ExerciseCanvasPersisted => ({
+        width: canvasSize.width,
+        height: canvasSize.height,
+        backgroundColor: canvasBackgroundColor,
+        zoom: canvasZoom,
+        showTitleOverlay,
+        showOrderOverlay,
+        images,
+        circles,
+        rects,
+        lines,
+        arrows,
+    }), [
+        arrows,
+        canvasBackgroundColor,
+        canvasSize.height,
+        canvasSize.width,
+        canvasZoom,
+        circles,
+        images,
+        lines,
+        rects,
+        showOrderOverlay,
+        showTitleOverlay,
+    ])
+
     return (
         <div className="flex w-full items-start gap-4">
             <div className="flex flex-col gap-2">
@@ -1100,6 +1168,22 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                 <div className="text-right text-[11px] text-zinc-500 dark:text-zinc-400">
                     {canvasSize.width} x {canvasSize.height}
                 </div>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowResetModal(true)}
+                        className="cf-btn-danger"
+                    >
+                        {isTemplateExercise ? "Reset" : "Clear"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowSaveModal(true)}
+                        className="cf-btn-success"
+                    >
+                        Save
+                    </button>
+                </div>
             </div>
 
             <ExerciseOrderPanel
@@ -1108,6 +1192,21 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                 playerFilter={playerFilter}
                 setPlayerFilter={setPlayerFilter}
                 onEditItem={handleEditOrderedItem}
+            />
+
+            <ResetConfirmModal
+                open={showResetModal}
+                isTemplateExercise={isTemplateExercise}
+                onClose={() => setShowResetModal(false)}
+                onClearCanvas={handleClearCanvasConfirm}
+                onResetTemplate={handleResetTemplateConfirm}
+            />
+
+            <SaveExerciseModal
+                open={showSaveModal}
+                canvas={exerciseCanvasData}
+                onClose={() => setShowSaveModal(false)}
+                onSave={onExerciseSave}
             />
         </div>
     )

@@ -57,7 +57,7 @@ export const ToolsPanel = ({ currentTool, setCurrentTool, selectedPaletteElement
             </h3>
             <div className="mb-1 h-px bg-zinc-300 dark:bg-zinc-600" />
 
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-5 gap-1">
                 <button
                     onClick={() => {
                         setCurrentTool("circle")
@@ -121,6 +121,22 @@ export const ToolsPanel = ({ currentTool, setCurrentTool, selectedPaletteElement
                     title="Recta"
                 >
                     ／
+                </button>
+                <button
+                    onClick={() => {
+                        setCurrentTool("dashed-line")
+                        setSelectedPaletteElement(null)
+                    }}
+                    className={clsx(
+                        "rounded-md p-2.5 text-lg leading-none font-medium transition-all",
+                        {
+                            "bg-violet-600 text-white": currentTool === "dashed-line",
+                            "bg-white text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600": currentTool !== "dashed-line",
+                        }
+                    )}
+                    title="Línea punteada"
+                >
+                    ┈
                 </button>
             </div>
 

@@ -128,7 +128,13 @@ export const useCanvasPointerInteractions = ({
             return
         }
 
-        if (currentTool === "circle" || currentTool === "rect" || currentTool === "square" || currentTool === "line") {
+        if (
+            currentTool === "circle" ||
+            currentTool === "rect" ||
+            currentTool === "square" ||
+            currentTool === "line" ||
+            currentTool === "dashed-line"
+        ) {
             draggingRef.current = null
             isDrawingShapeRef.current = true
             setTempShape({ tool: currentTool as ShapeTool, startX: x, startY: y, endX: x, endY: y })
@@ -284,20 +290,28 @@ export const useCanvasPointerInteractions = ({
 
         if (isDrawingShape && tempShape) {
             const { left, top, width, height } = getShapeBounds(tempShape)
-            if (width > 8 && height > 8) {
+            const isLineTool = tempShape.tool === "line" || tempShape.tool === "dashed-line"
+            const lineLength = Math.hypot(tempShape.endX - tempShape.startX, tempShape.endY - tempShape.startY)
+            const hasMinimumSize = isLineTool ? lineLength > 8 : width > 8 && height > 8
+
+            if (hasMinimumSize) {
                 if (tempShape.tool === "circle") {
                     const radius = Math.min(width, height) / 2
                     setCircles((prev) => [...prev, { id: generateId(), definitionId: "circle", type: "circle", x: left + width / 2, y: top + height / 2, zIndex: 0, data: { radius }, style: { strokeWidth: 3, strokeColor: defaultCircleColor } }])
-                } else if (tempShape.tool === "line") {
+                } else if (isLineTool) {
                     setLines((prev) => [...prev, {
                         id: generateId(),
-                        definitionId: "line",
+                        definitionId: tempShape.tool,
                         type: "line",
                         x: tempShape.startX,
                         y: tempShape.startY,
                         zIndex: 0,
                         data: { start: [tempShape.startX, tempShape.startY], end: [tempShape.endX, tempShape.endY] },
-                        style: { strokeWidth: 3, strokeColor: defaultLineColor },
+                        style: {
+                            strokeWidth: 3,
+                            strokeColor: defaultLineColor,
+                            dash: tempShape.tool === "dashed-line" ? [12, 8] : undefined,
+                        },
                     }])
                 } else {
                     setRects((prev) => [...prev, { id: generateId(), definitionId: tempShape.tool === "square" ? "square" : "rect", type: "rect", x: left, y: top, zIndex: 0, data: { width, height }, style: { strokeWidth: 3, strokeColor: defaultRectColor } }])

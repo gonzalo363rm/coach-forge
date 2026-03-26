@@ -15,6 +15,29 @@ const createSafeFont = (ck: any, size: number) => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const drawDashedLineSegments = (canvas: any, start: [number, number], end: [number, number], dash = 12, gap = 8, paint: any) => {
+    const dx = end[0] - start[0]
+    const dy = end[1] - start[1]
+    const length = Math.hypot(dx, dy)
+    if (length === 0) return
+
+    const ux = dx / length
+    const uy = dy / length
+    let cursor = 0
+
+    while (cursor < length) {
+        const dashStart = cursor
+        const dashEnd = Math.min(cursor + dash, length)
+        const x1 = start[0] + ux * dashStart
+        const y1 = start[1] + uy * dashStart
+        const x2 = start[0] + ux * dashEnd
+        const y2 = start[1] + uy * dashEnd
+        canvas.drawLine(x1, y1, x2, y2, paint)
+        cursor += dash + gap
+    }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const drawBackground = (canvas: any, ck: any, width: number, height: number, bgColor: [number, number, number, number]) => {
     const paint = new ck.Paint()
     paint.setColor(ck.Color(...bgColor))
@@ -250,7 +273,19 @@ export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance,
     paint.setStrokeWidth(line.style?.strokeWidth ?? 3)
     paint.setStrokeCap(ck.StrokeCap.Round)
     paint.setColor(ck.Color(...hexToColor(line.style?.strokeColor ?? "#22c55e", 230)))
-    canvas.drawLine(line.data.start[0], line.data.start[1], line.data.end[0], line.data.end[1], paint)
+    const dashPattern = line.style?.dash
+    if (dashPattern && dashPattern.length >= 2) {
+        drawDashedLineSegments(
+            canvas,
+            line.data.start,
+            line.data.end,
+            Math.max(1, dashPattern[0]),
+            Math.max(1, dashPattern[1]),
+            paint,
+        )
+    } else {
+        canvas.drawLine(line.data.start[0], line.data.start[1], line.data.end[0], line.data.end[1], paint)
+    }
     paint.delete()
 
     if (showLabels && line.label && typeof canvas.drawText === "function" && typeof ck.Font === "function") {
@@ -280,7 +315,7 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
     previewPaint.setColor(
         tempShape.tool === "circle"
             ? ck.Color(59, 130, 246, 230)
-            : tempShape.tool === "line"
+            : tempShape.tool === "line" || tempShape.tool === "dashed-line"
                 ? ck.Color(34, 197, 94, 230)
                 : ck.Color(168, 85, 247, 230)
     )
@@ -288,8 +323,19 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
     if (tempShape.tool === "circle") {
         const radius = Math.min(width, height) / 2
         canvas.drawCircle(left + width / 2, top + height / 2, radius, previewPaint)
-    } else if (tempShape.tool === "line") {
-        canvas.drawLine(tempShape.startX, tempShape.startY, tempShape.endX, tempShape.endY, previewPaint)
+    } else if (tempShape.tool === "line" || tempShape.tool === "dashed-line") {
+        if (tempShape.tool === "dashed-line") {
+            drawDashedLineSegments(
+                canvas,
+                [tempShape.startX, tempShape.startY],
+                [tempShape.endX, tempShape.endY],
+                12,
+                8,
+                previewPaint,
+            )
+        } else {
+            canvas.drawLine(tempShape.startX, tempShape.startY, tempShape.endX, tempShape.endY, previewPaint)
+        }
     } else {
         canvas.drawRect(ck.LTRBRect(left, top, left + width, top + height), previewPaint)
     }

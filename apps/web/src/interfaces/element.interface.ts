@@ -1,5 +1,5 @@
 // ─── Tipos para el menu ──────────────────────────────────────────────
-export type ToolType = 'arrow' | 'select' | 'circle' | 'rect' | 'square' | 'line'
+export type ToolType = 'arrow' | 'select' | 'circle' | 'rect' | 'square' | 'line' | 'dashed-line'
 
 // ─── Tipos base ──────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ export interface BaseElementInstance {
     fillColor?: string;
     strokeColor?: string;
     strokeWidth?: number;
+    dash?: number[];
     opacity?: number;
   };
 }
