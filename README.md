@@ -1,15 +1,14 @@
 # Coach Forge - Monorepo
 
-Monorepo para Coach Forge con aplicaciones web, mobile y backend.
+Monorepo para Coach Forge con aplicaciones web y mobile; la API vive en Next.js (`apps/web`, rutas `app/api`).
 
 ## Estructura del Proyecto
 
 ```
 coach-forge/
 ├── apps/
-│   ├── web/          # Aplicación Next.js (Frontend Web)
-│   ├── mobile/       # Aplicación React Native (Mobile)
-│   └── backend/      # API Express (Backend)
+│   ├── web/          # Next.js (UI + API Route Handlers)
+│   └── mobile/       # Aplicación React Native (Mobile)
 ├── packages/
 │   └── shared/       # Código compartido (tipos, utilidades)
 └── package.json      # Configuración del monorepo
@@ -40,12 +39,6 @@ Abre [http://localhost:3000](http://localhost:3000)
 npm run dev:mobile
 ```
 
-### Backend (Express)
-```bash
-npm run dev:backend
-```
-Abre [http://localhost:3001](http://localhost:3001)
-
 ## Editor de Gráficos
 
 El editor de gráficos 2D permite:
@@ -69,12 +62,8 @@ Aplicación Next.js con editor de gráficos usando CanvasKit (skia).
 ### `@coach-forge/mobile`
 Aplicación React Native con editor de gráficos usando react-native-skia.
 
-### `@coach-forge/backend`
-API Express para guardar/cargar canvas desde el servidor.
-
 ## Tecnologías
 
-- **Web**: Next.js 16, React 19, CanvasKit, Tailwind CSS
+- **Web**: Next.js 16, React 19, CanvasKit, Tailwind CSS (API en Route Handlers)
 - **Mobile**: React Native, Expo, react-native-skia
-- **Backend**: Express, TypeScript
 - **Monorepo**: npm workspaces

@@ -8,7 +8,7 @@ export default function Home() {
           Coach Forge
         </h1>
         <Link
-          href="/exercice/edit"
+          href="/exercises/new"
           className="rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >
           Abrir Editor

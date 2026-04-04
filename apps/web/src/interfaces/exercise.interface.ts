@@ -25,6 +25,8 @@ export interface ExerciseCanvas {
  * Ejercicio listo para persistir: metadatos + snapshot del canvas.
  */
 export interface Exercise {
+    /** Id del deporte; `null` si aplica a cualquier deporte o calentamiento genérico. */
+    sportId: string | null
     title: string
     categories: string[]
     minPlayers: number | null

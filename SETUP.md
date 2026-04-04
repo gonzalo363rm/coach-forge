@@ -43,11 +43,6 @@ coach-forge/
 │   │   ├── App.tsx
 │   │   └── package.json
 │   │
-│   └── backend/          # Express API
-│       ├── src/
-│       │   └── index.ts
-│       └── package.json
-│
 └── packages/
     └── shared/           # Código compartido
         ├── src/
@@ -89,20 +84,9 @@ cd apps/mobile
 npm start
 ```
 
-### Backend API
+### API (Next.js)
 
-```bash
-npm run dev:backend
-```
-
-Abre [http://localhost:3001](http://localhost:3001)
-
-**Endpoints:**
-- `GET /api/canvas` - Listar todos los canvas
-- `GET /api/canvas/:id` - Obtener canvas por ID
-- `POST /api/canvas` - Crear nuevo canvas
-- `PUT /api/canvas/:id` - Actualizar canvas
-- `DELETE /api/canvas/:id` - Eliminar canvas
+La API se implementa en `apps/web` con Route Handlers (`src/app/api/...`). Con `npm run dev:web` queda disponible en el mismo origen que la web (por ejemplo `http://localhost:3000/api/...`). La app mobile puede consumir esa misma API por URL base configurable.
 
 ## Package Compartido
 
@@ -130,15 +114,10 @@ import { GraphicElement, CanvasState, saveCanvasToJSON } from '@coach-forge/shar
    npm run dev:web
    ```
 
-3. **Desarrollo del backend:**
-   ```bash
-   npm run dev:backend
-   ```
-
 ## Próximos Pasos
 
 - [ ] Implementar editor completo en mobile con react-native-skia
-- [ ] Conectar web y mobile con el backend
+- [ ] Conectar web y mobile con la API de Next
 - [ ] Agregar autenticación
 - [ ] Agregar persistencia en base de datos
 - [ ] Agregar sincronización en tiempo real

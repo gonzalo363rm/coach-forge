@@ -28,6 +28,7 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
     const [maxPlayers, setMaxPlayers] = useState("")
     const [difficulty, setDifficulty] = useState(3)
     const [videoLink, setVideoLink] = useState("")
+    const [sportId, setSportId] = useState<string | null>(null)
     const [isSaving, setIsSaving] = useState(false)
 
     useEffect(() => {
@@ -39,6 +40,7 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
         setMaxPlayers("")
         setDifficulty(3)
         setVideoLink("")
+        setSportId(null)
     }, [open])
 
     const commitCategory = useCallback(() => {
@@ -60,6 +62,7 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
         const minParsed = minPlayers.trim() === "" ? null : Number(minPlayers)
         const maxParsed = maxPlayers.trim() === "" ? null : Number(maxPlayers)
         return {
+            sportId,
             title: title.trim(),
             categories,
             minPlayers: Number.isFinite(minParsed) ? minParsed : null,
@@ -68,7 +71,7 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
             videoLink: videoLink.trim(),
             canvas,
         }
-    }, [title, categories, minPlayers, maxPlayers, difficulty, videoLink, canvas])
+    }, [sportId, title, categories, minPlayers, maxPlayers, difficulty, videoLink, canvas])
 
     const handleConfirm = useCallback(async () => {
         setIsSaving(true)
@@ -103,6 +106,21 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
                     Guardar ejercicio
                 </h3>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="cf-modal-label flex flex-col gap-1 sm:col-span-2">
+                        <span>Deporte</span>
+                        <select
+                            value={sportId ?? ""}
+                            onChange={(e) => setSportId(e.target.value === "" ? null : e.target.value)}
+                            disabled
+                            aria-describedby="save-modal-sport-hint"
+                            className="cf-modal-input cursor-not-allowed opacity-80"
+                        >
+                            <option value="">Sin deporte</option>
+                        </select>
+                        <span id="save-modal-sport-hint" className="cf-modal-text text-xs">
+                            Podrás elegir deporte cuando exista el listado de deportes.
+                        </span>
+                    </label>
                     <label className="cf-modal-label flex flex-col gap-1 sm:col-span-2">
                         <span>Titulo</span>
                         <input

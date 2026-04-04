@@ -5,13 +5,11 @@
   "workspaces": [
     "packages/*",
     "apps/web",
-    "apps/mobile",
-    "apps/backend"
+    "apps/mobile"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:mobile": "npm run start --workspace=apps/mobile",
-    "dev:backend": "npm run dev --workspace=apps/backend",
     "build:web": "npm run build --workspace=apps/web",
     "build:shared": "npm run build --workspace=packages/shared",
     "lint": "npm run lint --workspaces --if-present"
