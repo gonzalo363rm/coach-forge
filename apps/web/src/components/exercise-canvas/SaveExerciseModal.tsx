@@ -22,8 +22,6 @@ const DIFFICULTY_ACTIVE_CLASS: Record<number, string> = {
 
 export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExerciseModalProps) => {
     const [title, setTitle] = useState("")
-    const [categories, setCategories] = useState<string[]>([])
-    const [categoryDraft, setCategoryDraft] = useState("")
     const [minPlayers, setMinPlayers] = useState("")
     const [maxPlayers, setMaxPlayers] = useState("")
     const [difficulty, setDifficulty] = useState(3)
@@ -34,8 +32,6 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
     useEffect(() => {
         if (!open) return
         setTitle("")
-        setCategories([])
-        setCategoryDraft("")
         setMinPlayers("")
         setMaxPlayers("")
         setDifficulty(3)
@@ -43,35 +39,19 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
         setSportId(null)
     }, [open])
 
-    const commitCategory = useCallback(() => {
-        const next = categoryDraft.trim()
-        if (!next) return
-        if (categories.includes(next)) {
-            setCategoryDraft("")
-            return
-        }
-        setCategories((prev) => [...prev, next])
-        setCategoryDraft("")
-    }, [categoryDraft, categories])
-
-    const removeCategory = useCallback((value: string) => {
-        setCategories((prev) => prev.filter((c) => c !== value))
-    }, [])
-
     const buildExercise = useCallback((): Exercise => {
         const minParsed = minPlayers.trim() === "" ? null : Number(minPlayers)
         const maxParsed = maxPlayers.trim() === "" ? null : Number(maxPlayers)
         return {
             sportId,
             title: title.trim(),
-            categories,
             minPlayers: Number.isFinite(minParsed) ? minParsed : null,
             maxPlayers: Number.isFinite(maxParsed) ? maxParsed : null,
             difficulty,
-            videoLink: videoLink.trim(),
+            videoLink: videoLink.trim() === "" ? null : videoLink.trim(),
             canvas,
         }
-    }, [sportId, title, categories, minPlayers, maxPlayers, difficulty, videoLink, canvas])
+    }, [sportId, title, minPlayers, maxPlayers, difficulty, videoLink, canvas])
 
     const handleConfirm = useCallback(async () => {
         setIsSaving(true)
@@ -80,6 +60,9 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
             if (onSave) await onSave(exercise)
             else await new Promise((r) => setTimeout(r, 700))
             onClose()
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : "Error al guardar"
+            window.alert(msg)
         } finally {
             setIsSaving(false)
         }
@@ -130,51 +113,6 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
                             className="cf-modal-input"
                         />
                     </label>
-                    <div className="cf-modal-label flex flex-col gap-2 sm:col-span-2">
-                        <span>Categorias</span>
-                        <div className="flex gap-1.5">
-                            <input
-                                type="text"
-                                value={categoryDraft}
-                                onChange={(e) => setCategoryDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault()
-                                        commitCategory()
-                                    }
-                                }}
-                                placeholder="Escribe y Enter o añade con +"
-                                className="cf-modal-input min-w-0 flex-1"
-                            />
-                            <button
-                                type="button"
-                                aria-label="Añadir categoria"
-                                onClick={commitCategory}
-                                className="cf-btn-add-category"
-                            >
-                                +
-                            </button>
-                        </div>
-                        {categories.length > 0 && (
-                            <ul className="flex flex-wrap gap-1.5" aria-label="Categorias seleccionadas">
-                                {categories.map((tag) => (
-                                    <li key={tag}>
-                                        <span className="cf-category-chip">
-                                            {tag}
-                                            <button
-                                                type="button"
-                                                aria-label={`Quitar ${tag}`}
-                                                onClick={() => removeCategory(tag)}
-                                                className="cf-category-chip-remove"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
                     <label className="cf-modal-label flex flex-col gap-1">
                         <span>Min jugadores</span>
                         <input
