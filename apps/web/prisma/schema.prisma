@@ -7,14 +7,22 @@ datasource db {
 }
 
 model Exercise {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  sportId     String?
-  title       String
-  minPlayers  Int?
-  maxPlayers  Int?
-  difficulty  Int
-  videoLink   String?
-  canvas      Json
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  sportId    String?
+  title      String
+  minPlayers Int?
+  maxPlayers Int?
+  difficulty Int
+  videoLink  String?
+  canvas     Json
+}
+
+model Sport {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  slug      String
 }

@@ -4,21 +4,18 @@
  * - `POST` — crea; cuerpo alineado con el tipo `Exercise` del cliente (sin `id` en el payload).
  * - `GET` — lista ordenada por `updatedAt` descendente.
  */
-import type { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 import { jsonError, jsonResponse } from "@/lib/api/json-response"
 import { parseJsonBody } from "@/lib/api/parse-json-body"
-import { getPrisma } from "@/lib/prisma"
-import { exerciseCreateSchema } from "@/lib/validation/exercise-schema"
+import { exerciseCreateSchema } from "@/schemas/exercise.schema"
+import { exerciseCreate, exercisesList } from "@/services/exercises.service"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
     try {
-        const exercises = await getPrisma().exercise.findMany({
-            orderBy: { updatedAt: "desc" },
-        })
+        const exercises = await exercisesList()
         return jsonResponse({ exercises })
     } catch (e) {
         console.error("[GET /api/exercises]", e)
@@ -39,20 +36,8 @@ export async function POST(request: Request) {
         return jsonError(400, "Validación fallida", z.treeifyError(result.error))
     }
 
-    const data = result.data
-
     try {
-        const exercise = await getPrisma().exercise.create({
-            data: {
-                sportId: data.sportId,
-                title: data.title,
-                minPlayers: data.minPlayers,
-                maxPlayers: data.maxPlayers,
-                difficulty: data.difficulty,
-                videoLink: data.videoLink,
-                canvas: data.canvas as unknown as Prisma.InputJsonValue,
-            },
-        })
+        const exercise = await exerciseCreate(result.data)
         return jsonResponse({ exercise }, { status: 201 })
     } catch (e) {
         console.error("[POST /api/exercises]", e)

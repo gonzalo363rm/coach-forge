@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react"
 
+import { createExerciseAction } from "@/app/actions/exercises"
 import type { ElementDefinition, Exercise, ToolType } from "@/interfaces"
 import { ToolsPanel } from "./ToolsPanel"
 import { ExerciseCanvas } from "./ExerciseCanvas"
@@ -11,14 +12,9 @@ export const ExerciseEditor = () => {
     const [selectedPaletteElement, setSelectedPaletteElement] = useState<ElementDefinition | null>(null)
 
     const handleExerciseSave = useCallback(async (exercise: Exercise) => {
-        const res = await fetch("/api/exercises", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(exercise),
-        })
-        const payload = (await res.json().catch(() => ({}))) as { error?: string }
-        if (!res.ok) {
-            throw new Error(payload.error ?? `Error al guardar (${res.status})`)
+        const result = await createExerciseAction(exercise)
+        if (!result.ok) {
+            throw new Error(result.error)
         }
     }, [])
 

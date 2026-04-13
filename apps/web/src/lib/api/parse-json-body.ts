@@ -1,4 +1,4 @@
-import { MAX_REQUEST_BODY_BYTES } from "@/lib/validation/exercise-schema"
+import { MAX_REQUEST_BODY_BYTES } from "@/schemas/exercise.schema"
 
 import { jsonError } from "./json-response"
 
