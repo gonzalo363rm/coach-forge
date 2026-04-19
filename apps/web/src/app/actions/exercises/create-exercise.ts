@@ -13,9 +13,11 @@ export async function createExerciseAction(
 ): Promise<ExerciseActionResult<Exercise>> {
     const parsed = exerciseCreateSchema.safeParse(input)
     if (!parsed.success) {
+        const issues = parsed.error.issues
+        const error = issues.map((i) => i.message).filter(Boolean).join(" ") || "Validación fallida"
         return {
             ok: false,
-            error: "Validación fallida",
+            error,
             details: z.treeifyError(parsed.error),
         }
     }

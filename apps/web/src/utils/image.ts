@@ -5,6 +5,46 @@
  * Devuelve null si hay algún error durante la carga.
  */
 
+/** PNG desde un canvas 2D ya pintado (mismo enfoque fiable que `svgTextToPngBytes`). */
+export function htmlCanvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array | null> {
+    return new Promise((resolve) => {
+        canvas.toBlob(
+            (blob) => {
+                if (!blob) return resolve(null)
+                blob.arrayBuffer().then((buffer) => resolve(new Uint8Array(buffer)))
+            },
+            "image/png",
+        )
+    })
+}
+
+/**
+ * Exporta un canvas WebGL (p. ej. CanvasKit) a PNG.
+ * `toBlob`/`makeImageSnapshot` sobre el WebGL suelen dar PNG vacío; copiar a un canvas 2D con
+ * `drawImage` obliga al navegador a componer la textura y el resultado es estable.
+ */
+export function webglCanvasToPngBytes(source: HTMLCanvasElement): Promise<Uint8Array | null> {
+    const w = source.width
+    const h = source.height
+    if (w < 1 || h < 1) return Promise.resolve(null)
+
+    return new Promise((resolve) => {
+        const canvas = document.createElement("canvas")
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return resolve(null)
+
+        try {
+            ctx.drawImage(source, 0, 0)
+        } catch {
+            return resolve(null)
+        }
+
+        htmlCanvasToPngBytes(canvas).then(resolve)
+    })
+}
+
 const svgTextToPngBytes = async (
   svgText: string,
   opts?: { width?: number; height?: number; maintainAspectRatio?: boolean }
@@ -36,10 +76,7 @@ const svgTextToPngBytes = async (
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      canvas.toBlob((blob) => {
-        if (!blob) return resolve(null);
-        blob.arrayBuffer().then((buffer) => resolve(new Uint8Array(buffer)));
-      }, "image/png");
+      htmlCanvasToPngBytes(canvas).then(resolve);
     };
     img.onerror = () => resolve(null);
     img.src = svgDataUri;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type { Exercise, ExerciseCanvas } from "@/interfaces"
+import { EXERCISE_EMPTY_CANVAS_MESSAGE } from "@/schemas/exercise.schema"
 
 export type SaveExerciseModalProps = {
     open: boolean
@@ -57,6 +58,17 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
         setIsSaving(true)
         try {
             const exercise = buildExercise()
+            const c = exercise.canvas
+            const elementCount =
+                c.images.length +
+                c.circles.length +
+                c.rects.length +
+                c.lines.length +
+                c.arrows.length
+            if (elementCount === 0) {
+                window.alert(EXERCISE_EMPTY_CANVAS_MESSAGE)
+                return
+            }
             if (onSave) await onSave(exercise)
             else await new Promise((r) => setTimeout(r, 700))
             onClose()

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "re
 import CanvasKitInit from "canvaskit-wasm/bin/full/canvaskit";
 
 import { SkiaCanvasHandle, SkiaCanvasProps } from "@/interfaces";
+import { webglCanvasToPngBytes } from "@/utils/image";
 
 // Cache global para CanvasKit (singleton)
 let canvasKitPromise: Promise<any> | null = null;
@@ -34,49 +35,55 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
   onDrawRef.current = onDraw;
 
   // Exponer funciones via ref
-  useImperativeHandle(ref, () => ({
-    redraw: () => {
-      if (surfaceRef.current && ckRef.current) {
-        try {
-          const canvas = surfaceRef.current.getCanvas();
-          canvas.clear(ckRef.current.TRANSPARENT);
-          onDrawRef.current(canvas, ckRef.current);
-          surfaceRef.current.flush();
-        } catch (err) {
-          console.error("Error en redraw de SkiaCanvas:", err);
-        }
+  useImperativeHandle(ref, () => {
+    const paintFrame = (): boolean => {
+      if (!surfaceRef.current || !ckRef.current) return false;
+      try {
+        const ck = ckRef.current;
+        const surface = surfaceRef.current;
+        const canvas = surface.getCanvas();
+        canvas.clear(ck.TRANSPARENT);
+        onDrawRef.current(canvas, ck);
+        surface.flush();
+        return true;
+      } catch (err) {
+        console.error("Error en paintFrame de SkiaCanvas:", err);
+        return false;
       }
-    },
-    saveAsImage: (filename = "skia-canvas.png") => {
-      if (!surfaceRef.current || !ckRef.current) return;
-      
-      const ck = ckRef.current;
-      const surface = surfaceRef.current;
-      
-      // Capturar snapshot del canvas
-      const image = surface.makeImageSnapshot();
-      if (!image) return;
-      
-      // Codificar como PNG
-      const bytes = image.encodeToBytes(ck.ImageFormat.PNG, 100);
-      image.delete();
-      
-      if (!bytes) return;
-      
-      // Crear blob y descargar
-      const blob = new Blob([bytes], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
-    }
-  }), []);
+    };
+
+    const getPngSnapshot = async (): Promise<Uint8Array | null> => {
+      if (!canvasRef.current) return null;
+      if (!paintFrame()) return null;
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      if (!canvasRef.current) return null;
+      return webglCanvasToPngBytes(canvasRef.current);
+    };
+
+    return {
+      redraw: () => {
+        paintFrame();
+      },
+      getPngSnapshot,
+      saveAsImage: (filename = "skia-canvas.png") => {
+        void getPngSnapshot().then((bytes) => {
+          if (!bytes) return;
+
+          const blob = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+          const url = URL.createObjectURL(blob);
+
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          URL.revokeObjectURL(url);
+        });
+      },
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;

@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "fs/promises"
+import path from "path"
+
 import type { Exercise, Prisma } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
@@ -11,6 +14,52 @@ export async function exercisesList(): Promise<Exercise[]> {
 
 export async function exerciseGetById(id: string): Promise<Exercise | null> {
     return getPrisma().exercise.findUnique({ where: { id } })
+}
+
+const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
+
+function isPngBuffer(buf: Buffer): boolean {
+    return (
+        buf.length >= 8 &&
+        buf[0] === 0x89 &&
+        buf[1] === 0x50 &&
+        buf[2] === 0x4e &&
+        buf[3] === 0x47 &&
+        buf[4] === 0x0d &&
+        buf[5] === 0x0a &&
+        buf[6] === 0x1a &&
+        buf[7] === 0x0a
+    )
+}
+
+/** Escribe `public/exercises/exercise-{id}.png` tras comprobar que el ejercicio existe. */
+export async function exerciseSavePreviewPng(
+    exerciseId: string,
+    pngBytes: Buffer,
+): Promise<{ url: string }> {
+    if (pngBytes.length === 0) {
+        throw new Error("PNG vacío")
+    }
+    if (pngBytes.length > MAX_PREVIEW_BYTES) {
+        throw new Error("La imagen supera el tamaño máximo permitido")
+    }
+    if (!isPngBuffer(pngBytes)) {
+        throw new Error("Se esperaba un PNG")
+    }
+
+    const exercise = await exerciseGetById(exerciseId)
+    if (!exercise) {
+        throw new Error("Ejercicio no encontrado")
+    }
+
+    const dir = path.join(process.cwd(), "public", "exercises")
+    const filename = `exercise-${exerciseId}.png`
+    const filePath = path.join(dir, filename)
+
+    await mkdir(dir, { recursive: true })
+    await writeFile(filePath, pngBytes)
+
+    return { url: `/exercises/${filename}` }
 }
 
 export async function exerciseCreate(data: ExerciseCreateInput): Promise<Exercise> {

@@ -21,6 +21,12 @@ export interface ExerciseCanvas {
     arrows: ArrowElementInstance[]
 }
 
+/** Tras guardar en BD, el cliente puede enviar un PNG del canvas (solo si hay elementos dibujados). */
+export type ExerciseSaveHandler = (
+    exercise: Exercise,
+    previewPng: Uint8Array | null,
+) => void | Promise<void>
+
 /**
  * Ejercicio listo para persistir: metadatos + snapshot del canvas.
  */

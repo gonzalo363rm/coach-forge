@@ -8,6 +8,7 @@ import type {
     ElementDefinition,
     Exercise,
     ExerciseCanvas as ExerciseCanvasPersisted,
+    ExerciseSaveHandler,
     ImageElementInstance,
     LineElementInstance,
     RectElementInstance,
@@ -51,7 +52,7 @@ interface Props {
     setCurrentTool: (tool: ToolType) => void
     selectedPaletteElement: ElementDefinition | null
     isTemplateExercise?: boolean
-    onExerciseSave?: (exercise: Exercise) => void | Promise<void>
+    onExerciseSave?: ExerciseSaveHandler
 }
 
 type DragTarget =
@@ -989,6 +990,29 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
         showTitleOverlay,
     ])
 
+    const hasPreviewableCanvasContent = useMemo(
+        () =>
+            images.length +
+                circles.length +
+                rects.length +
+                lines.length +
+                arrows.length >
+            0,
+        [images.length, circles.length, rects.length, lines.length, arrows.length],
+    )
+
+    const handleSaveExerciseFromModal = useCallback(
+        async (exercise: Exercise) => {
+            if (!onExerciseSave) return
+            let previewPng: Uint8Array | null = null
+            if (hasPreviewableCanvasContent) {
+                previewPng = (await canvasRef.current?.getPngSnapshot()) ?? null
+            }
+            await onExerciseSave(exercise, previewPng)
+        },
+        [hasPreviewableCanvasContent, onExerciseSave],
+    )
+
     return (
         <div className="flex w-full items-start gap-4">
             <div className="flex flex-col gap-2">
@@ -1178,8 +1202,14 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                     </button>
                     <button
                         type="button"
+                        disabled={!hasPreviewableCanvasContent}
+                        title={
+                            hasPreviewableCanvasContent
+                                ? undefined
+                                : "Añade al menos un elemento al canvas para poder guardar"
+                        }
                         onClick={() => setShowSaveModal(true)}
-                        className="cf-btn-success"
+                        className="cf-btn-success disabled:pointer-events-none disabled:opacity-40"
                     >
                         Save
                     </button>
@@ -1206,7 +1236,7 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                 open={showSaveModal}
                 canvas={exerciseCanvasData}
                 onClose={() => setShowSaveModal(false)}
-                onSave={onExerciseSave}
+                onSave={onExerciseSave ? handleSaveExerciseFromModal : undefined}
             />
         </div>
     )

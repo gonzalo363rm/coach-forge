@@ -1,5 +1,9 @@
 import { z } from "zod"
 
+/** Mensaje unificado para canvas sin elementos (cliente, Zod y server action). */
+export const EXERCISE_EMPTY_CANVAS_MESSAGE =
+    "No se puede guardar un ejercicio vacío."
+
 /** Tamaño máximo del cuerpo HTTP (bytes UTF-8) antes de parsear JSON. */
 export const MAX_REQUEST_BODY_BYTES = 1_048_576
 
@@ -168,6 +172,19 @@ export const exerciseCreateSchema = z
                 path: ["canvas"],
             })
         }
+        const elCount =
+            data.canvas.images.length +
+            data.canvas.circles.length +
+            data.canvas.rects.length +
+            data.canvas.lines.length +
+            data.canvas.arrows.length
+        if (elCount === 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: EXERCISE_EMPTY_CANVAS_MESSAGE,
+                path: ["canvas"],
+            })
+        }
     })
 
 export const exerciseUpdateSchema = z
@@ -205,6 +222,19 @@ export const exerciseUpdateSchema = z
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: `canvas excede ${MAX_CANVAS_JSON_CHARS} caracteres al serializar`,
+                    path: ["canvas"],
+                })
+            }
+            const elCount =
+                data.canvas.images.length +
+                data.canvas.circles.length +
+                data.canvas.rects.length +
+                data.canvas.lines.length +
+                data.canvas.arrows.length
+            if (elCount === 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: EXERCISE_EMPTY_CANVAS_MESSAGE,
                     path: ["canvas"],
                 })
             }
