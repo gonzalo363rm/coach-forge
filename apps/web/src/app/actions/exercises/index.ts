@@ -1,3 +1,7 @@
 export { createExerciseAction } from "./create-exercise"
+export { deleteExerciseAction } from "./delete-exercise"
+export { getExerciseCanvasAction } from "./get-exercise-canvas"
+export { getExercisesPaginatedAction } from "./get-exercises"
 export { saveExercisePreviewAction } from "./save-exercise-preview"
+export { updateExerciseAction } from "./update-exercise"
 export type { ExerciseActionResult } from "./types"

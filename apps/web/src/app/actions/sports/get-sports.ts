@@ -34,8 +34,14 @@ export async function getSportsPaginatedAction(
         }
     }
 
-    const { page, take } = parsed.data
-    const result = await sportsListPaginated(page, take)
+    const { page, take, filters, sortBy, sortDir } = parsed.data
+    const f = filters ?? {}
+    const result = await sportsListPaginated(
+        page,
+        take,
+        { search: f.search ?? undefined },
+        { sortBy, sortDir },
+    )
     if (!result.ok) return result
 
     return { ok: true, data: result.data }

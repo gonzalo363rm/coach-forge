@@ -1,9 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-import type { Exercise, ExerciseCanvas } from "@/interfaces"
+import type { Exercise, ExerciseCanvas, SportListOption } from "@/interfaces"
 import { EXERCISE_EMPTY_CANVAS_MESSAGE } from "@/schemas/exercise.schema"
+
+export type SaveExerciseModalFieldDefaults = {
+    title: string
+    minPlayers: number | null
+    maxPlayers: number | null
+    difficulty: number
+    videoLink: string | null
+    sportId: string | null
+}
 
 export type SaveExerciseModalProps = {
     open: boolean
@@ -11,6 +20,10 @@ export type SaveExerciseModalProps = {
     onClose: () => void
     /** Si no se pasa, solo se simula un guardado y se cierra el modal. */
     onSave?: (exercise: Exercise) => void | Promise<void>
+    /** Al editar: valores iniciales del formulario al abrir el modal. */
+    fieldDefaults?: SaveExerciseModalFieldDefaults | null
+    /** Deportes disponibles (ordenados por nombre en el servidor). */
+    sports?: SportListOption[]
 }
 
 const DIFFICULTY_ACTIVE_CLASS: Record<number, string> = {
@@ -21,7 +34,14 @@ const DIFFICULTY_ACTIVE_CLASS: Record<number, string> = {
     5: "cf-diff-segment-active-5",
 }
 
-export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExerciseModalProps) => {
+export const SaveExerciseModal = ({
+    open,
+    canvas,
+    onClose,
+    onSave,
+    fieldDefaults,
+    sports = [],
+}: SaveExerciseModalProps) => {
     const [title, setTitle] = useState("")
     const [minPlayers, setMinPlayers] = useState("")
     const [maxPlayers, setMaxPlayers] = useState("")
@@ -30,15 +50,27 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
     const [sportId, setSportId] = useState<string | null>(null)
     const [isSaving, setIsSaving] = useState(false)
 
+    const sportIds = useMemo(() => new Set(sports.map((s) => s.id)), [sports])
+    const sportOrphan = sportId != null && !sportIds.has(sportId)
+
     useEffect(() => {
         if (!open) return
-        setTitle("")
-        setMinPlayers("")
-        setMaxPlayers("")
-        setDifficulty(3)
-        setVideoLink("")
-        setSportId(null)
-    }, [open])
+        if (fieldDefaults) {
+            setTitle(fieldDefaults.title)
+            setMinPlayers(fieldDefaults.minPlayers != null ? String(fieldDefaults.minPlayers) : "")
+            setMaxPlayers(fieldDefaults.maxPlayers != null ? String(fieldDefaults.maxPlayers) : "")
+            setDifficulty(fieldDefaults.difficulty)
+            setVideoLink(fieldDefaults.videoLink ?? "")
+            setSportId(fieldDefaults.sportId)
+        } else {
+            setTitle("")
+            setMinPlayers("")
+            setMaxPlayers("")
+            setDifficulty(3)
+            setVideoLink("")
+            setSportId(null)
+        }
+    }, [open, fieldDefaults])
 
     const buildExercise = useCallback((): Exercise => {
         const minParsed = minPlayers.trim() === "" ? null : Number(minPlayers)
@@ -106,14 +138,23 @@ export const SaveExerciseModal = ({ open, canvas, onClose, onSave }: SaveExercis
                         <select
                             value={sportId ?? ""}
                             onChange={(e) => setSportId(e.target.value === "" ? null : e.target.value)}
-                            disabled
                             aria-describedby="save-modal-sport-hint"
-                            className="cf-modal-input cursor-not-allowed opacity-80"
+                            className="cf-modal-input"
                         >
                             <option value="">Sin deporte</option>
+                            {sportOrphan ? (
+                                <option value={sportId!}>Deporte eliminado (referencia guardada)</option>
+                            ) : null}
+                            {sports.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name}
+                                </option>
+                            ))}
                         </select>
                         <span id="save-modal-sport-hint" className="cf-modal-text text-xs">
-                            Podrás elegir deporte cuando exista el listado de deportes.
+                            {sports.length === 0
+                                ? "No hay deportes en el sistema; puedes dejar «Sin deporte» o crearlos antes."
+                                : "Elige el deporte al que aplica el ejercicio, o déjalo genérico."}
                         </span>
                     </label>
                     <label className="cf-modal-label flex flex-col gap-1 sm:col-span-2">

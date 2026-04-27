@@ -14,6 +14,11 @@ export async function GET(request: Request) {
 
         const page = Number(searchParams.get("page") ?? "1")
         const take = Number(searchParams.get("take") ?? "10")
+        const search = searchParams.get("search") ?? undefined
+        const sortByRaw = searchParams.get("sortBy") ?? "name"
+        const sortBy = sortByRaw === "createdAt" ? "createdAt" : "name"
+        const sortDirRaw = searchParams.get("sortDir") ?? "asc"
+        const sortDir = sortDirRaw === "desc" ? "desc" : "asc"
 
         if (!Number.isFinite(page) || page < 1) {
             return jsonError(400, "page debe ser un número mayor o igual a 1")
@@ -23,7 +28,12 @@ export async function GET(request: Request) {
             return jsonError(400, "take debe ser un número entre 1 y 100")
         }
 
-        const result = await sportsListPaginated(page, take)
+        const result = await sportsListPaginated(
+            page,
+            take,
+            { search },
+            { sortBy, sortDir },
+        )
         if (!result.ok) {
             return jsonError(500, result.error)
         }

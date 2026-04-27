@@ -49,7 +49,18 @@ export const sportDeleteSchema = z.object({
 
 export type SportDeleteInput = z.infer<typeof sportDeleteSchema>
 
+export const sportListSortBySchema = z.enum(["name", "createdAt"])
+
+export type SportListSortBy = z.infer<typeof sportListSortBySchema>
+
 export const getSportsPaginatedParamsSchema = z.object({
     page: z.coerce.number().int().min(1).max(10_000).default(1).catch(1),
     take: z.coerce.number().int().min(1).max(100).default(10).catch(10),
+    filters: z
+        .object({
+            search: z.string().optional().nullable(),
+        })
+        .optional(),
+    sortBy: sportListSortBySchema.default("name").catch("name"),
+    sortDir: z.enum(["asc", "desc"]).default("asc").catch("asc"),
 })

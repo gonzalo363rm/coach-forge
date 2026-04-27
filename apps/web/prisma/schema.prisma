@@ -17,6 +17,9 @@ model Exercise {
   difficulty Int
   videoLink  String?
   canvas     Json
+
+  sport      Sport?   @relation(fields: [sportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  @@index([sportId])
 }
 
 model Sport {
@@ -25,4 +28,6 @@ model Sport {
   updatedAt DateTime @updatedAt
   name      String
   slug      String
+
+  exercises Exercise[]
 }

@@ -1,15 +1,131 @@
-import { mkdir, writeFile } from "fs/promises"
+import { mkdir, unlink, writeFile } from "fs/promises"
 import path from "path"
 
 import type { Exercise, Prisma } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
-import type { ExerciseCreateInput, ExerciseUpdateInput } from "@/schemas/exercise.schema"
+import type {
+    ExerciseCreateInput,
+    ExerciseListSortBy,
+    ExerciseUpdateInput,
+} from "@/schemas/exercise.schema"
+
+function exercisePreviewFilename(exerciseId: string): string {
+    return `exercise-${exerciseId}.png`
+}
+
+export function exercisePreviewPublicUrl(exerciseId: string): string {
+    return `/exercises/${exercisePreviewFilename(exerciseId)}`
+}
+
+function exercisePreviewDiskPath(exerciseId: string): string {
+    return path.join(process.cwd(), "public", "exercises", exercisePreviewFilename(exerciseId))
+}
 
 export async function exercisesList(): Promise<Exercise[]> {
     return getPrisma().exercise.findMany({
         orderBy: { updatedAt: "desc" },
     })
+}
+
+export type ExerciseListItem = Exercise & { previewUrl: string }
+
+export type ExercisesPaginatedData = {
+    currentPage: number
+    totalPages: number
+    exercises: ExerciseListItem[]
+}
+
+export type ExercisesPaginatedResult =
+    | { ok: true; data: ExercisesPaginatedData }
+    | { ok: false; error: string }
+
+function exerciseListOrderBy(
+    sortBy: ExerciseListSortBy,
+    sortDir: "asc" | "desc",
+): Prisma.ExerciseOrderByWithRelationInput {
+    switch (sortBy) {
+        case "sport":
+            return { sport: { name: sortDir } }
+        case "title":
+            return { title: sortDir }
+        case "difficulty":
+            return { difficulty: sortDir }
+        case "updatedAt":
+        default:
+            return { updatedAt: sortDir }
+    }
+}
+
+export async function exercisesListPaginated(
+    page: number,
+    take: number,
+    filters: { search?: string; sport?: string; difficulty?: number },
+    sort: { sortBy: ExerciseListSortBy; sortDir: "asc" | "desc" },
+): Promise<ExercisesPaginatedResult> {
+    const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
+    const safeTake = Math.min(100, Math.max(1, Math.floor(take)))
+
+    const where: Prisma.ExerciseWhereInput = {
+        ...(filters.search ? { title: { contains: filters.search } } : {}),
+        ...(filters.sport ? { sport: { slug: filters.sport } } : {}),
+        ...(filters.difficulty !== undefined
+            ? { difficulty: filters.difficulty }
+            : {}),
+    }
+
+    try {
+        const [exercises, total] = await Promise.all([
+            getPrisma().exercise.findMany({
+                take: safeTake,
+                skip: (safePage - 1) * safeTake,
+                orderBy: exerciseListOrderBy(sort.sortBy, sort.sortDir),
+                where,
+            }),
+            getPrisma().exercise.count({ where }),
+        ])
+
+        const totalPages = Math.max(1, Math.ceil(total / safeTake))
+
+        const exercisesWithPreview: ExerciseListItem[] = exercises.map((e) => ({
+            ...e,
+            previewUrl: exercisePreviewPublicUrl(e.id),
+        }))
+
+        return {
+            ok: true,
+            data: {
+                currentPage: safePage,
+                totalPages,
+                exercises: exercisesWithPreview,
+            },
+        }
+    } catch (e) {
+        console.error("[exercisesListPaginated]", e)
+        return { ok: false, error: "Error al obtener la lista de ejercicios" }
+    }
+}
+
+export type ExerciseMutationResult =
+    | { ok: true; data: Exercise }
+    | { ok: false; error: string }
+
+export async function exerciseDelete(id: string): Promise<ExerciseMutationResult> {
+    try {
+        const deleted = await getPrisma().exercise.delete({ where: { id } })
+        await unlink(exercisePreviewDiskPath(id)).catch(() => {
+            /* archivo opcional */
+        })
+        return { ok: true, data: deleted }
+    } catch (e) {
+        const code =
+            e && typeof e === "object" && "code" in e ? (e as { code?: string }).code : undefined
+        if (code === "P2025") {
+            return { ok: false, error: "Ejercicio no encontrado" }
+        }
+        console.error("[exerciseDelete]", e)
+        return { ok: false, error: "Error al eliminar el ejercicio" }
+    }
 }
 
 export async function exerciseGetById(id: string): Promise<Exercise | null> {
@@ -52,20 +168,21 @@ export async function exerciseSavePreviewPng(
         throw new Error("Ejercicio no encontrado")
     }
 
-    const dir = path.join(process.cwd(), "public", "exercises")
-    const filename = `exercise-${exerciseId}.png`
-    const filePath = path.join(dir, filename)
+    const filePath = exercisePreviewDiskPath(exerciseId)
+    const dir = path.dirname(filePath)
 
     await mkdir(dir, { recursive: true })
     await writeFile(filePath, pngBytes)
 
-    return { url: `/exercises/${filename}` }
+    return { url: exercisePreviewPublicUrl(exerciseId) }
 }
 
 export async function exerciseCreate(data: ExerciseCreateInput): Promise<Exercise> {
     return getPrisma().exercise.create({
         data: {
-            sportId: data.sportId,
+            ...(data.sportId
+                ? { sport: { connect: { id: data.sportId } } }
+                : {}),
             title: data.title,
             minPlayers: data.minPlayers,
             maxPlayers: data.maxPlayers,
@@ -81,7 +198,11 @@ export async function exerciseUpdate(
     patch: ExerciseUpdateInput,
 ): Promise<Exercise> {
     const data: Prisma.ExerciseUpdateInput = {}
-    if (patch.sportId !== undefined) data.sportId = patch.sportId
+    if (patch.sportId !== undefined) {
+        data.sport = patch.sportId
+            ? { connect: { id: patch.sportId } }
+            : { disconnect: true }
+    }
     if (patch.title !== undefined) data.title = patch.title
     if (patch.minPlayers !== undefined) data.minPlayers = patch.minPlayers
     if (patch.maxPlayers !== undefined) data.maxPlayers = patch.maxPlayers

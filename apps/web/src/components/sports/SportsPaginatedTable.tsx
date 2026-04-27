@@ -3,18 +3,46 @@
 import { deleteSportAction } from "@/app/actions/sports"
 import { SportRowActions } from "@/components/sports/SportRowActions"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import { SortableTh } from "@/components/ui/table/SortableTh"
+import { useToast } from "@/components/ui/toast/ToastProvider"
+import type { SportListSortBy } from "@/schemas/sport.schema"
 import type { Sport } from "@prisma/client"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
 import { useCallback, useOptimistic, useTransition } from "react"
 
 type Props = {
     sports: Sport[]
     totalPages: number
+    listState: {
+        search: string
+        sortBy: SportListSortBy
+        sortDir: "asc" | "desc"
+    }
 }
 
-export function SportsPaginatedTable({ sports, totalPages }: Props) {
+interface FormData {
+    search: string
+}
+
+function defaultSortDir(column: SportListSortBy): "asc" | "desc" {
+    switch (column) {
+        case "createdAt":
+            return "desc"
+        case "name":
+        default:
+            return "asc"
+    }
+}
+
+export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
     const router = useRouter()
+    const { toast } = useToast()
     const [, startTransition] = useTransition()
+    const { register, handleSubmit } = useForm<FormData>({
+        defaultValues: { search: listState.search },
+    })
     const [optimisticSports, removeSportOptimistic] = useOptimistic(
         sports,
         (current, deletedId: string) => current.filter((s) => s.id !== deletedId),
@@ -30,15 +58,50 @@ export function SportsPaginatedTable({ sports, totalPages }: Props) {
                         router.refresh()
                         resolve({ ok: true })
                     } else {
+                        toast({
+                            type: "error",
+                            title: "No se pudo eliminar el deporte",
+                            message: result.error,
+                        })
+                        router.refresh()
                         resolve({ ok: false, error: result.error })
                     }
                 })
             }),
-        [removeSportOptimistic, router],
+        [removeSportOptimistic, router, toast],
     )
 
+    const onSubmit = (data: FormData) => {
+        const p = new URLSearchParams()
+        const q = data.search?.trim()
+        if (q) p.set("search", q)
+        p.set("sortBy", listState.sortBy)
+        p.set("sortDir", listState.sortDir)
+        router.push(`/sports/list?${p.toString()}`)
+        router.refresh()
+    }
+
     return (
-        <>
+        <div className="flex flex-col gap-4">
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex w-full flex-wrap items-center justify-start gap-3"
+            >
+                <input
+                    id="search"
+                    {...register("search")}
+                    type="text"
+                    placeholder="Buscar por nombre o slug"
+                    className="min-w-32 flex-1 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700 sm:max-w-xs"
+                />
+                <button
+                    type="submit"
+                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                >
+                    Buscar
+                </button>
+            </form>
+
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -46,60 +109,96 @@ export function SportsPaginatedTable({ sports, totalPages }: Props) {
                             <tr>
                                 <th
                                     scope="col"
-                                    className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
                                 >
                                     ID
                                 </th>
+
+                                <SortableTh
+                                    column="name"
+                                    label="Nombre"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("name")}
+                                />
+
                                 <th
                                     scope="col"
-                                    className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Nombre
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
                                 >
                                     Slug
                                 </th>
+
+                                <SortableTh
+                                    column="createdAt"
+                                    label="Creado"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("createdAt")}
+                                />
+
                                 <th
                                     scope="col"
-                                    className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
                                 >
                                     Acciones
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
-                            {optimisticSports.map((sport) => (
-                                <tr
-                                    key={sport.id}
-                                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
-                                >
-                                    <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-zinc-600 dark:text-zinc-400">
-                                        {sport.id}
-                                    </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                        {sport.name}
-                                    </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-700 dark:text-zinc-300">
-                                        {sport.slug}
-                                    </td>
-                                    <td className="px-6 py-4 align-top">
-                                        <SportRowActions
-                                            id={sport.id}
-                                            name={sport.name}
-                                            deleteSport={deleteSport}
-                                        />
+                            {optimisticSports.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
+                                    >
+                                        No hay deportes con estos filtros.{" "}
+                                        <Link
+                                            href="/sports/new"
+                                            className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                                        >
+                                            Crear el primero
+                                        </Link>
+                                        .
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                optimisticSports.map((sport) => (
+                                    <tr
+                                        key={sport.id}
+                                        className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                                    >
+                                        <td className="whitespace-nowrap px-4 py-4 font-mono text-sm text-zinc-600 dark:text-zinc-400">
+                                            {sport.id}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                            {sport.name}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-zinc-700 dark:text-zinc-300">
+                                            {sport.slug}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                                            {new Intl.DateTimeFormat("es", {
+                                                dateStyle: "short",
+                                                timeStyle: "short",
+                                            }).format(new Date(sport.createdAt))}
+                                        </td>
+                                        <td className="px-4 py-4 align-top">
+                                            <SportRowActions
+                                                id={sport.id}
+                                                name={sport.name}
+                                                deleteSport={deleteSport}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <Pagination totalPages={totalPages} />
-        </>
+        </div>
     )
 }

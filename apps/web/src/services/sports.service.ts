@@ -1,7 +1,11 @@
-import type { Sport } from "@prisma/client"
+import type { Prisma, Sport } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
-import type { SportCreateInput, SportUpdateInput } from "@/schemas/sport.schema"
+import type {
+    SportCreateInput,
+    SportListSortBy,
+    SportUpdateInput,
+} from "@/schemas/sport.schema"
 
 export type SportMutationResult =
     | { ok: true; data: Sport }
@@ -27,21 +31,46 @@ export type SportsPaginatedResult =
     | { ok: true; data: SportsPaginatedData }
     | { ok: false; error: string }
 
+function sportListOrderBy(
+    sortBy: SportListSortBy,
+    sortDir: "asc" | "desc",
+): Prisma.SportOrderByWithRelationInput {
+    switch (sortBy) {
+        case "createdAt":
+            return { createdAt: sortDir }
+        case "name":
+        default:
+            return { name: sortDir }
+    }
+}
+
 export async function sportsListPaginated(
     page: number,
     take: number,
+    filters: { search?: string },
+    sort: { sortBy: SportListSortBy; sortDir: "asc" | "desc" },
 ): Promise<SportsPaginatedResult> {
     const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
     const safeTake = Math.min(100, Math.max(1, Math.floor(take)))
+
+    const where: Prisma.SportWhereInput = filters.search
+        ? {
+              OR: [
+                  { name: { contains: filters.search, mode: "insensitive" } },
+                  { slug: { contains: filters.search, mode: "insensitive" } },
+              ],
+          }
+        : {}
 
     try {
         const [sports, totalSports] = await Promise.all([
             getPrisma().sport.findMany({
                 take: safeTake,
                 skip: (safePage - 1) * safeTake,
-                orderBy: { name: "asc" },
+                orderBy: sportListOrderBy(sort.sortBy, sort.sortDir),
+                where,
             }),
-            getPrisma().sport.count(),
+            getPrisma().sport.count({ where }),
         ])
 
         const totalPages = Math.max(1, Math.ceil(totalSports / safeTake))

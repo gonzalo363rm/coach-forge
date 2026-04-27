@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { exerciseSavePreviewPng } from "@/services/exercises.service"
 
+import { revalidateExercisesViews } from "./revalidate-exercises"
 import type { ExerciseActionResult } from "./types"
 
 const savePreviewInputSchema = z.object({
@@ -33,6 +34,7 @@ export async function saveExercisePreviewAction(
 
     try {
         const data = await exerciseSavePreviewPng(parsed.data.exerciseId, buf)
+        revalidateExercisesViews()
         return { ok: true, data }
     } catch (e) {
         console.error("[saveExercisePreviewAction]", e)

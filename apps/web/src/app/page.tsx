@@ -11,14 +11,21 @@ export default function Home() {
           href="/exercises/new"
           className="rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >
-          Abrir Editor
+          Nuevo ejercicio
+        </Link>
+
+        <Link
+          href="/exercises/list"
+          className="rounded-lg border border-emerald-600 px-6 py-3 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+        >
+          Lista de ejercicios
         </Link>
 
         <Link
           href="/sports/list"
           className="rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >
-          Ver Deportes
+          Ver deportes
         </Link>
       </main>
     </div>

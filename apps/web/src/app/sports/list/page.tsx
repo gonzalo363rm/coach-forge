@@ -3,17 +3,52 @@ export const revalidate = 60 * 60 * 24 * 7;
 
 import { getSportsPaginatedAction } from "@/app/actions/sports";
 import { SportsPaginatedTable } from "@/components/sports/SportsPaginatedTable";
+import {
+    sportListSortBySchema,
+    type SportListSortBy,
+} from "@/schemas/sport.schema";
 import Link from "next/link";
 
+function firstQueryValue(v: string | string[] | undefined): string {
+    if (v === undefined) return "";
+    return Array.isArray(v) ? (v[0] ?? "") : v;
+}
+
 interface Props {
-    searchParams: Promise<{ page?: string }>;
+    searchParams: Promise<{
+        page?: string | string[];
+        search?: string | string[];
+        sortBy?: string | string[];
+        sortDir?: string | string[];
+    }>;
 }
 
 export default async function Sports({ searchParams }: Props) {
     const params = await searchParams;
-    const rawPage = params.page ? parseInt(params.page, 10) : 1
-    const page = Number.isNaN(rawPage) ? 1 : rawPage
-    const result = await getSportsPaginatedAction({ page })
+    const rawPage = firstQueryValue(params.page);
+    const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
+    const page = Number.isNaN(parsedPage) ? 1 : parsedPage;
+
+    const search = firstQueryValue(params.search) || null;
+
+    const sortByParsed = sportListSortBySchema.safeParse(firstQueryValue(params.sortBy));
+    const sortBy: SportListSortBy = sortByParsed.success ? sortByParsed.data : "name";
+    const sortDirRaw = firstQueryValue(params.sortDir);
+    const sortDir: "asc" | "desc" = sortDirRaw === "desc" ? "desc" : "asc";
+
+    const listQueryKey = [page, search ?? "", sortBy, sortDir].join("|");
+    const listState = {
+        search: search ?? "",
+        sortBy,
+        sortDir,
+    };
+
+    const result = await getSportsPaginatedAction({
+        page,
+        filters: { search },
+        sortBy,
+        sortDir,
+    });
 
     if (!result.ok) {
         return (
@@ -37,7 +72,7 @@ export default async function Sports({ searchParams }: Props) {
 
     return (
         <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
-            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 p-8">
+            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-8">
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
                         <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
@@ -54,7 +89,12 @@ export default async function Sports({ searchParams }: Props) {
                     </div>
                 </header>
 
-                <SportsPaginatedTable sports={sports} totalPages={totalPages} />
+                <SportsPaginatedTable
+                    key={listQueryKey}
+                    sports={sports}
+                    totalPages={totalPages}
+                    listState={listState}
+                />
             </main>
         </div>
     );

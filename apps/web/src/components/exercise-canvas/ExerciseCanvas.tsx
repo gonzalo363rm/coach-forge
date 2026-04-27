@@ -8,11 +8,13 @@ import type {
     ElementDefinition,
     Exercise,
     ExerciseCanvas as ExerciseCanvasPersisted,
+    ExerciseEditorInitialData,
     ExerciseSaveHandler,
     ImageElementInstance,
     LineElementInstance,
     RectElementInstance,
     SkiaCanvasHandle,
+    SportListOption,
     ToolType,
 } from "@/interfaces"
 import SkiaCanvas from "@/components/skia/SkiaCanvas"
@@ -53,6 +55,8 @@ interface Props {
     selectedPaletteElement: ElementDefinition | null
     isTemplateExercise?: boolean
     onExerciseSave?: ExerciseSaveHandler
+    initialData?: ExerciseEditorInitialData | null
+    sports?: SportListOption[]
 }
 
 type DragTarget =
@@ -97,8 +101,17 @@ const MIN_CANVAS_HEIGHT = 400
 const MIN_CANVAS_ZOOM = 0.5
 const MAX_CANVAS_ZOOM = 2.5
 
-export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteElement, isTemplateExercise = false, onExerciseSave }: Props) => {
+export const ExerciseCanvas = ({
+    currentTool,
+    setCurrentTool,
+    selectedPaletteElement,
+    isTemplateExercise = false,
+    onExerciseSave,
+    initialData = null,
+    sports = [],
+}: Props) => {
     const canvasRef = useRef<SkiaCanvasHandle>(null)
+    const didHydrateInitial = useRef(false)
     const isCanvasHoveredRef = useRef(false)
     const draggingRef = useRef<DragTarget>(null)
     const isDrawingShapeRef = useRef(false)
@@ -137,6 +150,37 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const imagesCacheRef = useRef<Map<string, any>>(new Map())
     const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, width: 1200, height: 600 })
+
+    useEffect(() => {
+        if (!initialData || didHydrateInitial.current) return
+        didHydrateInitial.current = true
+        const c = initialData.canvas
+        setCanvasSize({ width: c.width, height: c.height })
+        setCanvasBackgroundColor(c.backgroundColor)
+        setCanvasZoom(Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))))
+        setShowTitleOverlay(c.showTitleOverlay)
+        setShowOrderOverlay(c.showOrderOverlay)
+        setImages(c.images)
+        setCircles(c.circles)
+        setRects(c.rects)
+        setLines(c.lines)
+        setArrows(c.arrows)
+    }, [initialData])
+
+    const saveModalFieldDefaults = useMemo(
+        () =>
+            initialData
+                ? {
+                      title: initialData.title,
+                      minPlayers: initialData.minPlayers,
+                      maxPlayers: initialData.maxPlayers,
+                      difficulty: initialData.difficulty,
+                      videoLink: initialData.videoLink,
+                      sportId: initialData.sportId,
+                  }
+                : null,
+        [initialData],
+    )
 
     const generateId = () => Math.random().toString(36).slice(2, 9)
 
@@ -1237,6 +1281,8 @@ export const ExerciseCanvas = ({ currentTool, setCurrentTool, selectedPaletteEle
                 canvas={exerciseCanvasData}
                 onClose={() => setShowSaveModal(false)}
                 onSave={onExerciseSave ? handleSaveExerciseFromModal : undefined}
+                fieldDefaults={saveModalFieldDefaults}
+                sports={sports}
             />
         </div>
     )
