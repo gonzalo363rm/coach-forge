@@ -22,6 +22,13 @@ export default function Home() {
         </Link>
 
         <Link
+          href="/elements/list"
+          className="rounded-lg border border-emerald-600 px-6 py-3 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+        >
+          Lista de elementos
+        </Link>
+
+        <Link
           href="/sports/list"
           className="rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >

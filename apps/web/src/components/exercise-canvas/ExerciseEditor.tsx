@@ -18,6 +18,12 @@ import { uint8ArrayToBase64 } from "@/utils/base64"
 import { ToolsPanel } from "./ToolsPanel"
 import { ExerciseCanvas } from "./ExerciseCanvas"
 
+type EditorProps = {
+    initialExercise?: ExerciseEditorInitialData | null
+    sports?: SportListOption[]
+    elements?: ElementDefinition[]
+}
+
 async function saveExercisePreviewIfPresent(
     exerciseId: string,
     previewPng: Uint8Array | null,
@@ -33,12 +39,11 @@ async function saveExercisePreviewIfPresent(
     }
 }
 
-type EditorProps = {
-    initialExercise?: ExerciseEditorInitialData | null
-    sports?: SportListOption[]
-}
-
-export const ExerciseEditor = ({ initialExercise = null, sports = [] }: EditorProps) => {
+export const ExerciseEditor = ({
+    initialExercise = null,
+    sports = [],
+    elements = [],
+}: EditorProps) => {
     const [currentTool, setCurrentTool] = useState<ToolType>("select")
     const [selectedPaletteElement, setSelectedPaletteElement] = useState<ElementDefinition | null>(null)
 
@@ -72,6 +77,8 @@ export const ExerciseEditor = ({ initialExercise = null, sports = [] }: EditorPr
         <div className="flex w-full gap-6">
             <div className="w-[20%]">
                 <ToolsPanel
+                    elements={elements}
+                    sports={sports}
                     currentTool={currentTool}
                     setCurrentTool={setCurrentTool}
                     selectedPaletteElement={selectedPaletteElement}

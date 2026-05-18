@@ -31,6 +31,7 @@ export type ExerciseSaveHandler = (
 export type SportListOption = {
     id: string
     name: string
+    slug: string
 }
 
 /** Hidrata el editor al editar un ejercicio ya persistido. */

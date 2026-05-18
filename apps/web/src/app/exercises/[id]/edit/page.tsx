@@ -1,5 +1,6 @@
 import { ExerciseEditor } from "@/components/exercise-canvas/ExerciseEditor"
 import type { ExerciseCanvas as ExerciseCanvasData } from "@/interfaces"
+import { elementsListAll } from "@/services/elements.service"
 import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
 import { notFound } from "next/navigation"
@@ -10,9 +11,13 @@ interface Props {
 
 export default async function EditExercisePage({ params }: Props) {
     const { id } = await params
-    const [row, sportRows] = await Promise.all([exerciseGetById(id), sportsListAll()])
+    const [row, sportRows, elements] = await Promise.all([
+        exerciseGetById(id),
+        sportsListAll(),
+        elementsListAll(),
+    ])
     if (!row) notFound()
-    const sports = sportRows.map((s) => ({ id: s.id, name: s.name }))
+    const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
 
     const initialExercise = {
         id: row.id,
@@ -31,7 +36,7 @@ export default async function EditExercisePage({ params }: Props) {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-bold text-zinc-800 dark:text-white">Editar ejercicio</h1>
                 </div>
-                <ExerciseEditor initialExercise={initialExercise} sports={sports} />
+                <ExerciseEditor initialExercise={initialExercise} sports={sports} elements={elements} />
             </main>
         </div>
     )

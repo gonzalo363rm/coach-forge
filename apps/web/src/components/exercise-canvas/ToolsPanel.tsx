@@ -1,22 +1,53 @@
 'use client'
 
-import { useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import clsx from "clsx"
 
-import type { ElementDefinition, ToolType } from "@/interfaces"
-import elementsData from "@/data/elements.json"
-
-const elements: ElementDefinition[] = elementsData as ElementDefinition[]
+import type { ElementDefinition, SportListOption, ToolType } from "@/interfaces"
 
 interface ToolsPanelProps {
+    elements: ElementDefinition[]
+    sports: SportListOption[]
     currentTool: ToolType
     setCurrentTool: (tool: ToolType) => void
     selectedPaletteElement: ElementDefinition | null
     setSelectedPaletteElement: (element: ElementDefinition | null) => void
 }
 
-export const ToolsPanel = ({ currentTool, setCurrentTool, selectedPaletteElement, setSelectedPaletteElement }: ToolsPanelProps) => {
+export const ToolsPanel = ({
+    elements,
+    sports,
+    currentTool,
+    setCurrentTool,
+    selectedPaletteElement,
+    setSelectedPaletteElement,
+}: ToolsPanelProps) => {
+    const [search, setSearch] = useState("")
+    const [sportFilter, setSportFilter] = useState("")
+
+    const sportSlugById = useMemo(() => {
+        const map = new Map<string, string>()
+        for (const s of sports) {
+            map.set(s.id, s.slug)
+        }
+        return map
+    }, [sports])
+
+    const filteredElements = useMemo(() => {
+        const q = search.trim().toLowerCase()
+        return elements.filter((element) => {
+            if (element.type !== "image") return false
+            if (sportFilter) {
+                const slug = element.sportSlug ?? (element.sportId ? sportSlugById.get(element.sportId) : null)
+                if (slug !== sportFilter) return false
+            }
+            if (!q) return true
+            return element.name.toLowerCase().includes(q) || element.id.toLowerCase().includes(q)
+        })
+    }, [elements, search, sportFilter, sportSlugById])
+
     const handleMenuDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, element: ElementDefinition) => {
         const data = JSON.stringify(element);
         e.dataTransfer.setData("application/json", data);
@@ -147,49 +178,76 @@ export const ToolsPanel = ({ currentTool, setCurrentTool, selectedPaletteElement
             </h3>
             <div className="mb-2 h-px bg-zinc-300 dark:bg-zinc-600" />
 
-            <div className="grid gap-2 md:grid-cols-4 xs:grid-cols-3">
-                {elements.map((element) => {
-                    const MAX_THUMB_SIZE = 38;
-                    const scale = Math.min(
-                        MAX_THUMB_SIZE / element.width,
-                        MAX_THUMB_SIZE / element.height
-                    );
+            <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar elemento"
+                className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+            />
 
-                    const thumbWidth = Math.max(1, Math.round(element.width * scale));
-                    const thumbHeight = Math.max(1, Math.round(element.height * scale));
+            <select
+                value={sportFilter}
+                onChange={(e) => setSportFilter(e.target.value)}
+                className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+            >
+                <option value="">Todos los deportes</option>
+                {sports.map((sport) => (
+                    <option key={sport.id} value={sport.slug}>
+                        {sport.name}
+                    </option>
+                ))}
+            </select>
 
-                    return (
-                        <div
-                            draggable
-                            onDragStart={(e) => handleMenuDragStart(e, element)}
-                            onClick={() => {
-                                setCurrentTool("select")
-                                setSelectedPaletteElement(
-                                    selectedPaletteElement?.id === element.id ? null : element
-                                )
-                            }}
-                            key={element.id}
-                            className={clsx(
-                                "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg py-2.5 font-medium transition-all hover:shadow-sm",
-                                selectedPaletteElement?.id === element.id
-                                    ? "bg-violet-600 text-white dark:bg-violet-600 dark:text-white"
-                                    : "bg-white text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
-                            )}
-                            title={element.name}
-                        >
-                            <Image
-                                src={element.image}
-                                alt={element.name}
-                                width={thumbWidth}
-                                height={thumbHeight}
-                                className="object-scale-down"
-                                draggable={false}
-                            />
-                        </div>
-                    )
-                })}
+            <div className="grid max-h-64 gap-2 overflow-y-auto md:grid-cols-4 xs:grid-cols-3">
+                {filteredElements.length === 0 ? (
+                    <p className="col-span-full py-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                        Sin elementos
+                    </p>
+                ) : (
+                    filteredElements.map((element) => {
+                        const MAX_THUMB_SIZE = 38;
+                        const scale = Math.min(
+                            MAX_THUMB_SIZE / element.width,
+                            MAX_THUMB_SIZE / element.height
+                        );
+
+                        const thumbWidth = Math.max(1, Math.round(element.width * scale));
+                        const thumbHeight = Math.max(1, Math.round(element.height * scale));
+
+                        return (
+                            <div
+                                draggable
+                                onDragStart={(e) => handleMenuDragStart(e, element)}
+                                onClick={() => {
+                                    setCurrentTool("select")
+                                    setSelectedPaletteElement(
+                                        selectedPaletteElement?.id === element.id ? null : element
+                                    )
+                                }}
+                                key={element.id}
+                                className={clsx(
+                                    "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg py-2.5 font-medium transition-all hover:shadow-sm",
+                                    selectedPaletteElement?.id === element.id
+                                        ? "bg-violet-600 text-white dark:bg-violet-600 dark:text-white"
+                                        : "bg-white text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+                                )}
+                                title={element.name}
+                            >
+                                <Image
+                                    src={element.image}
+                                    alt={element.name}
+                                    width={thumbWidth}
+                                    height={thumbHeight}
+                                    className="object-scale-down"
+                                    draggable={false}
+                                    unoptimized={element.image.startsWith("http")}
+                                />
+                            </div>
+                        )
+                    })
+                )}
             </div>
         </div>
     )
 }
-

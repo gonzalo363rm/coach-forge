@@ -30,4 +30,21 @@ model Sport {
   slug      String
 
   exercises Exercise[]
+  elements  Element[]
+}
+
+model Element {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sportId   String?
+  name      String
+  type      String   @default("image")
+  image     String
+  width     Float
+  height    Float
+
+  sport Sport? @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([sportId])
 }

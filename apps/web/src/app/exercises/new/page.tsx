@@ -1,5 +1,6 @@
 import { ExerciseEditor } from "@/components/exercise-canvas/ExerciseEditor"
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
+import { elementsListAll } from "@/services/elements.service"
 import { sportsListAll } from "@/services/sports.service"
 
 interface Props {
@@ -7,8 +8,8 @@ interface Props {
 }
 
 export default async function ExerciseNewPage({ searchParams }: Props) {
-    const sportRows = await sportsListAll()
-    const sports = sportRows.map((s) => ({ id: s.id, name: s.name }))
+    const [sportRows, elements] = await Promise.all([sportsListAll(), elementsListAll()])
+    const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
 
     const params = await searchParams
     const fromId = params.from?.trim() ? params.from.trim() : null
@@ -33,7 +34,7 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-bold text-zinc-800 dark:text-white">Nuevo ejercicio</h1>
                 </div>
-                <ExerciseEditor sports={sports} initialExercise={initialExercise} />
+                <ExerciseEditor sports={sports} elements={elements} initialExercise={initialExercise} />
             </main>
         </div>
     )

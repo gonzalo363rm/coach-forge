@@ -23,6 +23,8 @@ export interface ElementDefinition {
   image: string;          // icono/imagen para mostrar en el catálogo
   width: number;
   height: number;
+  sportId?: string | null;
+  sportSlug?: string | null;
 }
 
 // ─── Instancias (canvas) ─────────────────────────────────────
