@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { useRouter } from "next/navigation"
 
 import {
     createExerciseAction,
@@ -22,6 +23,8 @@ type EditorProps = {
     initialExercise?: ExerciseEditorInitialData | null
     sports?: SportListOption[]
     elements?: ElementDefinition[]
+    /** Ruta a la que volver tras guardar (p. ej. creación de clase). */
+    returnTo?: string | null
 }
 
 async function saveExercisePreviewIfPresent(
@@ -43,9 +46,28 @@ export const ExerciseEditor = ({
     initialExercise = null,
     sports = [],
     elements = [],
+    returnTo = null,
 }: EditorProps) => {
+    const router = useRouter()
     const [currentTool, setCurrentTool] = useState<ToolType>("select")
     const [selectedPaletteElement, setSelectedPaletteElement] = useState<ElementDefinition | null>(null)
+
+    const navigateAfterSave = useCallback(
+        (createdId?: string) => {
+            const dest = returnTo?.trim()
+            if (dest) {
+                const url = new URL(dest, window.location.origin)
+                if (createdId) {
+                    url.searchParams.set("addedExerciseId", createdId)
+                }
+                router.push(`${url.pathname}${url.search}`)
+                router.refresh()
+                return
+            }
+            router.back()
+        },
+        [returnTo, router],
+    )
 
     const handleExerciseSave = useCallback(
         async (exercise: Exercise, previewPng: Uint8Array | null) => {
@@ -58,6 +80,7 @@ export const ExerciseEditor = ({
                     throw new Error(result.error)
                 }
                 await saveExercisePreviewIfPresent(initialExercise.id, previewPng)
+                navigateAfterSave()
                 return
             }
 
@@ -68,9 +91,12 @@ export const ExerciseEditor = ({
 
             if (result.data?.id) {
                 await saveExercisePreviewIfPresent(result.data.id, previewPng)
+                navigateAfterSave(result.data.id)
+            } else {
+                navigateAfterSave()
             }
         },
-        [initialExercise?.id],
+        [initialExercise?.id, navigateAfterSave],
     )
 
     return (

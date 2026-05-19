@@ -253,20 +253,36 @@ export const exerciseListSortBySchema = z.enum([
 
 export type ExerciseListSortBy = z.infer<typeof exerciseListSortBySchema>
 
+const optionalPositiveInt = z.preprocess(
+    (val) => (val === null || val === undefined || val === "" ? undefined : val),
+    z.coerce.number().int().positive().optional(),
+)
+
+export const exerciseListFiltersSchema = z.object({
+    search: z.string().optional().nullable(),
+    sport: z.string().optional().nullable(),
+    difficulty: z.preprocess(
+        (val) => (val === null || val === undefined || val === "" ? undefined : val),
+        z.coerce.number().int().min(1).max(5).optional(),
+    ),
+    filterMinPlayers: optionalPositiveInt,
+    filterMaxPlayers: optionalPositiveInt,
+    difficultyMin: z.preprocess(
+        (val) => (val === null || val === undefined || val === "" ? undefined : val),
+        z.coerce.number().int().min(1).max(5).optional(),
+    ),
+    difficultyMax: z.preprocess(
+        (val) => (val === null || val === undefined || val === "" ? undefined : val),
+        z.coerce.number().int().min(1).max(5).optional(),
+    ),
+})
+
+export type ExerciseListFilters = z.infer<typeof exerciseListFiltersSchema>
+
 export const getExercisesPaginatedParamsSchema = z.object({
     page: z.coerce.number().int().min(1).max(10_000).default(1).catch(1),
     take: z.coerce.number().int().min(1).max(100).default(10).catch(10),
-    filters: z
-        .object({
-            search: z.string().optional().nullable(),
-            sport: z.string().optional().nullable(),
-            difficulty: z.preprocess(
-                (val) =>
-                    val === null || val === undefined || val === "" ? undefined : val,
-                z.coerce.number().int().min(1).max(5).optional(),
-            ),
-        })
-        .optional(),
+    filters: exerciseListFiltersSchema.optional(),
     sortBy: exerciseListSortBySchema.default("updatedAt").catch("updatedAt"),
     sortDir: z.enum(["asc", "desc"]).default("desc").catch("desc"),
 })

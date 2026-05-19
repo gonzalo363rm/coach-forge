@@ -24,16 +24,7 @@ export async function getExercisesPaginatedAction(
 
     const { page, take, filters, sortBy, sortDir } = parsed.data
     const f = filters ?? {}
-    const result = await exercisesListPaginated(
-        page,
-        take,
-        {
-            search: f.search ?? undefined,
-            sport: f.sport ?? undefined,
-            difficulty: f.difficulty ?? undefined,
-        },
-        { sortBy, sortDir },
-    )
+    const result = await exercisesListPaginated(page, take, f, { sortBy, sortDir })
     if (!result.ok) return result
 
     return { ok: true, data: result.data }

@@ -6,9 +6,48 @@ import type { Exercise, Prisma } from "@prisma/client"
 import { getPrisma } from "@/lib/prisma"
 import type {
     ExerciseCreateInput,
+    ExerciseListFilters,
     ExerciseListSortBy,
     ExerciseUpdateInput,
 } from "@/schemas/exercise.schema"
+
+function buildExerciseWhereFilters(
+    filters: ExerciseListFilters,
+): Prisma.ExerciseWhereInput {
+    const and: Prisma.ExerciseWhereInput[] = []
+
+    if (filters.search) {
+        and.push({ title: { contains: filters.search, mode: "insensitive" } })
+    }
+    if (filters.sport) {
+        and.push({ sport: { slug: filters.sport } })
+    }
+    if (filters.difficulty !== undefined) {
+        and.push({ difficulty: filters.difficulty })
+    }
+    if (filters.difficultyMin !== undefined || filters.difficultyMax !== undefined) {
+        and.push({
+            difficulty: {
+                ...(filters.difficultyMin !== undefined ? { gte: filters.difficultyMin } : {}),
+                ...(filters.difficultyMax !== undefined ? { lte: filters.difficultyMax } : {}),
+            },
+        })
+    }
+    if (filters.filterMinPlayers !== undefined) {
+        and.push({
+            OR: [{ maxPlayers: null }, { maxPlayers: { gte: filters.filterMinPlayers } }],
+        })
+    }
+    if (filters.filterMaxPlayers !== undefined) {
+        and.push({
+            OR: [{ minPlayers: null }, { minPlayers: { lte: filters.filterMaxPlayers } }],
+        })
+    }
+
+    if (and.length === 0) return {}
+    if (and.length === 1) return and[0]!
+    return { AND: and }
+}
 
 function exercisePreviewFilename(exerciseId: string): string {
     return `exercise-${exerciseId}.png`
@@ -60,19 +99,13 @@ function exerciseListOrderBy(
 export async function exercisesListPaginated(
     page: number,
     take: number,
-    filters: { search?: string; sport?: string; difficulty?: number },
+    filters: ExerciseListFilters = {},
     sort: { sortBy: ExerciseListSortBy; sortDir: "asc" | "desc" },
 ): Promise<ExercisesPaginatedResult> {
     const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
     const safeTake = Math.min(100, Math.max(1, Math.floor(take)))
 
-    const where: Prisma.ExerciseWhereInput = {
-        ...(filters.search ? { title: { contains: filters.search } } : {}),
-        ...(filters.sport ? { sport: { slug: filters.sport } } : {}),
-        ...(filters.difficulty !== undefined
-            ? { difficulty: filters.difficulty }
-            : {}),
-    }
+    const where = buildExerciseWhereFilters(filters)
 
     try {
         const [exercises, total] = await Promise.all([

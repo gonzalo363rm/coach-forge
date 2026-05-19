@@ -19,6 +19,7 @@ import type {
 } from "@/interfaces"
 import SkiaCanvas from "@/components/skia/SkiaCanvas"
 import { loadImageAsBytes } from "@/utils/image"
+import { buildOrderOverlayBadges } from "@/utils/order-overlay-badges"
 import { ExerciseOrderPanel, type OrderedItemSummary } from "./ExerciseOrderPanel"
 import { ElementContextMenu } from "./ElementContextMenu"
 import { ResetConfirmModal } from "./ResetConfirmModal"
@@ -46,6 +47,7 @@ import {
     drawImageElement as drawImageElementHelper,
     drawLineElement as drawLineElementHelper,
     drawRectElement as drawRectElementHelper,
+    drawOrderBadges as drawOrderBadgesHelper,
     drawTempShape as drawTempShapeHelper,
 } from "./canvas-drawers"
 
@@ -131,7 +133,7 @@ export const ExerciseCanvas = ({
     const [tempArrow, setTempArrow] = useState<ArrowElementInstance | null>(null)
     const [isDrawingShape, setIsDrawingShape] = useState(false)
     const [tempShape, setTempShape] = useState<TempShape | null>(null)
-    const [showOrderOverlay, setShowOrderOverlay] = useState(false)
+    const [showOrderOverlay, setShowOrderOverlay] = useState(true)
     const [showTitleOverlay, setShowTitleOverlay] = useState(true)
     const [showCanvasOptions, setShowCanvasOptions] = useState(false)
     const [playerFilter, setPlayerFilter] = useState("all")
@@ -242,12 +244,52 @@ export const ExerciseCanvas = ({
         })
     }, [loadImages])
 
+    const orderOverlayItems = useMemo(
+        () =>
+            showOrderOverlay
+                ? buildOrderOverlayBadges({
+                      images,
+                      arrows,
+                      circles,
+                      rects,
+                      lines,
+                      canvasWidth: canvasSize.width,
+                      canvasHeight: canvasSize.height,
+                  })
+                : [],
+        [
+            arrows,
+            canvasSize.height,
+            canvasSize.width,
+            circles,
+            images,
+            lines,
+            rects,
+            showOrderOverlay,
+        ],
+    )
+
     useEffect(() => {
         const raf = requestAnimationFrame(() => {
             canvasRef.current?.redraw()
         })
         return () => cancelAnimationFrame(raf)
-    }, [images, circles, rects, lines, arrows, tempArrow, tempShape, selectedArrowId, canvasSize, canvasBackgroundColor, canvasZoom, showTitleOverlay])
+    }, [
+        images,
+        circles,
+        rects,
+        lines,
+        arrows,
+        tempArrow,
+        tempShape,
+        selectedArrowId,
+        canvasSize,
+        canvasBackgroundColor,
+        canvasZoom,
+        showTitleOverlay,
+        showOrderOverlay,
+        orderOverlayItems,
+    ])
 
     useEffect(() => {
         if (!contextMenu.isOpen || !contextMenu.target) return
@@ -370,8 +412,30 @@ export const ExerciseCanvas = ({
         if (tempShape) {
             drawTempShapeHelper(canvas, ck, tempShape)
         }
+
+        if (showOrderOverlay && orderOverlayItems.length > 0) {
+            drawOrderBadgesHelper(canvas, ck, orderOverlayItems)
+        }
+
         canvas.restore()
-    }, [arrows, canvasZoom, circles, drawArrow, drawBackground, drawCircleElement, drawImageElement, drawLineElement, drawRectElement, images, lines, rects, tempArrow, tempShape])
+    }, [
+        arrows,
+        canvasZoom,
+        circles,
+        drawArrow,
+        drawBackground,
+        drawCircleElement,
+        drawImageElement,
+        drawLineElement,
+        drawRectElement,
+        images,
+        lines,
+        orderOverlayItems,
+        rects,
+        showOrderOverlay,
+        tempArrow,
+        tempShape,
+    ])
 
     const findArrowHandleAt = (x: number, y: number): DragTarget => {
         if (!selectedArrowId) return null
@@ -598,68 +662,6 @@ export const ExerciseCanvas = ({
             .filter((item): item is OrderedItemSummary => item !== null)
             .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
     }, [arrows, images, playerFilter])
-
-    const orderOverlayItems = useMemo(() => {
-        if (!showOrderOverlay) return []
-
-        const clampX = (x: number) => Math.max(12, Math.min(canvasSize.width - 12, x))
-        const clampY = (y: number) => Math.max(12, Math.min(canvasSize.height - 12, y))
-
-        const imageBadges = images
-            .filter((element) => typeof element.order === "number")
-            .map((element, index) => ({
-                key: `image-badge-${element.id ?? index}`,
-                order: element.order as number,
-                x: clampX(element.x - 14),
-                y: clampY(element.y - 12),
-                bgColor: element.style?.strokeColor ?? DEFAULT_ELEMENT_COLOR,
-            }))
-
-        const arrowBadges = arrows
-            .filter((element) => typeof element.order === "number")
-            .map((element, index) => {
-                const center = getArrowCenter(element.data.points)
-                return {
-                    key: `arrow-badge-${element.id ?? index}`,
-                    order: element.order as number,
-                    x: clampX(center[0] - 14),
-                    y: clampY(center[1] - 12),
-                    bgColor: element.style?.strokeColor ?? DEFAULT_ARROW_COLOR,
-                }
-            })
-
-        const circleBadges = circles
-            .filter((element) => typeof element.order === "number")
-            .map((element, index) => ({
-                key: `circle-badge-${element.id ?? index}`,
-                order: element.order as number,
-                x: clampX(element.x - 14),
-                y: clampY(element.y - 12),
-                bgColor: element.style?.strokeColor ?? DEFAULT_CIRCLE_COLOR,
-            }))
-
-        const rectBadges = rects
-            .filter((element) => typeof element.order === "number")
-            .map((element, index) => ({
-                key: `rect-badge-${element.id ?? index}`,
-                order: element.order as number,
-                x: clampX(element.x - 14),
-                y: clampY(element.y - 12),
-                bgColor: element.style?.strokeColor ?? DEFAULT_RECT_COLOR,
-            }))
-
-        const lineBadges = lines
-            .filter((element) => typeof element.order === "number")
-            .map((element, index) => ({
-                key: `line-badge-${element.id ?? index}`,
-                order: element.order as number,
-                x: clampX((element.data.start[0] + element.data.end[0]) / 2 - 14),
-                y: clampY((element.data.start[1] + element.data.end[1]) / 2 - 12),
-                bgColor: element.style?.strokeColor ?? DEFAULT_LINE_COLOR,
-            }))
-
-        return [...imageBadges, ...arrowBadges, ...circleBadges, ...rectBadges, ...lineBadges]
-    }, [arrows, canvasSize.height, canvasSize.width, circles, images, lines, rects, showOrderOverlay])
 
     // Drop de elemento del menú (de momento solo imagenes)
     const createImageInstanceFromDefinition = useCallback((x: number, y: number, elementDefinition: ElementDefinition): ImageElementInstance | null => {
@@ -1169,24 +1171,6 @@ export const ExerciseCanvas = ({
                         onDrop={handleCanvasDrop}
                     />
 
-                    {showOrderOverlay && (
-                        <div className="pointer-events-none absolute inset-0 z-30">
-                            {orderOverlayItems.map((badge) => (
-                                <div
-                                    key={badge.key}
-                                    className="absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-[11px] font-semibold shadow"
-                                    style={{
-                                        left: badge.x * canvasZoom,
-                                        top: badge.y * canvasZoom,
-                                        backgroundColor: badge.bgColor,
-                                        color: getReadableTextColor(badge.bgColor),
-                                    }}
-                                >
-                                    {badge.order}
-                                </div>
-                            ))}
-                        </div>
-                    )}
 
                     {contextMenu.isOpen && contextElement && contextMenu.target && (
                         <ElementContextMenu

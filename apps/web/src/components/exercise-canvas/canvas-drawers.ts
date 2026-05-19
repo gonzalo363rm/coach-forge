@@ -1,8 +1,10 @@
 import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance, LineElementInstance, RectElementInstance } from "@/interfaces"
 import type { MutableRefObject } from "react"
 
+import type { OrderOverlayBadge } from "@/utils/order-overlay-badges"
+
 import type { TempShape } from "./canvas-helpers"
-import { getArrowCenter, getShapeBounds, hexToColor } from "./canvas-helpers"
+import { getArrowCenter, getShapeBounds, getReadableTextColor, hexToColor } from "./canvas-helpers"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createSafeFont = (ck: any, size: number) => {
@@ -340,5 +342,51 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
         canvas.drawRect(ck.LTRBRect(left, top, left + width, top + height), previewPaint)
     }
     previewPaint.delete()
+}
+
+const ORDER_BADGE_RADIUS = 12
+const ORDER_BADGE_FONT_SIZE = 11
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const drawOrderBadges = (canvas: any, ck: any, badges: OrderOverlayBadge[]) => {
+    if (badges.length === 0) return
+    if (typeof canvas.drawCircle !== "function") return
+
+    for (const badge of badges) {
+        const bg = hexToColor(badge.bgColor)
+        const textColor = hexToColor(getReadableTextColor(badge.bgColor))
+
+        const fillPaint = new ck.Paint()
+        fillPaint.setAntiAlias(true)
+        fillPaint.setColor(ck.Color(...bg))
+        canvas.drawCircle(badge.x, badge.y, ORDER_BADGE_RADIUS, fillPaint)
+        fillPaint.delete()
+
+        const label = String(badge.order)
+        if (typeof canvas.drawText !== "function" || typeof ck.Font !== "function") continue
+
+        const font = createSafeFont(ck, ORDER_BADGE_FONT_SIZE)
+        if (!font) continue
+
+        const textPaint = new ck.Paint()
+        textPaint.setAntiAlias(true)
+        textPaint.setColor(ck.Color(...textColor))
+
+        let textX = badge.x - ORDER_BADGE_FONT_SIZE * 0.35 * label.length
+        if (typeof font.measureText === "function") {
+            const measured = font.measureText(label)
+            const width =
+                typeof measured === "number"
+                    ? measured
+                    : typeof measured?.width === "number"
+                      ? measured.width
+                      : null
+            if (width != null) textX = badge.x - width / 2
+        }
+
+        canvas.drawText(label, textX, badge.y + ORDER_BADGE_FONT_SIZE * 0.35, textPaint, font)
+        textPaint.delete()
+        font.delete()
+    }
 }
 

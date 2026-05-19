@@ -18,8 +18,41 @@ model Exercise {
   videoLink  String?
   canvas     Json
 
-  sport      Sport?   @relation(fields: [sportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sport              Sport?                  @relation(fields: [sportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  trainingClassItems TrainingClassExercise[]
+
   @@index([sportId])
+}
+
+model TrainingClass {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  title      String
+  sportId    String?
+  difficulty Int
+  isPublic   Boolean  @default(false)
+  creatorId  String?
+
+  sport  Sport?                  @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  items  TrainingClassExercise[]
+
+  @@index([sportId])
+}
+
+model TrainingClassExercise {
+  id              String  @id @default(cuid())
+  trainingClassId String
+  exerciseId      String
+  sortOrder       Int
+  durationMinutes Int?
+  isOptional      Boolean @default(false)
+
+  trainingClass TrainingClass @relation(fields: [trainingClassId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exercise      Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([trainingClassId, exerciseId])
+  @@index([trainingClassId, sortOrder])
 }
 
 model Sport {
@@ -29,8 +62,9 @@ model Sport {
   name      String
   slug      String
 
-  exercises Exercise[]
-  elements  Element[]
+  exercises      Exercise[]
+  elements       Element[]
+  trainingClasses TrainingClass[]
 }
 
 model Element {
