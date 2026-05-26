@@ -5,6 +5,7 @@ import { z } from "zod"
 import { trainingClassCreateSchema } from "@/schemas/training-class.schema"
 import { trainingClassCreate } from "@/services/classes.service"
 
+import { revalidateClassesViews } from "./revalidate-classes"
 import type { ClassActionResult } from "./types"
 
 export async function createTrainingClassAction(
@@ -24,6 +25,7 @@ export async function createTrainingClassAction(
 
     try {
         const created = await trainingClassCreate(parsed.data)
+        revalidateClassesViews()
         return { ok: true, data: { id: created.id } }
     } catch (e) {
         console.error("[createTrainingClassAction]", e)

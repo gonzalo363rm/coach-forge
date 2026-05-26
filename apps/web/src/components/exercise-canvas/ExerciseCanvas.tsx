@@ -1050,11 +1050,11 @@ export const ExerciseCanvas = ({
     const handleSaveExerciseFromModal = useCallback(
         async (exercise: Exercise) => {
             if (!onExerciseSave) return
-            let previewPng: Uint8Array | null = null
+            let previewWebp: Uint8Array | null = null
             if (hasPreviewableCanvasContent) {
-                previewPng = (await canvasRef.current?.getPngSnapshot()) ?? null
+                previewWebp = (await canvasRef.current?.getWebpSnapshot()) ?? null
             }
-            await onExerciseSave(exercise, previewPng)
+            await onExerciseSave(exercise, previewWebp)
         },
         [hasPreviewableCanvasContent, onExerciseSave],
     )

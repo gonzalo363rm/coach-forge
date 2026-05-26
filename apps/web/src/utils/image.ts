@@ -5,25 +5,44 @@
  * Devuelve null si hay algún error durante la carga.
  */
 
-/** PNG desde un canvas 2D ya pintado (mismo enfoque fiable que `svgTextToPngBytes`). */
-export function htmlCanvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array | null> {
+/** Calidad WebP para vistas previas de ejercicios (0–1, `toBlob`). */
+export const EXERCISE_PREVIEW_WEBP_QUALITY = 0.85
+
+export function htmlCanvasToEncodedBytes(
+    canvas: HTMLCanvasElement,
+    mime: string,
+    quality?: number,
+): Promise<Uint8Array | null> {
     return new Promise((resolve) => {
         canvas.toBlob(
             (blob) => {
                 if (!blob) return resolve(null)
                 blob.arrayBuffer().then((buffer) => resolve(new Uint8Array(buffer)))
             },
-            "image/png",
+            mime,
+            quality,
         )
     })
 }
 
+/** PNG desde un canvas 2D ya pintado (p. ej. rasterizar SVG para CanvasKit). */
+export function htmlCanvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array | null> {
+    return htmlCanvasToEncodedBytes(canvas, "image/png")
+}
+
+/** WebP desde un canvas 2D ya pintado. */
+export function htmlCanvasToWebpBytes(canvas: HTMLCanvasElement): Promise<Uint8Array | null> {
+    return htmlCanvasToEncodedBytes(canvas, "image/webp", EXERCISE_PREVIEW_WEBP_QUALITY)
+}
+
 /**
- * Exporta un canvas WebGL (p. ej. CanvasKit) a PNG.
- * `toBlob`/`makeImageSnapshot` sobre el WebGL suelen dar PNG vacío; copiar a un canvas 2D con
- * `drawImage` obliga al navegador a componer la textura y el resultado es estable.
+ * Exporta un canvas WebGL (p. ej. CanvasKit) copiando a 2D y codificando.
+ * `toBlob` sobre el WebGL directo suele dar imagen vacía; `drawImage` es estable.
  */
-export function webglCanvasToPngBytes(source: HTMLCanvasElement): Promise<Uint8Array | null> {
+function webglCanvasToEncodedBytes(
+    source: HTMLCanvasElement,
+    encode: (canvas: HTMLCanvasElement) => Promise<Uint8Array | null>,
+): Promise<Uint8Array | null> {
     const w = source.width
     const h = source.height
     if (w < 1 || h < 1) return Promise.resolve(null)
@@ -41,8 +60,17 @@ export function webglCanvasToPngBytes(source: HTMLCanvasElement): Promise<Uint8A
             return resolve(null)
         }
 
-        htmlCanvasToPngBytes(canvas).then(resolve)
+        void encode(canvas).then(resolve)
     })
+}
+
+export function webglCanvasToWebpBytes(source: HTMLCanvasElement): Promise<Uint8Array | null> {
+    return webglCanvasToEncodedBytes(source, htmlCanvasToWebpBytes)
+}
+
+/** @deprecated Preferir {@link webglCanvasToWebpBytes} para vistas previas guardadas. */
+export function webglCanvasToPngBytes(source: HTMLCanvasElement): Promise<Uint8Array | null> {
+    return webglCanvasToEncodedBytes(source, htmlCanvasToPngBytes)
 }
 
 const svgTextToPngBytes = async (

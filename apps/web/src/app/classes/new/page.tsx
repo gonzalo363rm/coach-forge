@@ -12,10 +12,10 @@ export default async function NewClassPage() {
             <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <Link
-                        href="/"
+                        href="/classes/list"
                         className="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
                     >
-                        ← Inicio
+                        ← Clases
                     </Link>
                     <h1 className="mt-2 text-2xl font-bold text-zinc-800 dark:text-white">
                         Nueva clase

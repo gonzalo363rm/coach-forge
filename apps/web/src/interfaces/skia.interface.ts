@@ -1,6 +1,6 @@
 export interface SkiaCanvasHandle {
     redraw: () => void;
-    getPngSnapshot: () => Promise<Uint8Array | null>;
+    getWebpSnapshot: () => Promise<Uint8Array | null>
     saveAsImage: (filename?: string) => void;
 }
 

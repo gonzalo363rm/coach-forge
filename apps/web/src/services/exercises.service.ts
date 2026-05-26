@@ -4,6 +4,10 @@ import path from "path"
 import type { Exercise, Prisma } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
+import {
+    exercisePreviewFilename,
+    exercisePreviewPublicUrl,
+} from "@/utils/exercise-preview-url"
 import type {
     ExerciseCreateInput,
     ExerciseListFilters,
@@ -49,16 +53,15 @@ function buildExerciseWhereFilters(
     return { AND: and }
 }
 
-function exercisePreviewFilename(exerciseId: string): string {
-    return `exercise-${exerciseId}.png`
-}
-
-export function exercisePreviewPublicUrl(exerciseId: string): string {
-    return `/exercises/${exercisePreviewFilename(exerciseId)}`
-}
+export { exercisePreviewPublicUrl } from "@/utils/exercise-preview-url"
 
 function exercisePreviewDiskPath(exerciseId: string): string {
-    return path.join(process.cwd(), "public", "exercises", exercisePreviewFilename(exerciseId))
+    return path.join(
+        process.cwd(),
+        "public",
+        "exercises",
+        exercisePreviewFilename(exerciseId),
+    )
 }
 
 export async function exercisesList(): Promise<Exercise[]> {
@@ -146,9 +149,7 @@ export type ExerciseMutationResult =
 export async function exerciseDelete(id: string): Promise<ExerciseMutationResult> {
     try {
         const deleted = await getPrisma().exercise.delete({ where: { id } })
-        await unlink(exercisePreviewDiskPath(id)).catch(() => {
-            /* archivo opcional */
-        })
+        await unlink(exercisePreviewDiskPath(id)).catch(() => {})
         return { ok: true, data: deleted }
     } catch (e) {
         const code =
@@ -167,33 +168,33 @@ export async function exerciseGetById(id: string): Promise<Exercise | null> {
 
 const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
 
-function isPngBuffer(buf: Buffer): boolean {
+function isWebpBuffer(buf: Buffer): boolean {
     return (
-        buf.length >= 8 &&
-        buf[0] === 0x89 &&
-        buf[1] === 0x50 &&
-        buf[2] === 0x4e &&
-        buf[3] === 0x47 &&
-        buf[4] === 0x0d &&
-        buf[5] === 0x0a &&
-        buf[6] === 0x1a &&
-        buf[7] === 0x0a
+        buf.length >= 12 &&
+        buf[0] === 0x52 &&
+        buf[1] === 0x49 &&
+        buf[2] === 0x46 &&
+        buf[3] === 0x46 &&
+        buf[8] === 0x57 &&
+        buf[9] === 0x45 &&
+        buf[10] === 0x42 &&
+        buf[11] === 0x50
     )
 }
 
-/** Escribe `public/exercises/exercise-{id}.png` tras comprobar que el ejercicio existe. */
-export async function exerciseSavePreviewPng(
+/** Escribe `public/exercises/exercise-{id}.webp` (bytes WebP enviados desde el cliente). */
+export async function exerciseSavePreview(
     exerciseId: string,
-    pngBytes: Buffer,
+    webpBytes: Buffer,
 ): Promise<{ url: string }> {
-    if (pngBytes.length === 0) {
-        throw new Error("PNG vacío")
+    if (webpBytes.length === 0) {
+        throw new Error("WebP vacío")
     }
-    if (pngBytes.length > MAX_PREVIEW_BYTES) {
+    if (webpBytes.length > MAX_PREVIEW_BYTES) {
         throw new Error("La imagen supera el tamaño máximo permitido")
     }
-    if (!isPngBuffer(pngBytes)) {
-        throw new Error("Se esperaba un PNG")
+    if (!isWebpBuffer(webpBytes)) {
+        throw new Error("Se esperaba un WebP")
     }
 
     const exercise = await exerciseGetById(exerciseId)
@@ -205,7 +206,7 @@ export async function exerciseSavePreviewPng(
     const dir = path.dirname(filePath)
 
     await mkdir(dir, { recursive: true })
-    await writeFile(filePath, pngBytes)
+    await writeFile(filePath, webpBytes)
 
     return { url: exercisePreviewPublicUrl(exerciseId) }
 }

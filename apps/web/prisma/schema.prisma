@@ -28,9 +28,10 @@ model TrainingClass {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  title      String
-  sportId    String?
-  difficulty Int
+  title       String
+  description String?
+  sportId     String?
+  difficulty  Int
   isPublic   Boolean  @default(false)
   creatorId  String?
 

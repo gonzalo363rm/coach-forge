@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "re
 import CanvasKitInit from "canvaskit-wasm/bin/full/canvaskit";
 
 import { SkiaCanvasHandle, SkiaCanvasProps } from "@/interfaces";
-import { webglCanvasToPngBytes } from "@/utils/image";
+import { webglCanvasToWebpBytes } from "@/utils/image"
 
 // Cache global para CanvasKit (singleton)
 let canvasKitPromise: Promise<any> | null = null;
@@ -52,24 +52,24 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
       }
     };
 
-    const getPngSnapshot = async (): Promise<Uint8Array | null> => {
+    const getWebpSnapshot = async (): Promise<Uint8Array | null> => {
       if (!canvasRef.current) return null;
       if (!paintFrame()) return null;
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
       if (!canvasRef.current) return null;
-      return webglCanvasToPngBytes(canvasRef.current);
+      return webglCanvasToWebpBytes(canvasRef.current);
     };
 
     return {
       redraw: () => {
         paintFrame();
       },
-      getPngSnapshot,
-      saveAsImage: (filename = "skia-canvas.png") => {
-        void getPngSnapshot().then((bytes) => {
+      getWebpSnapshot,
+      saveAsImage: (filename = "skia-canvas.webp") => {
+        void getWebpSnapshot().then((bytes) => {
           if (!bytes) return;
 
-          const blob = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+          const blob = new Blob([new Uint8Array(bytes)], { type: "image/webp" });
           const url = URL.createObjectURL(blob);
 
           const link = document.createElement("a");

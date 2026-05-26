@@ -12,6 +12,7 @@ export type ClassDraftExerciseItem = {
 
 export type ClassDraft = {
     title: string
+    description: string
     sportId: string | null
     difficulty: number
     isPublic: boolean
@@ -25,7 +26,12 @@ export function loadClassDraft(): ClassDraft | null {
     try {
         const raw = sessionStorage.getItem(STORAGE_KEY)
         if (!raw) return null
-        return JSON.parse(raw) as ClassDraft
+        const parsed = JSON.parse(raw) as Partial<ClassDraft>
+        return {
+            ...defaultClassDraft(),
+            ...parsed,
+            items: parsed.items ?? [],
+        }
     } catch {
         return null
     }
@@ -44,6 +50,7 @@ export function clearClassDraft(): void {
 export function defaultClassDraft(): ClassDraft {
     return {
         title: "",
+        description: "",
         sportId: null,
         difficulty: 3,
         isPublic: false,

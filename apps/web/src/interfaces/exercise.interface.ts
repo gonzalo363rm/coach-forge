@@ -21,10 +21,10 @@ export interface ExerciseCanvas {
     arrows: ArrowElementInstance[]
 }
 
-/** Tras guardar en BD, el cliente puede enviar un PNG del canvas (solo si hay elementos dibujados). */
+/** Tras guardar en BD, el cliente puede enviar un WebP del canvas (solo si hay elementos dibujados). */
 export type ExerciseSaveHandler = (
     exercise: Exercise,
-    previewPng: Uint8Array | null,
+    previewWebp: Uint8Array | null,
 ) => void | Promise<void>
 
 /** Opción mínima para selects de deporte (serializable desde RSC). */

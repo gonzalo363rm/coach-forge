@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { IoCloseOutline } from "react-icons/io5"
 
@@ -12,9 +13,11 @@ type Props = {
 
 export function ExercisePreviewThumb({ previewUrl, title }: Props) {
     const [open, setOpen] = useState(false)
+    const [thumbSrc, setThumbSrc] = useState(previewUrl)
     const [fullSrc, setFullSrc] = useState(previewUrl)
 
     useEffect(() => {
+        setThumbSrc(previewUrl)
         setFullSrc(previewUrl)
     }, [previewUrl])
 
@@ -50,23 +53,17 @@ export function ExercisePreviewThumb({ previewUrl, title }: Props) {
                 aria-label={`Abrir vista previa de ${title}`}
                 title={`Vista previa: ${title}`}
             >
-                <picture>
-                    <source srcSet={previewUrl} type="image/png" />
-                    <img
-                        src={previewUrl}
+                <span className="relative block h-14 w-24 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+                    <Image
+                        src={thumbSrc}
                         alt={`Vista previa de ${title}`}
-                        width={96}
-                        height={56}
-                        className="h-14 w-24 shrink-0 rounded-md border border-zinc-200 object-cover dark:border-zinc-700"
-                        loading="lazy"
-                        onError={(e) => {
-                            const el = e.currentTarget
-                            if (el.dataset.fallback === "1") return
-                            el.dataset.fallback = "1"
-                            el.src = PREVIEW_PLACEHOLDER
-                        }}
+                        fill
+                        sizes="96px"
+                        unoptimized={thumbSrc.endsWith(".svg")}
+                        className="object-cover"
+                        onError={() => setThumbSrc(PREVIEW_PLACEHOLDER)}
                     />
-                </picture>
+                </span>
             </button>
 
             {open ? (
@@ -99,12 +96,17 @@ export function ExercisePreviewThumb({ previewUrl, title }: Props) {
                             Vista previa: {title}
                         </h2>
 
-                        <img
-                            src={fullSrc}
-                            alt={`Vista previa de ${title}`}
-                            className="max-h-[85vh] w-full rounded-xl border border-zinc-200 bg-white object-contain shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
-                            onError={() => setFullSrc(PREVIEW_PLACEHOLDER)}
-                        />
+                        <div className="relative h-[min(85vh,900px)] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+                            <Image
+                                src={fullSrc}
+                                alt={`Vista previa de ${title}`}
+                                fill
+                                sizes="(max-width: 896px) 100vw, 896px"
+                                unoptimized={fullSrc.endsWith(".svg")}
+                                className="object-contain"
+                                onError={() => setFullSrc(PREVIEW_PLACEHOLDER)}
+                            />
+                        </div>
                     </div>
                 </div>
             ) : null}

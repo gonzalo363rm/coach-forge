@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 
-import { createTrainingClassAction, getExerciseSummaryAction } from "@/app/actions/classes"
+import {
+    createTrainingClassAction,
+    getExerciseSummaryAction,
+    updateTrainingClassAction,
+} from "@/app/actions/classes"
 import {
     computeExerciseCount,
     computeTotalMinutes,
@@ -28,9 +32,18 @@ import type { ExerciseListItem } from "@/services/exercises.service"
 
 type Props = {
     sports: Sport[]
+    mode?: "create" | "edit"
+    classId?: string
+    initialDraft?: ClassDraft
 }
 
-export function ClassCreateForm({ sports }: Props) {
+export function ClassCreateForm({
+    sports,
+    mode = "create",
+    classId,
+    initialDraft,
+}: Props) {
+    const isEdit = mode === "edit"
     const router = useRouter()
     const searchParams = useSearchParams()
     const [draft, setDraft] = useState<ClassDraft>(defaultClassDraft)
@@ -42,15 +55,19 @@ export function ClassCreateForm({ sports }: Props) {
     const [editItem, setEditItem] = useState<ClassDraftExerciseItem | null>(null)
 
     useEffect(() => {
-        const stored = loadClassDraft()
-        setDraft(stored ?? defaultClassDraft())
+        if (isEdit && initialDraft) {
+            setDraft(initialDraft)
+        } else {
+            const stored = loadClassDraft()
+            setDraft(stored ?? defaultClassDraft())
+        }
         setHydrated(true)
-    }, [])
+    }, [isEdit, initialDraft])
 
     useEffect(() => {
-        if (!hydrated) return
+        if (!hydrated || isEdit) return
         saveClassDraft(draft)
-    }, [draft, hydrated])
+    }, [draft, hydrated, isEdit])
 
     const applyAddedExercise = useCallback(async (exerciseId: string) => {
         const result = await getExerciseSummaryAction({ id: exerciseId })
@@ -71,15 +88,18 @@ export function ClassCreateForm({ sports }: Props) {
         if (!hydrated) return
         const addedId = searchParams.get("addedExerciseId")?.trim()
         if (!addedId) return
+        const returnPath = isEdit && classId ? `/classes/${classId}/edit` : "/classes/new"
         void applyAddedExercise(addedId).then(() => {
-            router.replace("/classes/new")
+            router.replace(returnPath)
         })
-    }, [hydrated, searchParams, applyAddedExercise, router])
+    }, [hydrated, searchParams, applyAddedExercise, router, isEdit, classId])
 
     const exerciseCount = useMemo(() => computeExerciseCount(draft.items), [draft.items])
     const totalMinutes = useMemo(() => computeTotalMinutes(draft.items), [draft.items])
 
-    const returnToEncoded = encodeURIComponent("/classes/new")
+    const returnToPath =
+        isEdit && classId ? `/classes/${classId}/edit` : "/classes/new"
+    const returnToEncoded = encodeURIComponent(returnToPath)
 
     const handleAddExercise = (
         exercise: ExerciseListItem,
@@ -100,25 +120,30 @@ export function ClassCreateForm({ sports }: Props) {
 
     const handleSave = () => {
         setError(null)
+        const description = draft.description.trim()
+        const payload = {
+            title: draft.title,
+            description: description.length > 0 ? description : null,
+            sportId: draft.sportId,
+            difficulty: draft.difficulty,
+            isPublic: draft.isPublic,
+            items: draft.items.map((item, idx) => ({
+                exerciseId: item.exerciseId,
+                sortOrder: idx,
+                durationMinutes: item.isOptional ? null : item.durationMinutes,
+                isOptional: item.isOptional,
+            })),
+        }
         startTransition(async () => {
-            const result = await createTrainingClassAction({
-                title: draft.title,
-                sportId: draft.sportId,
-                difficulty: draft.difficulty,
-                isPublic: draft.isPublic,
-                items: draft.items.map((item, idx) => ({
-                    exerciseId: item.exerciseId,
-                    sortOrder: idx,
-                    durationMinutes: item.isOptional ? null : item.durationMinutes,
-                    isOptional: item.isOptional,
-                })),
-            })
+            const result = isEdit
+                ? await updateTrainingClassAction({ id: classId!, ...payload })
+                : await createTrainingClassAction(payload)
             if (!result.ok) {
                 setError(result.error)
                 return
             }
-            clearClassDraft()
-            router.push("/")
+            if (!isEdit) clearClassDraft()
+            router.push("/classes/list")
             router.refresh()
         })
     }
@@ -191,6 +216,23 @@ export function ClassCreateForm({ sports }: Props) {
                                     ))}
                                 </select>
                             </label>
+                            <label className="flex flex-col gap-1 text-sm">
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                    Descripción
+                                </span>
+                                <textarea
+                                    value={draft.description}
+                                    onChange={(e) =>
+                                        setDraft((p) => ({
+                                            ...p,
+                                            description: e.target.value,
+                                        }))
+                                    }
+                                    rows={4}
+                                    placeholder="Objetivos, notas para el equipo, etc. (opcional)"
+                                    className="resize-y rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-800"
+                                />
+                            </label>
                             <div className="flex items-center justify-between gap-3 text-sm">
                                 <span className="text-zinc-700 dark:text-zinc-300">
                                     Clase pública
@@ -224,7 +266,7 @@ export function ClassCreateForm({ sports }: Props) {
                     </section>
                     <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900/50">
                         <p className="text-zinc-700 dark:text-zinc-300">
-                            <span className="font-medium">{exerciseCount}</span> ejercicios
+                            <span className="font-medium">{exerciseCount}</span> ejercicio{exerciseCount > 1 ? "s" : ""}
                         </p>
                         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
                             Duración total:{" "}
@@ -239,7 +281,7 @@ export function ClassCreateForm({ sports }: Props) {
                     </h2>
                     <ClassExerciseList
                         items={draft.items}
-                        returnTo="/classes/new"
+                        returnTo={returnToPath}
                         onChange={(items) => setDraft((p) => ({ ...p, items }))}
                         onEdit={setEditItem}
                         onView={setViewItem}
@@ -271,7 +313,7 @@ export function ClassCreateForm({ sports }: Props) {
 
             <div className="flex flex-wrap justify-end gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
                 <Link
-                    href="/"
+                    href="/classes/list"
                     className="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                 >
                     Cancelar
@@ -282,7 +324,11 @@ export function ClassCreateForm({ sports }: Props) {
                     onClick={handleSave}
                     className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
-                    {pending ? "Guardando…" : "Guardar clase"}
+                    {pending
+                        ? "Guardando…"
+                        : isEdit
+                          ? "Guardar cambios"
+                          : "Guardar clase"}
                 </button>
             </div>
 

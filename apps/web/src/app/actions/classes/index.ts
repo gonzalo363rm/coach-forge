@@ -1,3 +1,6 @@
 export { createTrainingClassAction } from "./create-training-class"
+export { deleteTrainingClassAction } from "./delete-training-class"
 export { getExerciseSummaryAction } from "./get-exercise-summary"
+export { getTrainingClassesPaginatedAction } from "./get-training-classes"
+export { updateTrainingClassAction } from "./update-training-class"
 export type { ClassActionResult } from "./types"

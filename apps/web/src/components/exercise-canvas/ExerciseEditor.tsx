@@ -29,13 +29,13 @@ type EditorProps = {
 
 async function saveExercisePreviewIfPresent(
     exerciseId: string,
-    previewPng: Uint8Array | null,
+    previewWebp: Uint8Array | null,
 ): Promise<void> {
-    if (!previewPng || previewPng.byteLength === 0) return
+    if (!previewWebp || previewWebp.byteLength === 0) return
 
     const previewResult = await saveExercisePreviewAction({
         exerciseId,
-        pngBase64: uint8ArrayToBase64(previewPng),
+        webpBase64: uint8ArrayToBase64(previewWebp),
     })
     if (!previewResult.ok) {
         console.error("[handleExerciseSave] Vista previa:", previewResult.error)
@@ -70,7 +70,7 @@ export const ExerciseEditor = ({
     )
 
     const handleExerciseSave = useCallback(
-        async (exercise: Exercise, previewPng: Uint8Array | null) => {
+        async (exercise: Exercise, previewWebp: Uint8Array | null) => {
             if (initialExercise?.id) {
                 const result = await updateExerciseAction({
                     id: initialExercise.id,
@@ -79,7 +79,7 @@ export const ExerciseEditor = ({
                 if (!result.ok) {
                     throw new Error(result.error)
                 }
-                await saveExercisePreviewIfPresent(initialExercise.id, previewPng)
+                await saveExercisePreviewIfPresent(initialExercise.id, previewWebp)
                 navigateAfterSave()
                 return
             }
@@ -90,7 +90,7 @@ export const ExerciseEditor = ({
             }
 
             if (result.data?.id) {
-                await saveExercisePreviewIfPresent(result.data.id, previewPng)
+                await saveExercisePreviewIfPresent(result.data.id, previewWebp)
                 navigateAfterSave(result.data.id)
             } else {
                 navigateAfterSave()

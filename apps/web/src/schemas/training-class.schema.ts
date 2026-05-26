@@ -20,6 +20,9 @@ export const trainingClassItemSchema = z
 
 export const trainingClassCreateSchema = z.object({
     title: z.string().trim().min(1, "El título es obligatorio").max(500),
+    description: z
+        .union([z.string().trim().max(2000, "Máximo 2000 caracteres"), z.null()])
+        .optional(),
     sportId: z.union([z.string().min(1), z.null()]).optional(),
     difficulty: z.number().int().min(1).max(5),
     isPublic: z.boolean().default(false),
@@ -28,6 +31,44 @@ export const trainingClassCreateSchema = z.object({
 
 export type TrainingClassCreateInput = z.infer<typeof trainingClassCreateSchema>
 export type TrainingClassItemInput = z.infer<typeof trainingClassItemSchema>
+
+export const trainingClassUpdateSchema = trainingClassCreateSchema.extend({
+    id: z.string().min(1, "id obligatorio"),
+})
+
+export type TrainingClassUpdateInput = z.infer<typeof trainingClassUpdateSchema>
+
+export const trainingClassDeleteSchema = z.object({
+    id: z.string().min(1, "id obligatorio"),
+})
+
+export type TrainingClassDeleteInput = z.infer<typeof trainingClassDeleteSchema>
+
+export const trainingClassListSortBySchema = z.enum([
+    "title",
+    "difficulty",
+    "updatedAt",
+    "createdAt",
+])
+
+export type TrainingClassListSortBy = z.infer<typeof trainingClassListSortBySchema>
+
+export const trainingClassListFiltersSchema = z.object({
+    search: z.string().optional().nullable(),
+    sport: z.string().optional().nullable(),
+    difficulty: z.number().int().min(1).max(5).optional().nullable(),
+    isPublic: z.boolean().optional().nullable(),
+})
+
+export type TrainingClassListFilters = z.infer<typeof trainingClassListFiltersSchema>
+
+export const getTrainingClassesPaginatedParamsSchema = z.object({
+    page: z.coerce.number().int().min(1).max(10_000).default(1).catch(1),
+    take: z.coerce.number().int().min(1).max(100).default(10).catch(10),
+    filters: trainingClassListFiltersSchema.optional(),
+    sortBy: trainingClassListSortBySchema.default("updatedAt").catch("updatedAt"),
+    sortDir: z.enum(["asc", "desc"]).default("desc").catch("desc"),
+})
 
 export function computeExerciseCount(items: { isOptional?: boolean }[]): number {
     return items.length
