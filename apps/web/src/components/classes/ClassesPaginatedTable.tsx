@@ -37,8 +37,13 @@ interface FormData {
 function defaultSortDir(column: TrainingClassListSortBy): "asc" | "desc" {
     switch (column) {
         case "title":
+        case "description":
+        case "sport":
             return "asc"
         case "difficulty":
+        case "exerciseCount":
+        case "totalMinutes":
+        case "isPublic":
         case "updatedAt":
         case "createdAt":
         default:
@@ -155,7 +160,7 @@ export function ClassesPaginatedTable({
             </form>
 
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-                <div className="overflow-x-auto">
+                <div className="app-scrollbar overflow-x-auto">
                     <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
                         <thead className="bg-zinc-100 dark:bg-zinc-900">
                             <tr>
@@ -166,12 +171,20 @@ export function ClassesPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("title")}
                                 />
-                                <th
-                                    scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Deporte
-                                </th>
+                                <SortableTh
+                                    column="description"
+                                    label="Descripción"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("description")}
+                                />
+                                <SortableTh
+                                    column="sport"
+                                    label="Deporte"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("sport")}
+                                />
                                 <SortableTh
                                     column="difficulty"
                                     label="Dificultad"
@@ -179,24 +192,27 @@ export function ClassesPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("difficulty")}
                                 />
-                                <th
-                                    scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Ejercicios
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Duración
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Visibilidad
-                                </th>
+                                <SortableTh
+                                    column="exerciseCount"
+                                    label="Ejercicios"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("exerciseCount")}
+                                />
+                                <SortableTh
+                                    column="totalMinutes"
+                                    label="Duración"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("totalMinutes")}
+                                />
+                                <SortableTh
+                                    column="isPublic"
+                                    label="Visibilidad"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("isPublic")}
+                                />
                                 <SortableTh
                                     column="updatedAt"
                                     label="Actualizado"
@@ -216,7 +232,7 @@ export function ClassesPaginatedTable({
                             {optimisticClasses.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={8}
+                                        colSpan={9}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         No hay clases con estos filtros.{" "}
@@ -239,6 +255,17 @@ export function ClassesPaginatedTable({
                                             <span className="line-clamp-2">
                                                 {trainingClass.title}
                                             </span>
+                                        </td>
+                                        <td className="max-w-md px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                                            {trainingClass.description?.trim() ? (
+                                                <span className="line-clamp-2">
+                                                    {trainingClass.description.trim()}
+                                                </span>
+                                            ) : (
+                                                <span className="text-zinc-400 dark:text-zinc-500">
+                                                    —
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
                                             {trainingClass.sport?.name ?? "—"}

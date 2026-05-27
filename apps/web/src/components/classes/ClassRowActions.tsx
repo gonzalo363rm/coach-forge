@@ -53,8 +53,8 @@ export function ClassRowActions({ id, title, deleteClass }: Props) {
     }
 
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="gap-1">
+            <div className="flex items-center gap-2">
                 <Link
                     href={`/classes/${id}/start`}
                     className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"

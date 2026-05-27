@@ -72,7 +72,7 @@ export default async function Sports({ searchParams }: Props) {
 
     return (
         <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
-            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-8">
+            <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
                         <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">

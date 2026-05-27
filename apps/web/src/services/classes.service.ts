@@ -79,13 +79,44 @@ function trainingClassListOrderBy(
     switch (sortBy) {
         case "title":
             return { title: sortDir }
+        case "description":
+            return { description: sortDir }
+        case "sport":
+            return { sport: { name: sortDir } }
         case "difficulty":
             return { difficulty: sortDir }
+        case "exerciseCount":
+            return { items: { _count: sortDir } }
+        case "isPublic":
+            return { isPublic: sortDir }
         case "createdAt":
             return { createdAt: sortDir }
+        case "totalMinutes":
         case "updatedAt":
         default:
             return { updatedAt: sortDir }
+    }
+}
+
+const trainingClassListInclude = {
+    sport: { select: { name: true, slug: true } },
+    items: {
+        select: {
+            durationMinutes: true,
+            isOptional: true,
+        },
+    },
+} satisfies Prisma.TrainingClassInclude
+
+function mapRowToListItem(
+    row: Prisma.TrainingClassGetPayload<{ include: typeof trainingClassListInclude }>,
+): TrainingClassListItem {
+    const { items, sport, ...rest } = row
+    return {
+        ...rest,
+        sport,
+        exerciseCount: computeExerciseCount(items),
+        totalMinutes: computeTotalMinutes(items),
     }
 }
 
@@ -117,36 +148,41 @@ export async function trainingClassesListPaginated(
     const where = buildTrainingClassWhereFilters(filters)
 
     try {
-        const [rows, total] = await Promise.all([
-            getPrisma().trainingClass.findMany({
-                take: safeTake,
-                skip: (safePage - 1) * safeTake,
-                orderBy: trainingClassListOrderBy(sort.sortBy, sort.sortDir),
+        const skip = (safePage - 1) * safeTake
+
+        let rows: Prisma.TrainingClassGetPayload<{
+            include: typeof trainingClassListInclude
+        }>[]
+        let total: number
+
+        if (sort.sortBy === "totalMinutes") {
+            const all = await getPrisma().trainingClass.findMany({
                 where,
-                include: {
-                    sport: { select: { name: true, slug: true } },
-                    items: {
-                        select: {
-                            durationMinutes: true,
-                            isOptional: true,
-                        },
-                    },
-                },
-            }),
-            getPrisma().trainingClass.count({ where }),
-        ])
+                include: trainingClassListInclude,
+            })
+            total = all.length
+            const sorted = [...all].sort((a, b) => {
+                const diff =
+                    computeTotalMinutes(a.items) - computeTotalMinutes(b.items)
+                return sort.sortDir === "asc" ? diff : -diff
+            })
+            rows = sorted.slice(skip, skip + safeTake)
+        } else {
+            ;[rows, total] = await Promise.all([
+                getPrisma().trainingClass.findMany({
+                    take: safeTake,
+                    skip,
+                    orderBy: trainingClassListOrderBy(sort.sortBy, sort.sortDir),
+                    where,
+                    include: trainingClassListInclude,
+                }),
+                getPrisma().trainingClass.count({ where }),
+            ])
+        }
 
         const totalPages = Math.max(1, Math.ceil(total / safeTake))
 
-        const classes: TrainingClassListItem[] = rows.map((row) => {
-            const { items, sport, ...rest } = row
-            return {
-                ...rest,
-                sport,
-                exerciseCount: computeExerciseCount(items),
-                totalMinutes: computeTotalMinutes(items),
-            }
-        })
+        const classes: TrainingClassListItem[] = rows.map(mapRowToListItem)
 
         return {
             ok: true,

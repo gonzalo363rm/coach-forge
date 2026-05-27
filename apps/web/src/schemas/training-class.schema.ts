@@ -46,7 +46,12 @@ export type TrainingClassDeleteInput = z.infer<typeof trainingClassDeleteSchema>
 
 export const trainingClassListSortBySchema = z.enum([
     "title",
+    "description",
+    "sport",
     "difficulty",
+    "exerciseCount",
+    "totalMinutes",
+    "isPublic",
     "updatedAt",
     "createdAt",
 ])
