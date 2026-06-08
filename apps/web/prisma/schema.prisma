@@ -6,8 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  admin
+  coach
+}
+
 model Exercise {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   sportId    String?
@@ -25,7 +30,7 @@ model Exercise {
 }
 
 model TrainingClass {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   title       String
@@ -42,7 +47,7 @@ model TrainingClass {
 }
 
 model TrainingClassExercise {
-  id              String  @id @default(cuid())
+  id              String  @id @default(uuid())
   trainingClassId String
   exerciseId      String
   sortOrder       Int
@@ -57,7 +62,7 @@ model TrainingClassExercise {
 }
 
 model Sport {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   name      String
@@ -82,4 +87,26 @@ model Element {
   sport Sport? @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([sportId])
+}
+
+model User {
+  id            String    @id @default(uuid())
+  firstName     String
+  lastName      String
+  phoneNumber   String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String
+  role          Role      @default(coach)
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
