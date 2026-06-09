@@ -1,22 +1,28 @@
 import type { ClassDraft } from "@/components/classes/class-draft-storage"
-import { exercisePreviewPublicUrl } from "@/utils/exercise-preview-url"
+import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
 import type { TrainingClassWithItems } from "@/services/classes.service"
 
-export function trainingClassToDraft(trainingClass: TrainingClassWithItems): ClassDraft {
+export async function trainingClassToDraft(
+    trainingClass: TrainingClassWithItems,
+): Promise<ClassDraft> {
+    const items = await Promise.all(
+        trainingClass.items.map(async (item) => ({
+            exerciseId: item.exerciseId,
+            title: item.exercise.title,
+            difficulty: item.exercise.difficulty,
+            previewUrl: await resolveExercisePreviewUrl(item.exerciseId),
+            sortOrder: item.sortOrder,
+            durationMinutes: item.durationMinutes,
+            isOptional: item.isOptional,
+        })),
+    )
+
     return {
         title: trainingClass.title,
         description: trainingClass.description ?? "",
         sportId: trainingClass.sportId,
         difficulty: trainingClass.difficulty,
         isPublic: trainingClass.isPublic,
-        items: trainingClass.items.map((item) => ({
-            exerciseId: item.exerciseId,
-            title: item.exercise.title,
-            difficulty: item.exercise.difficulty,
-            previewUrl: exercisePreviewPublicUrl(item.exerciseId),
-            sortOrder: item.sortOrder,
-            durationMinutes: item.durationMinutes,
-            isOptional: item.isOptional,
-        })),
+        items,
     }
 }

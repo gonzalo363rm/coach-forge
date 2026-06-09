@@ -4,7 +4,7 @@ import { z } from "zod"
 
 import {
     exerciseGetById,
-    exercisePreviewPublicUrl,
+    resolveExercisePreviewUrl,
     type ExerciseListItem,
 } from "@/services/exercises.service"
 
@@ -31,7 +31,7 @@ export async function getExerciseSummaryAction(
             ok: true,
             data: {
                 ...row,
-                previewUrl: exercisePreviewPublicUrl(row.id),
+                previewUrl: await resolveExercisePreviewUrl(row.id),
             },
         }
     } catch (e) {

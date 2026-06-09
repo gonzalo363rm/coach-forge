@@ -40,7 +40,7 @@ export default async function StartClassPage({ params }: Props) {
         )
     }
 
-    const session = buildClassSessionData(trainingClass)
+    const session = await buildClassSessionData(trainingClass)
 
     return (
         <PageRoot>

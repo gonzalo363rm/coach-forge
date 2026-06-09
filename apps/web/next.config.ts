@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     "@prisma/client",
     "@prisma/adapter-pg",
     "pg",
+    "cloudinary",
   ],
 
   // Configuración de Turbopack
@@ -19,10 +20,14 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'cdn-icons-png.flaticon.com'
-      }
-    ]
+        protocol: "https",
+        hostname: "cdn-icons-png.flaticon.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+    ],
   },
   
   // Configuración de webpack para CanvasKit

@@ -22,7 +22,7 @@ export default async function EditClassPage({ params }: Props) {
         notFound()
     }
 
-    const initialDraft = trainingClassToDraft(trainingClass)
+    const initialDraft = await trainingClassToDraft(trainingClass)
 
     return (
         <PageRoot>

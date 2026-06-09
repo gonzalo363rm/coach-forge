@@ -1,19 +1,18 @@
-import { mkdir, unlink, writeFile } from "fs/promises"
-import path from "path"
-
-import type { Exercise, Prisma } from "@prisma/client"
+import { Prisma, type Exercise } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
-import {
-    exercisePreviewFilename,
-    exercisePreviewPublicUrl,
-} from "@/utils/exercise-preview-url"
+import { exercisePreviewPublicId } from "@/lib/cloudinary-url"
+import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
 import type {
-    ExerciseCreateInput,
-    ExerciseListFilters,
-    ExerciseListSortBy,
-    ExerciseUpdateInput,
+  ExerciseCreateInput,
+  ExerciseListFilters,
+  ExerciseListSortBy,
+  ExerciseUpdateInput,
 } from "@/schemas/exercise.schema"
+import {
+  deleteCloudinaryImage,
+  uploadImageBuffer,
+} from "@/services/cloudinary.service"
 
 function buildExerciseWhereFilters(
     filters: ExerciseListFilters,
@@ -53,16 +52,7 @@ function buildExerciseWhereFilters(
     return { AND: and }
 }
 
-export { exercisePreviewPublicUrl } from "@/utils/exercise-preview-url"
-
-function exercisePreviewDiskPath(exerciseId: string): string {
-    return path.join(
-        process.cwd(),
-        "public",
-        "exercises",
-        exercisePreviewFilename(exerciseId),
-    )
-}
+export { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
 
 export async function exercisesList(): Promise<Exercise[]> {
     return getPrisma().exercise.findMany({
@@ -123,10 +113,12 @@ export async function exercisesListPaginated(
 
         const totalPages = Math.max(1, Math.ceil(total / safeTake))
 
-        const exercisesWithPreview: ExerciseListItem[] = exercises.map((e) => ({
-            ...e,
-            previewUrl: exercisePreviewPublicUrl(e.id),
-        }))
+        const exercisesWithPreview: ExerciseListItem[] = await Promise.all(
+            exercises.map(async (e) => ({
+                ...e,
+                previewUrl: await resolveExercisePreviewUrl(e.id),
+            })),
+        )
 
         return {
             ok: true,
@@ -146,20 +138,59 @@ export type ExerciseMutationResult =
     | { ok: true; data: Exercise }
     | { ok: false; error: string }
 
+const MAX_LISTED_CLASSES = 8
+
+async function exerciseClassTitlesUsingIt(exerciseId: string): Promise<string[]> {
+  const rows = await getPrisma().trainingClassExercise.findMany({
+    where: { exerciseId },
+    select: { trainingClass: { select: { title: true } } },
+  })
+
+  return rows
+    .map((row) => row.trainingClass.title)
+    .sort((a, b) => a.localeCompare(b, "es"))
+}
+
+function formatExerciseInUseMessage(classTitles: string[]): string {
+  if (classTitles.length === 0) {
+    return "No se puede eliminar: está asignado a una o más clases"
+  }
+
+  if (classTitles.length <= MAX_LISTED_CLASSES) {
+    return `No se puede eliminar: está asignado a las clases: ${classTitles.join(", ")}`
+  }
+
+  const shown = classTitles.slice(0, MAX_LISTED_CLASSES).join(", ")
+  const rest = classTitles.length - MAX_LISTED_CLASSES
+
+  return `No se puede eliminar: está asignado a las clases: ${shown} y ${rest} más`
+}
+
 export async function exerciseDelete(id: string): Promise<ExerciseMutationResult> {
-    try {
-        const deleted = await getPrisma().exercise.delete({ where: { id } })
-        await unlink(exercisePreviewDiskPath(id)).catch(() => {})
-        return { ok: true, data: deleted }
-    } catch (e) {
-        const code =
-            e && typeof e === "object" && "code" in e ? (e as { code?: string }).code : undefined
-        if (code === "P2025") {
-            return { ok: false, error: "Ejercicio no encontrado" }
-        }
-        console.error("[exerciseDelete]", e)
-        return { ok: false, error: "Error al eliminar el ejercicio" }
+  try {
+    const classTitles = await exerciseClassTitlesUsingIt(id)
+    if (classTitles.length > 0) {
+      return { ok: false, error: formatExerciseInUseMessage(classTitles) }
     }
+
+    const deleted = await getPrisma().exercise.delete({ where: { id } })
+    await deleteCloudinaryImage("exercises", exercisePreviewPublicId(id))
+    return { ok: true, data: deleted }
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code === "P2025") {
+        return { ok: false, error: "Ejercicio no encontrado" }
+      }
+      if (e.code === "P2003") {
+        return {
+          ok: false,
+          error: formatExerciseInUseMessage(await exerciseClassTitlesUsingIt(id)),
+        }
+      }
+    }
+    console.error("[exerciseDelete]", e)
+    return { ok: false, error: "Error al eliminar el ejercicio" }
+  }
 }
 
 export async function exerciseGetById(id: string): Promise<Exercise | null> {
@@ -182,33 +213,34 @@ function isWebpBuffer(buf: Buffer): boolean {
     )
 }
 
-/** Escribe `public/exercises/exercise-{id}.webp` (bytes WebP enviados desde el cliente). */
+/** Sube la vista previa WebP del ejercicio a Cloudinary. */
 export async function exerciseSavePreview(
-    exerciseId: string,
-    webpBytes: Buffer,
+  exerciseId: string,
+  webpBytes: Buffer,
 ): Promise<{ url: string }> {
-    if (webpBytes.length === 0) {
-        throw new Error("WebP vacío")
-    }
-    if (webpBytes.length > MAX_PREVIEW_BYTES) {
-        throw new Error("La imagen supera el tamaño máximo permitido")
-    }
-    if (!isWebpBuffer(webpBytes)) {
-        throw new Error("Se esperaba un WebP")
-    }
+  if (webpBytes.length === 0) {
+    throw new Error("WebP vacío")
+  }
+  if (webpBytes.length > MAX_PREVIEW_BYTES) {
+    throw new Error("La imagen supera el tamaño máximo permitido")
+  }
+  if (!isWebpBuffer(webpBytes)) {
+    throw new Error("Se esperaba un WebP")
+  }
 
-    const exercise = await exerciseGetById(exerciseId)
-    if (!exercise) {
-        throw new Error("Ejercicio no encontrado")
-    }
+  const exercise = await exerciseGetById(exerciseId)
+  if (!exercise) {
+    throw new Error("Ejercicio no encontrado")
+  }
 
-    const filePath = exercisePreviewDiskPath(exerciseId)
-    const dir = path.dirname(filePath)
+  const url = await uploadImageBuffer(
+    webpBytes,
+    "image/webp",
+    "exercises",
+    exercisePreviewPublicId(exerciseId),
+  )
 
-    await mkdir(dir, { recursive: true })
-    await writeFile(filePath, webpBytes)
-
-    return { url: exercisePreviewPublicUrl(exerciseId) }
+  return { url }
 }
 
 export async function exerciseCreate(data: ExerciseCreateInput): Promise<Exercise> {

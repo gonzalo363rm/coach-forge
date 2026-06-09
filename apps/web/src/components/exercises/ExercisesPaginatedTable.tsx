@@ -69,9 +69,9 @@ export function ExercisesPaginatedTable({
         (id: string) =>
             new Promise<{ ok: true } | { ok: false; error: string }>((resolve) => {
                 startTransition(async () => {
-                    removeExerciseOptimistic(id)
                     const result = await deleteExerciseAction(id)
                     if (result.ok) {
+                        removeExerciseOptimistic(id)
                         router.refresh()
                         resolve({ ok: true })
                     } else {
