@@ -6,6 +6,8 @@ export const publicRoutes = [
   "/login",
   "/register",
   "/verify-email",
+  "/forgot-password",
+  "/reset-password",
 ]
 
 // Configuración ligera compartida (proxy + auth). Sin Prisma ni bcrypt.
@@ -48,7 +50,20 @@ export const authConfig = {
         return true
       }
 
-      return isLoggedIn
+      if (!isLoggedIn) {
+        const loginUrl = new URL("/login", nextUrl)
+
+        if (nextUrl.pathname !== "/") {
+          loginUrl.searchParams.set(
+            "callbackUrl",
+            `${nextUrl.pathname}${nextUrl.search}`,
+          )
+        }
+
+        return Response.redirect(loginUrl)
+      }
+
+      return true
     },
   },
 } satisfies NextAuthConfig

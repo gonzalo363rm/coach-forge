@@ -32,6 +32,7 @@ export function LoginForm() {
 
   const callbackUrl = searchParams.get("callbackUrl") ?? "/"
   const verified = searchParams.get("verified") === "true"
+  const passwordReset = searchParams.get("reset") === "true"
 
   const {
     register,
@@ -94,6 +95,12 @@ export function LoginForm() {
         </p>
       ) : null}
 
+      {passwordReset ? (
+        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+          Tu contraseña se ha actualizado. Ya puedes iniciar sesión.
+        </p>
+      ) : null}
+
       {resendSuccess ? (
         <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
           Hemos enviado un nuevo enlace de verificación a tu email.
@@ -141,9 +148,17 @@ export function LoginForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className={authLabelClass}>
-          Contraseña
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="password" className={authLabelClass}>
+            Contraseña
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
         <input
           id="password"
           type="password"

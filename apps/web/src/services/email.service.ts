@@ -63,3 +63,37 @@ export async function sendVerificationEmail(
 
   return { ok: true }
 }
+
+type SendPasswordResetEmailInput = {
+  to: string
+  firstName: string
+  token: string
+}
+
+function buildPasswordResetUrl(token: string): string {
+  return `${getAppUrl()}/reset-password?token=${encodeURIComponent(token)}`
+}
+
+export async function sendPasswordResetEmail(
+  input: SendPasswordResetEmailInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const resetUrl = buildPasswordResetUrl(input.token)
+  const subject = "Restablece tu contraseña en Coach Forge"
+  const html = `
+    <p>Hola ${input.firstName},</p>
+    <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el enlace para elegir una nueva:</p>
+    <p><a href="${resetUrl}">Restablecer contraseña</a></p>
+    <p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>
+    <p>El enlace caduca en 1 hora.</p>
+  `
+
+  if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+    return sendWithResend(input.to, subject, html)
+  }
+
+  console.info(
+    `[email:dev] Recuperación de contraseña para ${input.to}\n${resetUrl}`,
+  )
+
+  return { ok: true }
+}

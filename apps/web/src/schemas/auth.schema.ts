@@ -30,5 +30,27 @@ export const registerSchema = z
     path: ["confirmPassword"],
   })
 
+export const forgotPasswordSchema = z.object({
+  email: z.email({ error: "Introduce un email válido" }),
+})
+
+export const resetPasswordFormSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string({ error: "Confirma la contraseña" }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  })
+
+export const resetPasswordSchema = resetPasswordFormSchema.extend({
+  token: z
+    .string({ error: "Token de recuperación inválido" })
+    .min(1, "Token de recuperación inválido"),
+})
+
 export type SignInFormInput = z.infer<typeof signInSchema>
+export type ForgotPasswordFormInput = z.infer<typeof forgotPasswordSchema>
+export type ResetPasswordFormInput = z.infer<typeof resetPasswordFormSchema>
 export type RegisterFormInput = z.infer<typeof registerSchema>

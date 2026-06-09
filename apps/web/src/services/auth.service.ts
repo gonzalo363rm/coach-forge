@@ -1,36 +1,101 @@
-import type { User } from "@prisma/client"
+import type { AuthTokenType, User } from "@prisma/client"
 import bcryptjs from "bcryptjs"
 import { randomBytes } from "crypto"
 
 import type { AuthErrorCode } from "@/app/actions/auth/types"
 import { getPrisma } from "@/lib/prisma"
-import { registerSchema, signInSchema } from "@/schemas/auth.schema"
-import { sendVerificationEmail } from "@/services/email.service"
+import {
+  forgotPasswordSchema,
+  registerSchema,
+  resetPasswordSchema,
+  signInSchema,
+} from "@/schemas/auth.schema"
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "@/services/email.service"
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 
 type ServiceResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; code?: AuthErrorCode }
 
-function createVerificationToken(): string {
+type ValidAuthToken = {
+  userId: string
+  type: AuthTokenType
+  token: string
+  expires: Date
+  user: User
+}
+
+function createTokenValue(): string {
   return randomBytes(32).toString("hex")
 }
 
-async function createEmailVerificationToken(email: string): Promise<string> {
+async function createAuthToken(
+  userId: string,
+  type: AuthTokenType,
+  ttlMs: number,
+): Promise<string> {
   const prisma = getPrisma()
-  const token = createVerificationToken()
-  const expires = new Date(Date.now() + VERIFICATION_TTL_MS)
+  const token = createTokenValue()
+  const expires = new Date(Date.now() + ttlMs)
 
-  await prisma.verificationToken.deleteMany({
-    where: { identifier: email },
+  await prisma.authToken.deleteMany({
+    where: { userId, type },
   })
 
-  await prisma.verificationToken.create({
-    data: { identifier: email, token, expires },
+  await prisma.authToken.create({
+    data: { userId, type, token, expires },
   })
 
   return token
+}
+
+async function deleteAuthToken(
+  userId: string,
+  type: AuthTokenType,
+): Promise<void> {
+  const prisma = getPrisma()
+  await prisma.authToken.deleteMany({
+    where: { userId, type },
+  })
+}
+
+async function findValidAuthToken(
+  token: string,
+  type: AuthTokenType,
+): Promise<ServiceResult<ValidAuthToken>> {
+  const prisma = getPrisma()
+  const record = await prisma.authToken.findUnique({
+    where: { token },
+    include: { user: true },
+  })
+
+  if (!record || record.type !== type) {
+    return { ok: false, error: invalidTokenError(type) }
+  }
+
+  if (record.expires < new Date()) {
+    await deleteAuthToken(record.userId, type)
+    return { ok: false, error: expiredTokenError(type) }
+  }
+
+  return { ok: true, data: record }
+}
+
+function invalidTokenError(type: AuthTokenType): string {
+  return type === "email_verification"
+    ? "El enlace de verificación no es válido"
+    : "El enlace de recuperación no es válido"
+}
+
+function expiredTokenError(type: AuthTokenType): string {
+  return type === "email_verification"
+    ? "El enlace de verificación ha caducado"
+    : "El enlace de recuperación ha caducado"
 }
 
 export async function authenticateUser(
@@ -90,7 +155,11 @@ export async function resendVerificationEmail(
     return { ok: false, error: "Tu email ya está verificado" }
   }
 
-  const token = await createEmailVerificationToken(email)
+  const token = await createAuthToken(
+    user.id,
+    "email_verification",
+    VERIFICATION_TTL_MS,
+  )
   const emailResult = await sendVerificationEmail({
     to: email,
     firstName: user.firstName,
@@ -119,7 +188,11 @@ export async function registerUser(
       return { ok: false, error: "Ya existe una cuenta con ese email" }
     }
 
-    const token = await createEmailVerificationToken(email)
+    const token = await createAuthToken(
+      existing.id,
+      "email_verification",
+      VERIFICATION_TTL_MS,
+    )
     const emailResult = await sendVerificationEmail({
       to: email,
       firstName: existing.firstName,
@@ -136,7 +209,7 @@ export async function registerUser(
 
   const passwordHash = await bcryptjs.hash(password, 12)
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       firstName,
       lastName,
@@ -145,7 +218,11 @@ export async function registerUser(
     },
   })
 
-  const token = await createEmailVerificationToken(email)
+  const token = await createAuthToken(
+    user.id,
+    "email_verification",
+    VERIFICATION_TTL_MS,
+  )
   const emailResult = await sendVerificationEmail({
     to: email,
     firstName,
@@ -154,7 +231,7 @@ export async function registerUser(
 
   if (!emailResult.ok) {
     await prisma.user.delete({ where: { email } })
-    await prisma.verificationToken.deleteMany({ where: { identifier: email } })
+    await deleteAuthToken(user.id, "email_verification")
     return emailResult
   }
 
@@ -168,45 +245,81 @@ export async function verifyEmailToken(
     return { ok: false, error: "Token de verificación inválido" }
   }
 
-  const prisma = getPrisma()
-  const record = await prisma.verificationToken.findUnique({
-    where: { token },
-  })
+  const tokenResult = await findValidAuthToken(token, "email_verification")
+  if (!tokenResult.ok) return tokenResult
 
-  if (!record) {
-    return { ok: false, error: "El enlace de verificación no es válido" }
-  }
-
-  if (record.expires < new Date()) {
-    await prisma.verificationToken.delete({
-      where: { identifier_token: { identifier: record.identifier, token } },
-    })
-    return { ok: false, error: "El enlace de verificación ha caducado" }
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: record.identifier },
-  })
-
-  if (!user) {
-    return { ok: false, error: "No se encontró la cuenta asociada al enlace" }
-  }
+  const { user } = tokenResult.data
 
   if (user.emailVerified) {
-    await prisma.verificationToken.deleteMany({
-      where: { identifier: record.identifier },
-    })
+    await deleteAuthToken(user.id, "email_verification")
     return { ok: true, data: user }
   }
 
+  const prisma = getPrisma()
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: { emailVerified: new Date() },
   })
 
-  await prisma.verificationToken.deleteMany({
-    where: { identifier: record.identifier },
-  })
+  await deleteAuthToken(user.id, "email_verification")
 
   return { ok: true, data: updated }
+}
+
+export async function requestPasswordReset(
+  input: unknown,
+): Promise<ServiceResult<{ email: string }>> {
+  const parsed = forgotPasswordSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: "Introduce un email válido" }
+  }
+
+  const { email } = parsed.data
+  const prisma = getPrisma()
+  const user = await prisma.user.findUnique({ where: { email } })
+
+  if (user) {
+    const token = await createAuthToken(
+      user.id,
+      "password_reset",
+      PASSWORD_RESET_TTL_MS,
+    )
+    const emailResult = await sendPasswordResetEmail({
+      to: email,
+      firstName: user.firstName,
+      token,
+    })
+
+    if (!emailResult.ok) {
+      console.error("Password reset email failed:", emailResult.error)
+    }
+  }
+
+  return { ok: true, data: { email } }
+}
+
+export async function resetPasswordWithToken(
+  input: unknown,
+): Promise<ServiceResult<void>> {
+  const parsed = resetPasswordSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: "Datos de recuperación inválidos" }
+  }
+
+  const { token, password } = parsed.data
+  const tokenResult = await findValidAuthToken(token, "password_reset")
+  if (!tokenResult.ok) return tokenResult
+
+  const { user } = tokenResult.data
+  const prisma = getPrisma()
+  const passwordHash = await bcryptjs.hash(password, 12)
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash },
+  })
+
+  await deleteAuthToken(user.id, "password_reset")
+
+  return { ok: true, data: undefined }
 }

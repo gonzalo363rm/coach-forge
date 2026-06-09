@@ -11,6 +11,11 @@ enum Role {
   coach
 }
 
+enum AuthTokenType {
+  email_verification
+  password_reset
+}
+
 model Exercise {
   id         String   @id @default(uuid())
   createdAt  DateTime @default(now())
@@ -101,12 +106,17 @@ model User {
   avatarUrl     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  authTokens AuthToken[]
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+model AuthToken {
+  userId  String
+  type    AuthTokenType
+  token   String        @unique
+  expires DateTime
 
-  @@unique([identifier, token])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, type])
 }

@@ -1,5 +1,7 @@
+export { forgotPasswordAction } from "./forgot-password"
 export { loginAction } from "./login"
 export { logoutAction } from "./logout"
 export { registerAction } from "./register"
 export { resendVerificationAction } from "./resend-verification"
+export { resetPasswordAction } from "./reset-password"
 export type { AuthActionResult, AuthErrorCode } from "./types"
