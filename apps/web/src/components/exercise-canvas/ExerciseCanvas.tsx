@@ -177,6 +177,7 @@ export const ExerciseCanvas = ({
                       minPlayers: initialData.minPlayers,
                       maxPlayers: initialData.maxPlayers,
                       difficulty: initialData.difficulty,
+                      isPublic: initialData.isPublic,
                       videoLink: initialData.videoLink,
                       sportId: initialData.sportId,
                   }

@@ -46,6 +46,9 @@ function buildExerciseWhereFilters(
             OR: [{ minPlayers: null }, { minPlayers: { lte: filters.filterMaxPlayers } }],
         })
     }
+    if (filters.isPublic != null) {
+        and.push({ isPublic: filters.isPublic })
+    }
 
     if (and.length === 0) return {}
     if (and.length === 1) return and[0]!
@@ -83,6 +86,8 @@ function exerciseListOrderBy(
             return { title: sortDir }
         case "difficulty":
             return { difficulty: sortDir }
+        case "isPublic":
+            return { isPublic: sortDir }
         case "updatedAt":
         default:
             return { updatedAt: sortDir }
@@ -243,16 +248,21 @@ export async function exerciseSavePreview(
   return { url }
 }
 
-export async function exerciseCreate(data: ExerciseCreateInput): Promise<Exercise> {
+export async function exerciseCreate(
+    data: ExerciseCreateInput,
+    creatorId?: string | null,
+): Promise<Exercise> {
     return getPrisma().exercise.create({
         data: {
             ...(data.sportId
                 ? { sport: { connect: { id: data.sportId } } }
                 : {}),
+            ...(creatorId ? { creator: { connect: { id: creatorId } } } : {}),
             title: data.title,
             minPlayers: data.minPlayers,
             maxPlayers: data.maxPlayers,
             difficulty: data.difficulty,
+            isPublic: data.isPublic,
             videoLink: data.videoLink,
             canvas: data.canvas as unknown as Prisma.InputJsonValue,
         },
@@ -273,6 +283,7 @@ export async function exerciseUpdate(
     if (patch.minPlayers !== undefined) data.minPlayers = patch.minPlayers
     if (patch.maxPlayers !== undefined) data.maxPlayers = patch.maxPlayers
     if (patch.difficulty !== undefined) data.difficulty = patch.difficulty
+    if (patch.isPublic !== undefined) data.isPublic = patch.isPublic
     if (patch.videoLink !== undefined) data.videoLink = patch.videoLink
     if (patch.canvas !== undefined) {
         data.canvas = patch.canvas as unknown as Prisma.InputJsonValue

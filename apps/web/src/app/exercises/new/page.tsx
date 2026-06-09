@@ -26,6 +26,7 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                   minPlayers: null,
                   maxPlayers: null,
                   difficulty: 3,
+                  isPublic: false,
                   videoLink: null,
                   canvas: canvasResult.data,
               }

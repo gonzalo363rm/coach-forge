@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { getAuthenticatedUserId } from "@/lib/get-authenticated-user-id"
 import { trainingClassCreateSchema } from "@/schemas/training-class.schema"
 import { trainingClassCreate } from "@/services/classes.service"
 
@@ -24,7 +25,8 @@ export async function createTrainingClassAction(
     }
 
     try {
-        const created = await trainingClassCreate(parsed.data)
+        const creatorId = await getAuthenticatedUserId()
+        const created = await trainingClassCreate(parsed.data, creatorId)
         revalidateClassesViews()
         return { ok: true, data: { id: created.id } }
     } catch (e) {

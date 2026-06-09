@@ -145,6 +145,7 @@ export const exerciseCreateSchema = z
             z.union([z.number().int().positive(), z.null()]),
         ),
         difficulty: z.number().int().min(1).max(5),
+        isPublic: z.boolean().default(false),
         videoLink: z.preprocess(
             (v) => (v === "" || v === undefined ? null : v),
             z.union([z.string().max(2000), z.null()]).optional(),
@@ -194,6 +195,7 @@ export const exerciseUpdateSchema = z
         minPlayers: z.union([z.number().int().positive(), z.null()]).optional(),
         maxPlayers: z.union([z.number().int().positive(), z.null()]).optional(),
         difficulty: z.number().int().min(1).max(5).optional(),
+        isPublic: z.boolean().optional(),
         videoLink: z.preprocess(
             (v) => (v === "" ? null : v),
             z.union([z.string().max(2000), z.null()]).optional(),
@@ -248,6 +250,7 @@ export const exerciseListSortBySchema = z.enum([
     "title",
     "difficulty",
     "sport",
+    "isPublic",
     "updatedAt",
 ])
 
@@ -275,6 +278,7 @@ export const exerciseListFiltersSchema = z.object({
         (val) => (val === null || val === undefined || val === "" ? undefined : val),
         z.coerce.number().int().min(1).max(5).optional(),
     ),
+    isPublic: z.boolean().optional().nullable(),
 })
 
 export type ExerciseListFilters = z.infer<typeof exerciseListFiltersSchema>

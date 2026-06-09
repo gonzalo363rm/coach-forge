@@ -31,6 +31,7 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
         minPlayers: row.minPlayers,
         maxPlayers: row.maxPlayers,
         difficulty: row.difficulty,
+        isPublic: row.isPublic,
         videoLink: row.videoLink,
         canvas: row.canvas as unknown as ExerciseCanvasData,
     }

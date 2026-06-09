@@ -22,6 +22,7 @@ interface Props {
         search?: string | string[]
         sport?: string | string[]
         difficulty?: string | string[]
+        visibility?: string | string[]
         sortBy?: string | string[]
         sortDir?: string | string[]
     }>
@@ -46,16 +47,29 @@ export default async function ExercisesListPage({ searchParams }: Props) {
                   return n
               })()
 
+    const visibilityRaw = firstQueryValue(params.visibility)
+    const isPublic =
+        visibilityRaw === "public" ? true : visibilityRaw === "private" ? false : null
+
     const sortByParsed = exerciseListSortBySchema.safeParse(firstQueryValue(params.sortBy))
     const sortBy: ExerciseListSortBy = sortByParsed.success ? sortByParsed.data : "updatedAt"
     const sortDirRaw = firstQueryValue(params.sortDir)
     const sortDir: "asc" | "desc" = sortDirRaw === "asc" ? "asc" : "desc"
 
-    const listQueryKey = [page, search ?? "", sport ?? "", rawDiff, sortBy, sortDir].join("|")
+    const listQueryKey = [
+        page,
+        search ?? "",
+        sport ?? "",
+        rawDiff,
+        visibilityRaw,
+        sortBy,
+        sortDir,
+    ].join("|")
     const listState = {
         search: search ?? "",
         sport: sport ?? "",
         difficulty: difficultyNum !== undefined ? String(difficultyNum) : "",
+        visibility: visibilityRaw,
         sortBy,
         sortDir,
     }
@@ -66,6 +80,7 @@ export default async function ExercisesListPage({ searchParams }: Props) {
             search,
             sport,
             difficulty: difficultyNum ?? null,
+            isPublic,
         },
         sortBy,
         sortDir,

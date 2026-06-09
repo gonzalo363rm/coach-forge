@@ -3,6 +3,7 @@
 import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
+import { getAuthenticatedUserId } from "@/lib/get-authenticated-user-id"
 import { exerciseCreateSchema } from "@/schemas/exercise.schema"
 import { exerciseCreate } from "@/services/exercises.service"
 
@@ -24,7 +25,8 @@ export async function createExerciseAction(
     }
 
     try {
-        const data = await exerciseCreate(parsed.data)
+        const creatorId = await getAuthenticatedUserId()
+        const data = await exerciseCreate(parsed.data, creatorId)
         revalidateExercisesViews()
         return { ok: true, data }
     } catch (e) {

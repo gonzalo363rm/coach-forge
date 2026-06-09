@@ -200,6 +200,7 @@ export async function trainingClassesListPaginated(
 
 export async function trainingClassCreate(
     data: TrainingClassCreateInput,
+    creatorId?: string | null,
 ): Promise<TrainingClassWithItems> {
     return getPrisma().trainingClass.create({
         data: {
@@ -207,6 +208,7 @@ export async function trainingClassCreate(
             description: data.description ?? null,
             difficulty: data.difficulty,
             isPublic: data.isPublic,
+            ...(creatorId ? { creator: { connect: { id: creatorId } } } : {}),
             ...(data.sportId ? { sport: { connect: { id: data.sportId } } } : {}),
             items: {
                 create: data.items.map((item) => ({

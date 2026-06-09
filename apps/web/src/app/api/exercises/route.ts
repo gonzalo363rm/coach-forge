@@ -8,6 +8,7 @@ import { z } from "zod"
 
 import { jsonError, jsonResponse } from "@/lib/api/json-response"
 import { parseJsonBody } from "@/lib/api/parse-json-body"
+import { getAuthenticatedUserId } from "@/lib/get-authenticated-user-id"
 import { exerciseCreateSchema } from "@/schemas/exercise.schema"
 import { exerciseCreate, exercisesList } from "@/services/exercises.service"
 
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
     }
 
     try {
-        const exercise = await exerciseCreate(result.data)
+        const creatorId = await getAuthenticatedUserId()
+        const exercise = await exerciseCreate(result.data, creatorId)
         return jsonResponse({ exercise }, { status: 201 })
     } catch (e) {
         console.error("[POST /api/exercises]", e)

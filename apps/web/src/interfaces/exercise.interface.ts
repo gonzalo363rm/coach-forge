@@ -42,6 +42,7 @@ export type ExerciseEditorInitialData = {
     minPlayers: number | null
     maxPlayers: number | null
     difficulty: number
+    isPublic: boolean
     videoLink: string | null
     canvas: ExerciseCanvas
 }
@@ -56,6 +57,7 @@ export interface Exercise {
     minPlayers: number | null
     maxPlayers: number | null
     difficulty: number
+    isPublic: boolean
     videoLink: string | null
     canvas: ExerciseCanvas
 }

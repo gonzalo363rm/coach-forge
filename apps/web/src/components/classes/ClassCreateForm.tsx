@@ -259,8 +259,8 @@ export function ClassCreateForm({
                             </div>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">
                                 {draft.isPublic
-                                    ? "Visible para todos (cuando exista listado público)."
-                                    : "Solo tú podrás verla cuando haya autenticación."}
+                                    ? "Visible para todos."
+                                    : "Solo tú podrás verla."}
                             </p>
                         </div>
                     </section>

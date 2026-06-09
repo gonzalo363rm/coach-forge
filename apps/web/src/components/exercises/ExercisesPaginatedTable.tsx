@@ -22,6 +22,7 @@ type Props = {
         search: string
         sport: string
         difficulty: string
+        visibility: string
         sortBy: ExerciseListSortBy
         sortDir: "asc" | "desc"
     }
@@ -31,6 +32,7 @@ interface FormData {
     search: string
     sport: Sport["slug"]
     difficulty: string
+    visibility: string
 }
 
 function defaultSortDir(column: ExerciseListSortBy): "asc" | "desc" {
@@ -39,6 +41,7 @@ function defaultSortDir(column: ExerciseListSortBy): "asc" | "desc" {
         case "sport":
             return "asc"
         case "difficulty":
+        case "isPublic":
         case "updatedAt":
         default:
             return "desc"
@@ -57,6 +60,7 @@ export function ExercisesPaginatedTable({
             search: listState.search,
             sport: listState.sport,
             difficulty: listState.difficulty,
+            visibility: listState.visibility,
         },
     })
     const [, startTransition] = useTransition()
@@ -88,6 +92,7 @@ export function ExercisesPaginatedTable({
         if (q) p.set("search", q)
         if (data.sport) p.set("sport", data.sport)
         if (data.difficulty) p.set("difficulty", data.difficulty)
+        if (data.visibility) p.set("visibility", data.visibility)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
         router.push(`/exercises/list?${p.toString()}`)
@@ -134,6 +139,16 @@ export function ExercisesPaginatedTable({
                     ))}
                 </select>
 
+                <select
+                    id="visibility"
+                    {...register("visibility")}
+                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
+                >
+                    <option value="">Todas</option>
+                    <option value="public">Públicos</option>
+                    <option value="private">Privados</option>
+                </select>
+
                 <button
                     type="submit"
                     className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
@@ -175,6 +190,13 @@ export function ExercisesPaginatedTable({
                                     defaultDir={defaultSortDir("sport")}
                                 />
                                 <SortableTh
+                                    column="isPublic"
+                                    label="Visibilidad"
+                                    currentSortBy={listState.sortBy}
+                                    currentSortDir={listState.sortDir}
+                                    defaultDir={defaultSortDir("isPublic")}
+                                />
+                                <SortableTh
                                     column="updatedAt"
                                     label="Actualizado"
                                     currentSortBy={listState.sortBy}
@@ -193,7 +215,7 @@ export function ExercisesPaginatedTable({
                             {optimisticExercises.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         No hay ejercicios con estos filtros.{" "}
@@ -234,6 +256,9 @@ export function ExercisesPaginatedTable({
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
                                                 {sportName}
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                                {exercise.isPublic ? "Público" : "Privado"}
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
                                                 {new Intl.DateTimeFormat("es", {

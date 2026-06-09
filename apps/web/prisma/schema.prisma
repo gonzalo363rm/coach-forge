@@ -27,11 +27,15 @@ model Exercise {
   difficulty Int
   videoLink  String?
   canvas     Json
+  isPublic   Boolean  @default(false)
+  creatorId  String?
 
   sport              Sport?                  @relation(fields: [sportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  creator            User?                   @relation(fields: [creatorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   trainingClassItems TrainingClassExercise[]
 
   @@index([sportId])
+  @@index([creatorId])
 }
 
 model TrainingClass {
@@ -45,10 +49,12 @@ model TrainingClass {
   isPublic   Boolean  @default(false)
   creatorId  String?
 
-  sport  Sport?                  @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  items  TrainingClassExercise[]
+  sport   Sport?                  @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  creator User?                   @relation(fields: [creatorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  items   TrainingClassExercise[]
 
   @@index([sportId])
+  @@index([creatorId])
 }
 
 model TrainingClassExercise {
@@ -107,7 +113,9 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  authTokens AuthToken[]
+  authTokens       AuthToken[]
+  exercises        Exercise[]
+  trainingClasses  TrainingClass[]
 }
 
 model AuthToken {
