@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const passwordSchema = z
+export const passwordSchema = z
   .string({ error: "La contraseña es obligatoria" })
   .min(1, "La contraseña es obligatoria")
   .min(8, "La contraseña debe tener al menos 8 caracteres")

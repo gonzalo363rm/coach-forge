@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-export default function Home() {
+import { auth } from "@/auth";
+
+export default async function Home() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === "admin";
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
       <main className="flex flex-1 flex-col items-center justify-center gap-8 p-8">
@@ -48,6 +53,15 @@ export default function Home() {
         >
           Ver deportes
         </Link>
+
+        {isAdmin ? (
+          <Link
+            href="/users/list"
+            className="rounded-lg border border-emerald-600 px-6 py-3 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+          >
+            Usuarios
+          </Link>
+        ) : null}
       </main>
     </div>
   );

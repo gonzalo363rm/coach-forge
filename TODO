@@ -1,1 +1,3 @@
 -Acomodar los estilos y posiciones de los btns, cada page tiene los propios
+-Podemos hacer que todas las rutas que van a ser accesibles solamente por el admin esten en /admin/--- y en `auth.config.ts` solo controlar que no comiencen por "/admin"
+-En la vista de deportes, podriamos listar los elementos
