@@ -4,6 +4,8 @@ import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { IoArrowDownOutline, IoArrowUpOutline } from "react-icons/io5"
 
+import { tableHeaderThClass } from "@/components/ui/table/table-header"
+
 type SortDir = "asc" | "desc"
 
 type Props = {
@@ -68,36 +70,28 @@ export function SortableTh({
                         : "descending"
                     : "none"
             }
-            className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+            className={tableHeaderThClass}
         >
             <Link
                 href={href}
                 prefetch={false}
-                className="inline-flex items-center gap-1.5 rounded-md py-0.5 text-inherit no-underline outline-none transition-colors hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:hover:text-emerald-400 dark:focus-visible:ring-offset-zinc-950"
+                className="inline-flex items-center gap-1 rounded-md py-0.5 text-inherit no-underline outline-none transition-colors hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:hover:text-emerald-400 dark:focus-visible:ring-offset-zinc-950"
                 aria-label={sortLabel}
             >
                 <span>{label}</span>
                 {isActive ? (
                     currentSortDir === "asc" ? (
                         <IoArrowUpOutline
-                            className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                            className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
                             aria-hidden
                         />
                     ) : (
                         <IoArrowDownOutline
-                            className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                            className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
                             aria-hidden
                         />
                     )
-                ) : (
-                    <span
-                        className="inline-flex shrink-0 flex-col leading-none opacity-35"
-                        aria-hidden
-                    >
-                        <IoArrowUpOutline className="size-3.5" />
-                        <IoArrowDownOutline className="-mt-0.5 size-3.5" />
-                    </span>
-                )}
+                ) : null}
             </Link>
         </th>
     )

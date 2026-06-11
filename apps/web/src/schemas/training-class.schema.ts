@@ -63,6 +63,7 @@ export const trainingClassListFiltersSchema = z.object({
     sport: z.string().optional().nullable(),
     difficulty: z.number().int().min(1).max(5).optional().nullable(),
     isPublic: z.boolean().optional().nullable(),
+    creatorId: z.string().min(1).optional().nullable(),
 })
 
 export type TrainingClassListFilters = z.infer<typeof trainingClassListFiltersSchema>

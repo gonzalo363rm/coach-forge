@@ -5,11 +5,14 @@ import Link from "next/link"
 
 import { getTrainingClassesPaginatedAction } from "@/app/actions/classes"
 import { ClassesPaginatedTable } from "@/components/classes/ClassesPaginatedTable"
+import { ListNewLink } from "@/components/ui/ListNewLink"
 import {
     trainingClassListSortBySchema,
     type TrainingClassListSortBy,
 } from "@/schemas/training-class.schema"
 import { sportsListAll } from "@/services/sports.service"
+import { formatUserDisplayName } from "@/lib/user-display"
+import { userGetById } from "@/services/users.service"
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""
@@ -23,6 +26,7 @@ interface Props {
         sport?: string | string[]
         difficulty?: string | string[]
         visibility?: string | string[]
+        creator?: string | string[]
         sortBy?: string | string[]
         sortDir?: string | string[]
     }>
@@ -60,12 +64,22 @@ export default async function ClassesListPage({ searchParams }: Props) {
     const sortDirRaw = firstQueryValue(params.sortDir)
     const sortDir: "asc" | "desc" = sortDirRaw === "asc" ? "asc" : "desc"
 
+    const creatorId = firstQueryValue(params.creator) || null
+    let initialCreatorLabel: string | null = null
+    if (creatorId) {
+        const creator = await userGetById(creatorId)
+        if (creator) {
+            initialCreatorLabel = formatUserDisplayName(creator)
+        }
+    }
+
     const listQueryKey = [
         page,
         search ?? "",
         sport ?? "",
         rawDiff,
         visibilityRaw,
+        creatorId ?? "",
         sortBy,
         sortDir,
     ].join("|")
@@ -74,6 +88,7 @@ export default async function ClassesListPage({ searchParams }: Props) {
         sport: sport ?? "",
         difficulty: difficultyNum !== null ? String(difficultyNum) : "",
         visibility: visibilityRaw,
+        creator: creatorId ?? "",
         sortBy,
         sortDir,
     }
@@ -86,6 +101,7 @@ export default async function ClassesListPage({ searchParams }: Props) {
                 sport,
                 difficulty: difficultyNum,
                 isPublic,
+                creatorId,
             },
             sortBy,
             sortDir,
@@ -116,20 +132,11 @@ export default async function ClassesListPage({ searchParams }: Props) {
     return (
         <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
-                            Clases
-                        </h1>
-                        <Link
-                            href="/classes/new"
-                            aria-label="Nueva clase"
-                            title="Nueva clase"
-                            className="inline-flex size-9 items-center justify-center rounded-lg border border-zinc-300 text-xl font-semibold leading-none text-emerald-700 transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:border-zinc-600 dark:text-emerald-400 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/40"
-                        >
-                            +
-                        </Link>
-                    </div>
+                <header className="flex items-center justify-between gap-4">
+                    <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
+                        Clases
+                    </h1>
+                    <ListNewLink href="/classes/new" ariaLabel="Nueva clase" />
                 </header>
 
                 <ClassesPaginatedTable
@@ -138,6 +145,8 @@ export default async function ClassesListPage({ searchParams }: Props) {
                     totalPages={totalPages}
                     sports={sports}
                     listState={listState}
+                    showCreatorFilter
+                    initialCreatorLabel={initialCreatorLabel}
                 />
             </main>
         </div>

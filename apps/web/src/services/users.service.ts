@@ -7,12 +7,17 @@ import {
   deleteCloudinaryImage,
   uploadImageBuffer,
 } from "@/services/cloudinary.service"
+import type { UserSelectOption } from "@/lib/user-display"
 import type {
     UserCreateInput,
     UserListFilters,
     UserListSortBy,
+    UserProfileUpdateInput,
     UserUpdateInput,
 } from "@/schemas/user.schema"
+
+export type { UserSelectOption } from "@/lib/user-display"
+export { formatUserDisplayName } from "@/lib/user-display"
 
 export type UserSafe = Omit<User, "passwordHash">
 
@@ -30,9 +35,30 @@ export type UsersPaginatedResult =
     | { ok: true; data: UsersPaginatedData }
     | { ok: false; error: string }
 
+export type UsersSearchForSelectData = {
+    users: UserSelectOption[]
+    hasMore: boolean
+}
+
+export type UsersSearchForSelectResult =
+    | { ok: true; data: UsersSearchForSelectData }
+    | { ok: false; error: string }
+
 function toUserSafe(user: User): UserSafe {
     const { passwordHash: _passwordHash, ...safe } = user
     return safe
+}
+
+function mergeUserWhere(
+    ...parts: (Prisma.UserWhereInput | undefined)[]
+): Prisma.UserWhereInput {
+    const clauses = parts.filter(
+        (part): part is Prisma.UserWhereInput =>
+            part != null && Object.keys(part).length > 0,
+    )
+    if (clauses.length === 0) return {}
+    if (clauses.length === 1) return clauses[0]!
+    return { AND: clauses }
 }
 
 function buildUserWhereFilters(filters: UserListFilters): Prisma.UserWhereInput {
@@ -52,9 +78,7 @@ function buildUserWhereFilters(filters: UserListFilters): Prisma.UserWhereInput 
         and.push({ role: filters.role })
     }
 
-    if (and.length === 0) return {}
-    if (and.length === 1) return and[0]!
-    return { AND: and }
+    return mergeUserWhere(...and)
 }
 
 function userListOrderBy(
@@ -88,10 +112,11 @@ export async function usersListPaginated(
     take: number,
     filters: UserListFilters = {},
     sort: { sortBy: UserListSortBy; sortDir: "asc" | "desc" },
+    visibility?: Prisma.UserWhereInput,
 ): Promise<UsersPaginatedResult> {
     const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
     const safeTake = Math.min(100, Math.max(1, Math.floor(take)))
-    const where = buildUserWhereFilters(filters)
+    const where = mergeUserWhere(buildUserWhereFilters(filters), visibility)
 
     try {
         const [users, total] = await Promise.all([
@@ -117,6 +142,49 @@ export async function usersListPaginated(
     } catch (e) {
         console.error("[usersListPaginated]", e)
         return { ok: false, error: "Error al obtener la lista de usuarios" }
+    }
+}
+
+export async function usersSearchForSelect(
+    search: string | null | undefined,
+    page: number,
+    take = 10,
+): Promise<UsersSearchForSelectResult> {
+    const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
+    const safeTake = Math.min(50, Math.max(1, Math.floor(take)))
+    const q = search?.trim() || null
+
+    const where: Prisma.UserWhereInput = q
+        ? {
+              OR: [
+                  { firstName: { contains: q, mode: "insensitive" } },
+                  { lastName: { contains: q, mode: "insensitive" } },
+              ],
+          }
+        : {}
+
+    try {
+        const [users, total] = await Promise.all([
+            getPrisma().user.findMany({
+                take: safeTake,
+                skip: (safePage - 1) * safeTake,
+                where,
+                orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+                select: { id: true, firstName: true, lastName: true },
+            }),
+            getPrisma().user.count({ where }),
+        ])
+
+        return {
+            ok: true,
+            data: {
+                users,
+                hasMore: safePage * safeTake < total,
+            },
+        }
+    } catch (e) {
+        console.error("[usersSearchForSelect]", e)
+        return { ok: false, error: "Error al buscar usuarios" }
     }
 }
 
@@ -201,6 +269,29 @@ export async function userUpdate(data: UserUpdateInput): Promise<UserMutationRes
         console.error("[userUpdate]", e)
         return { ok: false, error: "Error al actualizar el usuario" }
     }
+}
+
+export async function userProfileUpdate(
+    userId: string,
+    data: UserProfileUpdateInput,
+): Promise<UserMutationResult> {
+    const current = await getPrisma().user.findUnique({ where: { id: userId } })
+    if (!current) {
+        return { ok: false, error: "Usuario no encontrado" }
+    }
+
+    return userUpdate({
+        id: userId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl ?? current.avatarUrl ?? "",
+        role: current.role,
+        emailVerified: Boolean(current.emailVerified),
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+    })
 }
 
 async function userOwnedContentCounts(

@@ -31,6 +31,7 @@ export type TrainingClassWithItems = TrainingClass & {
 
 export type TrainingClassListItem = TrainingClass & {
     sport: { name: string; slug: string } | null
+    creator: { id: string; firstName: string; lastName: string } | null
     exerciseCount: number
     totalMinutes: number
 }
@@ -66,6 +67,9 @@ function buildTrainingClassWhereFilters(
     if (filters.isPublic != null) {
         and.push({ isPublic: filters.isPublic })
     }
+    if (filters.creatorId) {
+        and.push({ creatorId: filters.creatorId })
+    }
 
     if (and.length === 0) return {}
     if (and.length === 1) return and[0]!
@@ -100,6 +104,7 @@ function trainingClassListOrderBy(
 
 const trainingClassListInclude = {
     sport: { select: { name: true, slug: true } },
+    creator: { select: { id: true, firstName: true, lastName: true } },
     items: {
         select: {
             durationMinutes: true,
@@ -111,10 +116,11 @@ const trainingClassListInclude = {
 function mapRowToListItem(
     row: Prisma.TrainingClassGetPayload<{ include: typeof trainingClassListInclude }>,
 ): TrainingClassListItem {
-    const { items, sport, ...rest } = row
+    const { items, sport, creator, ...rest } = row
     return {
         ...rest,
         sport,
+        creator,
         exerciseCount: computeExerciseCount(items),
         totalMinutes: computeTotalMinutes(items),
     }

@@ -49,6 +49,9 @@ function buildExerciseWhereFilters(
     if (filters.isPublic != null) {
         and.push({ isPublic: filters.isPublic })
     }
+    if (filters.creatorId) {
+        and.push({ creatorId: filters.creatorId })
+    }
 
     if (and.length === 0) return {}
     if (and.length === 1) return and[0]!
@@ -63,7 +66,10 @@ export async function exercisesList(): Promise<Exercise[]> {
     })
 }
 
-export type ExerciseListItem = Exercise & { previewUrl: string }
+export type ExerciseListItem = Exercise & {
+    previewUrl: string
+    creator: { id: string; firstName: string; lastName: string } | null
+}
 
 export type ExercisesPaginatedData = {
     currentPage: number
@@ -112,6 +118,9 @@ export async function exercisesListPaginated(
                 skip: (safePage - 1) * safeTake,
                 orderBy: exerciseListOrderBy(sort.sortBy, sort.sortDir),
                 where,
+                include: {
+                    creator: { select: { id: true, firstName: true, lastName: true } },
+                },
             }),
             getPrisma().exercise.count({ where }),
         ])
@@ -119,8 +128,9 @@ export async function exercisesListPaginated(
         const totalPages = Math.max(1, Math.ceil(total / safeTake))
 
         const exercisesWithPreview: ExerciseListItem[] = await Promise.all(
-            exercises.map(async (e) => ({
+            exercises.map(async ({ creator, ...e }) => ({
                 ...e,
+                creator,
                 previewUrl: await resolveExercisePreviewUrl(e.id),
             })),
         )

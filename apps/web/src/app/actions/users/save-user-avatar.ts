@@ -3,7 +3,8 @@
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/require-admin"
-import { userSaveAvatar, type UserSafe } from "@/services/users.service"
+import { canAdminEditUser } from "@/lib/user-permissions"
+import { userGetById, userSaveAvatar, type UserSafe } from "@/services/users.service"
 
 import { revalidateUsersViews } from "./revalidate-users"
 import type { UserActionResult } from "./types"
@@ -33,6 +34,14 @@ export async function saveUserAvatarAction(
             error: "Datos de imagen inválidos",
             details: z.treeifyError(parsed.error),
         }
+    }
+
+    const target = await userGetById(parsed.data.userId)
+    if (!target) {
+        return { ok: false, error: "Usuario no encontrado" }
+    }
+    if (!canAdminEditUser(admin.user.role, admin.user.id, target)) {
+        return { ok: false, error: "No tienes permisos para editar este usuario" }
     }
 
     const result = await userSaveAvatar(

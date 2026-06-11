@@ -2,8 +2,17 @@
 
 import { deleteTrainingClassAction } from "@/app/actions/classes"
 import { ClassRowActions } from "@/components/classes/ClassRowActions"
+import { CreatorSelect } from "@/components/users/CreatorSelect"
+import { formatUserDisplayName } from "@/lib/user-display"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import {
+    listFilterButtonClass,
+    listFilterFormClass,
+    listFilterSearchClass,
+    listFilterSelectClass,
+} from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
+import { tableHeaderThClass } from "@/components/ui/table/table-header"
 import { useToast } from "@/components/ui/toast/ToastProvider"
 import type { TrainingClassListSortBy } from "@/schemas/training-class.schema"
 import type { TrainingClassListItem } from "@/services/classes.service"
@@ -17,11 +26,16 @@ type Props = {
     classes: TrainingClassListItem[]
     totalPages: number
     sports: Sport[]
+    listBasePath?: string
+    showCreatorFilter?: boolean
+    hideClassMetrics?: boolean
+    initialCreatorLabel?: string | null
     listState: {
         search: string
         sport: string
         difficulty: string
         visibility: string
+        creator: string
         sortBy: TrainingClassListSortBy
         sortDir: "asc" | "desc"
     }
@@ -32,6 +46,7 @@ interface FormData {
     sport: string
     difficulty: string
     visibility: string
+    creator: string
 }
 
 function defaultSortDir(column: TrainingClassListSortBy): "asc" | "desc" {
@@ -55,19 +70,27 @@ export function ClassesPaginatedTable({
     classes,
     totalPages,
     sports,
+    listBasePath = "/admin/classes",
+    showCreatorFilter = false,
+    hideClassMetrics = false,
+    initialCreatorLabel = null,
     listState,
 }: Props) {
+    const columnCount =
+        7 + (showCreatorFilter ? 1 : 0) + (hideClassMetrics ? 0 : 2)
     const router = useRouter()
     const { toast } = useToast()
     const [, startTransition] = useTransition()
-    const { register, handleSubmit } = useForm<FormData>({
+    const { register, handleSubmit, setValue, watch } = useForm<FormData>({
         defaultValues: {
             search: listState.search,
             sport: listState.sport,
             difficulty: listState.difficulty,
             visibility: listState.visibility,
+            creator: listState.creator,
         },
     })
+    const creator = watch("creator")
     const [optimisticClasses, removeClassOptimistic] = useOptimistic(
         classes,
         (current, deletedId: string) => current.filter((c) => c.id !== deletedId),
@@ -103,28 +126,23 @@ export function ClassesPaginatedTable({
         if (data.sport) p.set("sport", data.sport)
         if (data.difficulty) p.set("difficulty", data.difficulty)
         if (data.visibility) p.set("visibility", data.visibility)
+        if (data.creator) p.set("creator", data.creator)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
-        router.push(`/classes/list?${p.toString()}`)
+        router.push(`${listBasePath}?${p.toString()}`)
         router.refresh()
     }
 
     return (
         <div className="flex flex-col gap-4">
-            <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="flex w-full flex-wrap items-center justify-start gap-3"
-            >
+            <form onSubmit={handleSubmit(onSubmit)} className={listFilterFormClass}>
                 <input
                     {...register("search")}
                     type="text"
                     placeholder="Buscar por título"
-                    className="min-w-32 flex-1 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700 sm:max-w-xs"
+                    className={listFilterSearchClass}
                 />
-                <select
-                    {...register("sport")}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-                >
+                <select {...register("sport")} className={listFilterSelectClass}>
                     <option value="">Todos los deportes</option>
                     {sports.map((sport) => (
                         <option key={sport.id} value={sport.slug}>
@@ -132,10 +150,7 @@ export function ClassesPaginatedTable({
                         </option>
                     ))}
                 </select>
-                <select
-                    {...register("difficulty")}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-                >
+                <select {...register("difficulty")} className={listFilterSelectClass}>
                     <option value="">Todas las dificultades</option>
                     {[1, 2, 3, 4, 5].map((n) => (
                         <option key={n} value={String(n)}>
@@ -143,18 +158,19 @@ export function ClassesPaginatedTable({
                         </option>
                     ))}
                 </select>
-                <select
-                    {...register("visibility")}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-                >
+                <select {...register("visibility")} className={listFilterSelectClass}>
                     <option value="">Todas</option>
                     <option value="public">Públicas</option>
                     <option value="private">Privadas</option>
                 </select>
-                <button
-                    type="submit"
-                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
+                {showCreatorFilter ? (
+                    <CreatorSelect
+                        value={creator}
+                        initialLabel={initialCreatorLabel}
+                        onChange={(id) => setValue("creator", id)}
+                    />
+                ) : null}
+                <button type="submit" className={listFilterButtonClass}>
                     Buscar
                 </button>
             </form>
@@ -185,6 +201,14 @@ export function ClassesPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("sport")}
                                 />
+                                {showCreatorFilter ? (
+                                    <th
+                                        scope="col"
+                                        className={tableHeaderThClass}
+                                    >
+                                        Creador
+                                    </th>
+                                ) : null}
                                 <SortableTh
                                     column="difficulty"
                                     label="Dificultad"
@@ -192,20 +216,24 @@ export function ClassesPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("difficulty")}
                                 />
-                                <SortableTh
-                                    column="exerciseCount"
-                                    label="Ejercicios"
-                                    currentSortBy={listState.sortBy}
-                                    currentSortDir={listState.sortDir}
-                                    defaultDir={defaultSortDir("exerciseCount")}
-                                />
-                                <SortableTh
-                                    column="totalMinutes"
-                                    label="Duración"
-                                    currentSortBy={listState.sortBy}
-                                    currentSortDir={listState.sortDir}
-                                    defaultDir={defaultSortDir("totalMinutes")}
-                                />
+                                {!hideClassMetrics ? (
+                                    <>
+                                        <SortableTh
+                                            column="exerciseCount"
+                                            label="Ejercicios"
+                                            currentSortBy={listState.sortBy}
+                                            currentSortDir={listState.sortDir}
+                                            defaultDir={defaultSortDir("exerciseCount")}
+                                        />
+                                        <SortableTh
+                                            column="totalMinutes"
+                                            label="Duración"
+                                            currentSortBy={listState.sortBy}
+                                            currentSortDir={listState.sortDir}
+                                            defaultDir={defaultSortDir("totalMinutes")}
+                                        />
+                                    </>
+                                ) : null}
                                 <SortableTh
                                     column="isPublic"
                                     label="Visibilidad"
@@ -222,7 +250,7 @@ export function ClassesPaginatedTable({
                                 />
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Acciones
                                 </th>
@@ -232,7 +260,7 @@ export function ClassesPaginatedTable({
                             {optimisticClasses.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={9}
+                                        colSpan={columnCount}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         No hay clases con estos filtros.{" "}
@@ -251,12 +279,12 @@ export function ClassesPaginatedTable({
                                         key={trainingClass.id}
                                         className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                                     >
-                                        <td className="max-w-xs px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                        <td className="max-w-xs px-4 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                                             <span className="line-clamp-2">
                                                 {trainingClass.title}
                                             </span>
                                         </td>
-                                        <td className="max-w-md px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                                        <td className="max-w-md px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             {trainingClass.description?.trim() ? (
                                                 <span className="line-clamp-2">
                                                     {trainingClass.description.trim()}
@@ -267,28 +295,39 @@ export function ClassesPaginatedTable({
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {trainingClass.sport?.name ?? "—"}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+                                        {showCreatorFilter ? (
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                                {trainingClass.creator
+                                                    ? formatUserDisplayName(trainingClass.creator)
+                                                    : "—"}
+                                            </td>
+                                        ) : null}
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
                                             {trainingClass.difficulty} / 5
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
-                                            {trainingClass.exerciseCount}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
-                                            {trainingClass.totalMinutes} min
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                        {!hideClassMetrics ? (
+                                            <>
+                                                <td className="whitespace-nowrap px-4 py-2 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+                                                    {trainingClass.exerciseCount}
+                                                </td>
+                                                <td className="whitespace-nowrap px-4 py-2 text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+                                                    {trainingClass.totalMinutes} min
+                                                </td>
+                                            </>
+                                        ) : null}
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {trainingClass.isPublic ? "Pública" : "Privada"}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             {new Intl.DateTimeFormat("es", {
                                                 dateStyle: "short",
                                                 timeStyle: "short",
                                             }).format(new Date(trainingClass.updatedAt))}
                                         </td>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-4 py-2 align-top">
                                             <ClassRowActions
                                                 id={trainingClass.id}
                                                 title={trainingClass.title}

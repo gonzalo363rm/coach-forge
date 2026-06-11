@@ -7,6 +7,7 @@ datasource db {
 }
 
 enum Role {
+  superadmin
   admin
   coach
 }

@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import { getElementsPaginatedAction } from "@/app/actions/elements"
 import { ElementsPaginatedTable } from "@/components/elements/ElementsPaginatedTable"
+import { ListNewLink } from "@/components/ui/ListNewLink"
 import { elementListSortBySchema, type ElementListSortBy } from "@/schemas/element.schema"
 import { sportsListAll } from "@/services/sports.service"
 
@@ -74,18 +75,11 @@ export default async function ElementsListPage({ searchParams }: Props) {
     return (
         <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">Elementos</h1>
-                        <Link
-                            href="/elements/new"
-                            aria-label="Nuevo elemento"
-                            title="Nuevo elemento"
-                            className="inline-flex size-9 items-center justify-center rounded-lg border border-zinc-300 text-xl font-semibold leading-none text-emerald-700 transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:border-zinc-600 dark:text-emerald-400 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/40"
-                        >
-                            +
-                        </Link>
-                    </div>
+                <header className="flex items-center justify-between gap-4">
+                    <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
+                        Elementos
+                    </h1>
+                    <ListNewLink href="/admin/elements/new" ariaLabel="Nuevo elemento" />
                 </header>
 
                 <ElementsPaginatedTable

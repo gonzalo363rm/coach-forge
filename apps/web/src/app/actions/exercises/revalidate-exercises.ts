@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache"
 
 export function revalidateExercisesViews() {
-    revalidatePath("/exercises/list")
+    revalidatePath("/admin/exercises")
+    revalidatePath("/exercises/mine")
 }

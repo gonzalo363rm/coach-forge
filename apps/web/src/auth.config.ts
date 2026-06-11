@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth"
 
+import { isStaffRole } from "@/lib/user-permissions"
 import type { AuthUser } from "@/types/auth-user"
 
 export const publicRoutes = [
@@ -10,12 +11,8 @@ export const publicRoutes = [
   "/reset-password",
 ]
 
-export const adminRoutes = ["/users"]
-
 function isAdminRoute(pathname: string): boolean {
-  return adminRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  )
+  return pathname === "/admin" || pathname.startsWith("/admin/")
 }
 
 // Configuración ligera compartida (proxy + auth). Sin Prisma ni bcrypt.
@@ -71,8 +68,11 @@ export const authConfig = {
         return Response.redirect(loginUrl)
       }
 
-      if (isAdminRoute(nextUrl.pathname) && auth?.user?.role !== "admin") {
-        return Response.redirect(new URL("/", nextUrl))
+      if (
+        isAdminRoute(nextUrl.pathname) &&
+        (!auth?.user?.role || !isStaffRole(auth.user.role))
+      ) {
+        return Response.redirect(new URL("/forbidden", nextUrl))
       }
 
       return true

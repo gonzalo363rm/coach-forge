@@ -147,7 +147,7 @@ export function ClassSessionRunner({ session }: Props) {
         <div className="flex flex-col gap-6">
             <header className="flex flex-col gap-4">
                 <Link
-                    href="/classes/list"
+                    href="/classes/mine"
                     className="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
                 >
                     ← Clases

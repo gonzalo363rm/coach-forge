@@ -1,4 +1,5 @@
 import { auth } from "@/auth"
+import { isStaffRole } from "@/lib/user-permissions"
 import type { AuthUser } from "@/types/auth-user"
 
 export type AdminCheckResult =
@@ -10,7 +11,7 @@ export async function requireAdmin(): Promise<AdminCheckResult> {
     if (!session?.user) {
         return { ok: false, error: "No autenticado" }
     }
-    if (session.user.role !== "admin") {
+    if (!isStaffRole(session.user.role)) {
         return { ok: false, error: "No tienes permisos de administrador" }
     }
     return { ok: true, user: session.user }

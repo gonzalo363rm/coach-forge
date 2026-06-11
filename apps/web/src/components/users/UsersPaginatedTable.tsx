@@ -8,13 +8,29 @@ import { useForm } from "react-hook-form"
 import { deleteUserAction } from "@/app/actions/users"
 import { UserRowActions } from "@/components/users/UserRowActions"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import {
+    listFilterButtonClass,
+    listFilterFormClass,
+    listFilterSearchClass,
+    listFilterSelectClass,
+} from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
+import { tableHeaderThClass } from "@/components/ui/table/table-header"
+import {
+    canAdminDeleteUser,
+    canAdminEditUser,
+    filterableRolesForActor,
+    formatUserRole,
+} from "@/lib/user-permissions"
 import type { UserListSortBy } from "@/schemas/user.schema"
 import type { UserSafe } from "@/services/users.service"
+import type { Role } from "@prisma/client"
 
 type Props = {
     users: UserSafe[]
     totalPages: number
+    actorRole: Role
+    actorId: string
     listState: {
         search: string
         role: string
@@ -42,11 +58,14 @@ function defaultSortDir(column: UserListSortBy): "asc" | "desc" {
     }
 }
 
-function formatRole(role: UserSafe["role"]): string {
-    return role === "admin" ? "Administrador" : "Entrenador"
-}
-
-export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
+export function UsersPaginatedTable({
+    users,
+    totalPages,
+    actorRole,
+    actorId,
+    listState,
+}: Props) {
+    const filterableRoles = filterableRolesForActor(actorRole)
     const router = useRouter()
     const [, startTransition] = useTransition()
     const { register, handleSubmit } = useForm<FormData>({
@@ -84,35 +103,29 @@ export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
         if (data.role) p.set("role", data.role)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
-        router.push(`/users/list?${p.toString()}`)
+        router.push(`/admin/users?${p.toString()}`)
         router.refresh()
     }
 
     return (
         <div className="flex flex-col gap-4">
-            <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="flex w-full flex-wrap items-center justify-start gap-3"
-            >
+            <form onSubmit={handleSubmit(onSubmit)} className={listFilterFormClass}>
                 <input
                     id="search"
                     {...register("search")}
                     type="text"
                     placeholder="Buscar por nombre o email"
-                    className="min-w-32 flex-1 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700 sm:max-w-xs"
+                    className={listFilterSearchClass}
                 />
-                <select
-                    {...register("role")}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-                >
+                <select {...register("role")} className={listFilterSelectClass}>
                     <option value="">Todos los roles</option>
-                    <option value="admin">Administrador</option>
-                    <option value="coach">Entrenador</option>
+                    {filterableRoles.map((role) => (
+                        <option key={role} value={role}>
+                            {formatUserRole(role)}
+                        </option>
+                    ))}
                 </select>
-                <button
-                    type="submit"
-                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
+                <button type="submit" className={listFilterButtonClass}>
                     Buscar
                 </button>
             </form>
@@ -145,7 +158,7 @@ export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
                                 />
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Verificado
                                 </th>
@@ -158,7 +171,7 @@ export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
                                 />
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Acciones
                                 </th>
@@ -173,7 +186,7 @@ export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
                                     >
                                         No hay usuarios con estos filtros.{" "}
                                         <Link
-                                            href="/users/new"
+                                            href="/admin/users/new"
                                             className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                                         >
                                             Crear el primero
@@ -187,29 +200,39 @@ export function UsersPaginatedTable({ users, totalPages, listState }: Props) {
                                         key={user.id}
                                         className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                                     >
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                                             {user.firstName} {user.lastName}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {user.email}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
-                                            {formatRole(user.role)}
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                            {formatUserRole(user.role)}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {user.emailVerified ? "Sí" : "No"}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             {new Intl.DateTimeFormat("es", {
                                                 dateStyle: "short",
                                                 timeStyle: "short",
                                             }).format(new Date(user.updatedAt))}
                                         </td>
-                                        <td className="px-4 py-3 align-middle">
+                                        <td className="px-4 py-2 align-middle">
                                             <UserRowActions
                                                 id={user.id}
                                                 displayName={`${user.firstName} ${user.lastName}`}
                                                 deleteUser={deleteUser}
+                                                canEdit={canAdminEditUser(
+                                                    actorRole,
+                                                    actorId,
+                                                    user,
+                                                )}
+                                                canDelete={canAdminDeleteUser(
+                                                    actorRole,
+                                                    actorId,
+                                                    user,
+                                                )}
                                             />
                                         </td>
                                     </tr>

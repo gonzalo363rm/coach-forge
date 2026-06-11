@@ -3,6 +3,10 @@
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/require-admin"
+import {
+    assignableRolesForActor,
+    canManageUserRoles,
+} from "@/lib/user-permissions"
 import { userCreateSchema } from "@/schemas/user.schema"
 import { userCreate, type UserSafe } from "@/services/users.service"
 
@@ -25,7 +29,14 @@ export async function createUserAction(input: unknown): Promise<UserActionResult
         }
     }
 
-    const result = await userCreate(parsed.data)
+    const data = { ...parsed.data }
+    if (!canManageUserRoles(admin.user.role)) {
+        data.role = "coach"
+    } else if (!assignableRolesForActor(admin.user.role).includes(data.role)) {
+        data.role = "coach"
+    }
+
+    const result = await userCreate(data)
     if (!result.ok) return result
 
     revalidateUsersViews()

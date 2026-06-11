@@ -9,9 +9,17 @@ type Props = {
     id: string
     displayName: string
     deleteUser: (id: string) => Promise<DeleteResult>
+    canEdit: boolean
+    canDelete: boolean
 }
 
-export function UserRowActions({ id, displayName, deleteUser }: Props) {
+export function UserRowActions({
+    id,
+    displayName,
+    deleteUser,
+    canEdit,
+    canDelete,
+}: Props) {
     const titleId = useId()
     const [deleting, setDeleting] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -52,23 +60,33 @@ export function UserRowActions({ id, displayName, deleteUser }: Props) {
         }
     }
 
+    if (!canEdit && !canDelete) {
+        return (
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">No puedes gestionar este usuario</span>
+        )
+    }
+
     return (
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-                <Link
-                    href={`/users/${id}/edit`}
-                    className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
-                    Editar
-                </Link>
-                <button
-                    type="button"
-                    disabled={deleting}
-                    onClick={openConfirm}
-                    className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/70"
-                >
-                    Eliminar
-                </button>
+                {canEdit ? (
+                    <Link
+                        href={`/admin/users/${id}/edit`}
+                        className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                        Editar
+                    </Link>
+                ) : null}
+                {canDelete ? (
+                    <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={openConfirm}
+                        className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/70"
+                    >
+                        Eliminar
+                    </button>
+                ) : null}
             </div>
 
             {confirmOpen ? (

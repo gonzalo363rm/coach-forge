@@ -279,6 +279,7 @@ export const exerciseListFiltersSchema = z.object({
         z.coerce.number().int().min(1).max(5).optional(),
     ),
     isPublic: z.boolean().optional().nullable(),
+    creatorId: z.string().min(1).optional().nullable(),
 })
 
 export type ExerciseListFilters = z.infer<typeof exerciseListFiltersSchema>

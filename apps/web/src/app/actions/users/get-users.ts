@@ -3,6 +3,10 @@
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/require-admin"
+import {
+    filterableRolesForActor,
+    userListVisibilityFilter,
+} from "@/lib/user-permissions"
 import { getUsersPaginatedParamsSchema } from "@/schemas/user.schema"
 import {
     usersListPaginated,
@@ -27,7 +31,19 @@ export async function getUsersPaginatedAction(
     }
 
     const { page, take, filters, sortBy, sortDir } = parsed.data
-    const result = await usersListPaginated(page, take, filters ?? {}, { sortBy, sortDir })
+    const allowedRoles = filterableRolesForActor(admin.user.role)
+    const safeFilters = { ...(filters ?? {}) }
+    if (safeFilters.role != null && !allowedRoles.includes(safeFilters.role)) {
+        safeFilters.role = null
+    }
+
+    const result = await usersListPaginated(
+        page,
+        take,
+        safeFilters,
+        { sortBy, sortDir },
+        userListVisibilityFilter(admin.user.role),
+    )
     if (!result.ok) return result
 
     return { ok: true, data: result.data }

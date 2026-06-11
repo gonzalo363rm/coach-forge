@@ -3,7 +3,13 @@
 import { deleteSportAction } from "@/app/actions/sports"
 import { SportRowActions } from "@/components/sports/SportRowActions"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import {
+    listFilterButtonClass,
+    listFilterFormClass,
+    listFilterSearchClass,
+} from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
+import { tableHeaderThClass } from "@/components/ui/table/table-header"
 import { useToast } from "@/components/ui/toast/ToastProvider"
 import type { SportListSortBy } from "@/schemas/sport.schema"
 import type { Sport } from "@prisma/client"
@@ -77,27 +83,21 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
         if (q) p.set("search", q)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
-        router.push(`/sports/list?${p.toString()}`)
+        router.push(`/admin/sports?${p.toString()}`)
         router.refresh()
     }
 
     return (
         <div className="flex flex-col gap-4">
-            <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="flex w-full flex-wrap items-center justify-start gap-3"
-            >
+            <form onSubmit={handleSubmit(onSubmit)} className={listFilterFormClass}>
                 <input
                     id="search"
                     {...register("search")}
                     type="text"
                     placeholder="Buscar por nombre o slug"
-                    className="min-w-32 flex-1 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700 sm:max-w-xs"
+                    className={listFilterSearchClass}
                 />
-                <button
-                    type="submit"
-                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
+                <button type="submit" className={listFilterButtonClass}>
                     Buscar
                 </button>
             </form>
@@ -109,7 +109,7 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                             <tr>
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     ID
                                 </th>
@@ -124,7 +124,7 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
 
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Slug
                                 </th>
@@ -139,7 +139,7 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
 
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Acciones
                                 </th>
@@ -154,7 +154,7 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                                     >
                                         No hay deportes con estos filtros.{" "}
                                         <Link
-                                            href="/sports/new"
+                                            href="/admin/sports/new"
                                             className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                                         >
                                             Crear el primero
@@ -168,22 +168,22 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                                         key={sport.id}
                                         className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                                     >
-                                        <td className="whitespace-nowrap px-4 py-4 font-mono text-sm text-zinc-600 dark:text-zinc-400">
+                                        <td className="whitespace-nowrap px-4 py-2 font-mono text-sm text-zinc-600 dark:text-zinc-400">
                                             {sport.id}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                                             {sport.name}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-zinc-700 dark:text-zinc-300">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {sport.slug}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             {new Intl.DateTimeFormat("es", {
                                                 dateStyle: "short",
                                                 timeStyle: "short",
                                             }).format(new Date(sport.createdAt))}
                                         </td>
-                                        <td className="px-4 py-4 align-top">
+                                        <td className="px-4 py-2 align-top">
                                             <SportRowActions
                                                 id={sport.id}
                                                 name={sport.name}

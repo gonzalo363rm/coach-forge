@@ -56,7 +56,7 @@ export function SportRowActions({ id, name, deleteSport }: Props) {
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
                 <Link
-                    href={`/sports/${id}/edit`}
+                    href={`/admin/sports/${id}/edit`}
                     className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                 >
                     Editar

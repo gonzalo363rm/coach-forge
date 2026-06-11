@@ -3,8 +3,9 @@
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/require-admin"
+import { canAdminDeleteUser } from "@/lib/user-permissions"
 import { userDeleteParamsSchema } from "@/schemas/user.schema"
-import { userDelete, type UserSafe } from "@/services/users.service"
+import { userDelete, userGetById, type UserSafe } from "@/services/users.service"
 
 import { revalidateUsersViews } from "./revalidate-users"
 import type { UserActionResult } from "./types"
@@ -21,6 +22,14 @@ export async function deleteUserAction(input: unknown): Promise<UserActionResult
             error: "Validación fallida",
             details: z.treeifyError(parsed.error),
         }
+    }
+
+    const target = await userGetById(parsed.data.id)
+    if (!target) {
+        return { ok: false, error: "Usuario no encontrado" }
+    }
+    if (!canAdminDeleteUser(admin.user.role, admin.user.id, target)) {
+        return { ok: false, error: "No tienes permisos para eliminar este usuario" }
     }
 
     const result = await userDelete(parsed.data.id, admin.user.id)

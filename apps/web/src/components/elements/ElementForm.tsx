@@ -113,7 +113,7 @@ export function ElementForm(props: Props) {
                         setError(result.error)
                         return
                     }
-                    router.push("/elements/list")
+                    router.push("/admin/elements")
                     router.refresh()
                     return
                 }
@@ -135,7 +135,7 @@ export function ElementForm(props: Props) {
                     setError(result.error)
                     return
                 }
-                router.push("/elements/list")
+                router.push("/admin/elements")
                 router.refresh()
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error al guardar")
@@ -277,7 +277,7 @@ export function ElementForm(props: Props) {
                         {pending ? "Guardando…" : "Guardar"}
                     </button>
                     <Link
-                        href="/elements/list"
+                        href="/admin/elements"
                         className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                     >
                         Cancelar

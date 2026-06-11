@@ -143,7 +143,7 @@ export function ClassCreateForm({
                 return
             }
             if (!isEdit) clearClassDraft()
-            router.push("/classes/list")
+            router.push("/classes/mine")
             router.refresh()
         })
     }
@@ -313,7 +313,7 @@ export function ClassCreateForm({
 
             <div className="flex flex-wrap justify-end gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
                 <Link
-                    href="/classes/list"
+                    href="/classes/mine"
                     className="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                 >
                     Cancelar

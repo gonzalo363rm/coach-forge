@@ -10,7 +10,14 @@ import type { Sport } from "@prisma/client"
 import { deleteElementAction } from "@/app/actions/elements"
 import { ElementRowActions } from "@/components/elements/ElementRowActions"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import {
+    listFilterButtonClass,
+    listFilterFormClass,
+    listFilterSearchClass,
+    listFilterSelectClass,
+} from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
+import { tableHeaderThClass } from "@/components/ui/table/table-header"
 import type { ElementListSortBy } from "@/schemas/element.schema"
 import type { ElementListItem } from "@/services/elements.service"
 
@@ -82,29 +89,22 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
         if (data.sport) p.set("sport", data.sport)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
-        router.push(`/elements/list?${p.toString()}`)
+        router.push(`/admin/elements?${p.toString()}`)
         router.refresh()
     }
 
     return (
         <div className="flex flex-col gap-4">
-            <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="flex w-full flex-wrap items-center justify-start gap-3"
-            >
+            <form onSubmit={handleSubmit(onSubmit)} className={listFilterFormClass}>
                 <input
                     id="search"
                     {...register("search")}
                     type="text"
                     placeholder="Buscar"
-                    className="min-w-32 flex-1 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700 sm:max-w-xs"
+                    className={listFilterSearchClass}
                 />
 
-                <select
-                    id="sport"
-                    {...register("sport")}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-                >
+                <select id="sport" {...register("sport")} className={listFilterSelectClass}>
                     <option value="">Todos los deportes</option>
                     {sports.map((sport) => (
                         <option key={sport.id} value={sport.slug}>
@@ -113,10 +113,7 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                     ))}
                 </select>
 
-                <button
-                    type="submit"
-                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
+                <button type="submit" className={listFilterButtonClass}>
                     Buscar
                 </button>
             </form>
@@ -128,7 +125,7 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                             <tr>
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Imagen
                                 </th>
@@ -169,7 +166,7 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                                 />
                                 <th
                                     scope="col"
-                                    className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                                    className={tableHeaderThClass}
                                 >
                                     Acciones
                                 </th>
@@ -184,7 +181,7 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                                     >
                                         No hay elementos con estos filtros.{" "}
                                         <Link
-                                            href="/elements/new"
+                                            href="/admin/elements/new"
                                             className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                                         >
                                             Crear el primero
@@ -202,7 +199,7 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                                             key={element.id}
                                             className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                                         >
-                                            <td className="whitespace-nowrap px-4 py-3 align-middle">
+                                            <td className="whitespace-nowrap px-4 py-2 align-middle">
                                                 <Image
                                                     src={element.image}
                                                     alt={element.name}
@@ -211,28 +208,28 @@ export function ElementsPaginatedTable({ elements, totalPages, sports, listState
                                                     className="h-10 w-10 object-contain"
                                                 />
                                             </td>
-                                            <td className="max-w-xs px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                            <td className="max-w-xs px-4 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                                                 <span className="line-clamp-2">{element.name}</span>
                                                 <span className="mt-0.5 block text-xs font-normal text-zinc-500">
                                                     {element.id}
                                                 </span>
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                                 {element.width}
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                                 {element.height}
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                                 {sportName}
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                                 {new Intl.DateTimeFormat("es", {
                                                     dateStyle: "short",
                                                     timeStyle: "short",
                                                 }).format(new Date(element.updatedAt))}
                                             </td>
-                                            <td className="px-4 py-3 align-middle">
+                                            <td className="px-4 py-2 align-middle">
                                                 <ElementRowActions
                                                     id={element.id}
                                                     name={element.name}

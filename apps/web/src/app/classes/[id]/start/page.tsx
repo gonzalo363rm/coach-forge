@@ -21,7 +21,7 @@ export default async function StartClassPage({ params }: Props) {
         return (
             <PageRoot>
                 <Link
-                    href="/classes/list"
+                    href="/classes/mine"
                     className="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
                 >
                     ← Clases
