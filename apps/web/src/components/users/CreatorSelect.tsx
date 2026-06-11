@@ -172,7 +172,7 @@ export function CreatorSelect({
             </button>
 
             {open ? (
-                <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[14rem] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-56 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                     <div className="border-b border-zinc-200 p-2 dark:border-zinc-700">
                         <input
                             type="text"

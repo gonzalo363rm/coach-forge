@@ -3,8 +3,7 @@
 import { z } from "zod"
 
 import {
-    exerciseGetById,
-    resolveExercisePreviewUrl,
+    exerciseGetListItemById,
     type ExerciseListItem,
 } from "@/services/exercises.service"
 
@@ -23,17 +22,11 @@ export async function getExerciseSummaryAction(
     }
 
     try {
-        const row = await exerciseGetById(parsed.data.id)
+        const row = await exerciseGetListItemById(parsed.data.id)
         if (!row) {
             return { ok: false, error: "Ejercicio no encontrado" }
         }
-        return {
-            ok: true,
-            data: {
-                ...row,
-                previewUrl: await resolveExercisePreviewUrl(row.id),
-            },
-        }
+        return { ok: true, data: row }
     } catch (e) {
         console.error("[getExerciseSummaryAction]", e)
         return { ok: false, error: "Error al cargar el ejercicio" }

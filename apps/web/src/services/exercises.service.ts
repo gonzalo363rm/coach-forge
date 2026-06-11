@@ -212,6 +212,23 @@ export async function exerciseGetById(id: string): Promise<Exercise | null> {
     return getPrisma().exercise.findUnique({ where: { id } })
 }
 
+export async function exerciseGetListItemById(id: string): Promise<ExerciseListItem | null> {
+    const row = await getPrisma().exercise.findUnique({
+        where: { id },
+        include: {
+            creator: { select: { id: true, firstName: true, lastName: true } },
+        },
+    })
+    if (!row) return null
+
+    const { creator, ...exercise } = row
+    return {
+        ...exercise,
+        creator,
+        previewUrl: await resolveExercisePreviewUrl(exercise.id),
+    }
+}
+
 const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
 
 function isWebpBuffer(buf: Buffer): boolean {

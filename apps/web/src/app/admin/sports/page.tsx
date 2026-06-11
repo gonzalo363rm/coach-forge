@@ -1,5 +1,5 @@
 /** Revalidación ISR: 7 días */
-export const revalidate = 60 * 60 * 24 * 7;
+export const revalidate = 604800;
 
 import { getSportsPaginatedAction } from "@/app/actions/sports";
 import { ListNewLink } from "@/components/ui/ListNewLink";
