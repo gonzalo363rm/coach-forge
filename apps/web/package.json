@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && node scripts/copy-canvaskit.mjs && next build --webpack",
-    "postinstall": "prisma generate && node scripts/copy-canvaskit.mjs",
+    "postinstall": "node scripts/copy-canvaskit.mjs",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.0.0",
