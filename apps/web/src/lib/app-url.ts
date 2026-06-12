@@ -1,10 +1,15 @@
 export function getAppUrl(): string {
-  const url =
-    process.env.APP_URL ??
-    process.env.AUTH_URL ??
-    process.env.NEXTAUTH_URL
-
-  if (url) return url.replace(/\/$/, "")
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, "")
+  }
 
   return "http://localhost:3000"
 }
