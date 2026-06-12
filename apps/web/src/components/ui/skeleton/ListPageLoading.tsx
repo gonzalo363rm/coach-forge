@@ -21,7 +21,7 @@ export function ListPageLoading({
                     <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
                         {title}
                     </h1>
-                    <Skeleton className="size-9 shrink-0 rounded-lg" aria-hidden />
+                    <Skeleton className="w-20 size-9 shrink-0 rounded-lg" aria-hidden />
                 </header>
 
                 <ListTableSkeleton
