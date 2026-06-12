@@ -9,6 +9,7 @@ import type { ElementDefinition, SportListOption, ToolType } from "@/interfaces"
 
 interface ToolsPanelProps {
     elements: ElementDefinition[]
+    elementsLoading?: boolean
     sports: SportListOption[]
     currentTool: ToolType
     setCurrentTool: (tool: ToolType) => void
@@ -18,6 +19,7 @@ interface ToolsPanelProps {
 
 export const ToolsPanel = ({
     elements,
+    elementsLoading = false,
     sports,
     currentTool,
     setCurrentTool,
@@ -200,7 +202,11 @@ export const ToolsPanel = ({
             </select>
 
             <div className="grid max-h-64 gap-2 overflow-y-auto md:grid-cols-4 xs:grid-cols-3">
-                {filteredElements.length === 0 ? (
+                {elementsLoading ? (
+                    <p className="col-span-full py-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                        Cargando elementos…
+                    </p>
+                ) : filteredElements.length === 0 ? (
                     <p className="col-span-full py-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
                         Sin elementos
                     </p>

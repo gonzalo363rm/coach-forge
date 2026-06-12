@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { IoChevronDownOutline } from "react-icons/io5"
 
+import { useNavPending } from "@/hooks/use-nav-pending"
+
 const adminLinks = [
     { href: "/admin/classes", label: "Clases" },
     { href: "/admin/exercises", label: "Ejercicios" },
@@ -20,7 +22,9 @@ export function AdminNavMenu() {
     const [open, setOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const pathname = usePathname()
-    const isAdminSection = pathname.startsWith("/admin")
+    const { pendingHref, startNavigation } = useNavPending()
+    const effectivePath = pendingHref ?? pathname
+    const isAdminSection = effectivePath.startsWith("/admin")
 
     useEffect(() => {
         setOpen(false)
@@ -70,14 +74,18 @@ export function AdminNavMenu() {
                 >
                     {adminLinks.map((link) => {
                         const isActive =
-                            pathname === link.href || pathname.startsWith(`${link.href}/`)
+                            effectivePath === link.href ||
+                            effectivePath.startsWith(`${link.href}/`)
 
                         return (
                             <Link
                                 key={link.href}
                                 href={link.href}
                                 role="menuitem"
-                                onClick={() => setOpen(false)}
+                                onClick={() => {
+                                    startNavigation(link.href)
+                                    setOpen(false)
+                                }}
                                 className={`${menuLinkClass} ${
                                     isActive
                                         ? "bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"

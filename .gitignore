@@ -11,6 +11,8 @@ coverage/
 out/
 build/
 dist/
+apps/web/public/canvaskit/canvaskit.wasm
+apps/web/public/canvaskit/canvaskit.js
 
 # Production
 *.log

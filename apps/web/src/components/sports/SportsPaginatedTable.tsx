@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
 import { tableHeaderThClass } from "@/components/ui/table/table-header"
-import { useToast } from "@/components/ui/toast/ToastProvider"
+import { useToast } from "@/hooks/use-toast"
 import type { SportListSortBy } from "@/schemas/sport.schema"
 import type { Sport } from "@prisma/client"
 import Link from "next/link"

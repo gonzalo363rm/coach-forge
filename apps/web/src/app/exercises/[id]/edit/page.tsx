@@ -1,8 +1,7 @@
 import Link from "next/link"
 
-import { ExerciseEditor } from "@/components/exercise-canvas/ExerciseEditor"
+import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import type { ExerciseCanvas as ExerciseCanvasData } from "@/interfaces"
-import { elementsListAll } from "@/services/elements.service"
 import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
 import { notFound } from "next/navigation"
@@ -16,11 +15,7 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
     const { id } = await params
     const sp = await searchParams
     const returnTo = sp.returnTo?.trim() ? sp.returnTo.trim() : null
-    const [row, sportRows, elements] = await Promise.all([
-        exerciseGetById(id),
-        sportsListAll(),
-        elementsListAll(),
-    ])
+    const [row, sportRows] = await Promise.all([exerciseGetById(id), sportsListAll()])
     if (!row) notFound()
     const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
 
@@ -37,7 +32,7 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full flex-1 flex-col gap-6 p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -54,10 +49,9 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
                     </h1>
                     </div>
                 </div>
-                <ExerciseEditor
+                <ExerciseEditorDynamic
                     initialExercise={initialExercise}
                     sports={sports}
-                    elements={elements}
                     returnTo={returnTo}
                 />
             </main>

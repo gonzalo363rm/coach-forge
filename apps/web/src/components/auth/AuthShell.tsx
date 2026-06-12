@@ -10,7 +10,7 @@ type Props = {
 
 export function AuthShell({ title, description, children, footer }: Props) {
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
       <main className="flex flex-1 items-center justify-center p-8">
         <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <div className="mb-6 space-y-2 text-center">

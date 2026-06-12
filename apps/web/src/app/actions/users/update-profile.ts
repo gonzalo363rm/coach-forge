@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { auth } from "@/auth"
+import { auth, unstable_update } from "@/auth"
+import type { AuthUser } from "@/types/auth-user"
 import { userProfileUpdateSchema } from "@/schemas/user.schema"
 import { userProfileUpdate, type UserSafe } from "@/services/users.service"
 
@@ -31,6 +32,8 @@ export async function updateProfileAction(
 
     const result = await userProfileUpdate(session.user.id, parsed.data)
     if (!result.ok) return result
+
+    await unstable_update({ user: result.data as AuthUser })
 
     revalidatePath("/profile")
     revalidatePath("/")

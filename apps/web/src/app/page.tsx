@@ -5,7 +5,7 @@ export default async function Home() {
     const firstName = session?.user?.firstName ?? ""
 
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center gap-4 p-8">
                 <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
                     Coach Forge

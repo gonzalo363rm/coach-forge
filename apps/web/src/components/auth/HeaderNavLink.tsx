@@ -3,38 +3,28 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { useNavPending } from "@/hooks/use-nav-pending"
+import { isNavActive, type NavSection } from "@/lib/nav-active"
+
 const baseClass =
     "text-sm transition-colors hover:text-emerald-700 dark:hover:text-emerald-400"
-
-type Section = "classes-mine" | "exercises-mine"
 
 type Props = {
     href: string
     label: string
-    section?: Section
-}
-
-function isNavActive(pathname: string, href: string, section?: Section): boolean {
-    if (pathname === href) return true
-
-    if (section === "classes-mine") {
-        return pathname.startsWith("/classes/") && pathname !== "/classes/new"
-    }
-
-    if (section === "exercises-mine") {
-        return pathname.startsWith("/exercises/") && pathname !== "/exercises/new"
-    }
-
-    return pathname.startsWith(`${href}/`)
+    section?: NavSection
 }
 
 export function HeaderNavLink({ href, label, section }: Props) {
     const pathname = usePathname()
-    const active = isNavActive(pathname, href, section)
+    const { pendingHref, startNavigation } = useNavPending()
+    const effectivePath = pendingHref ?? pathname
+    const active = isNavActive(effectivePath, href, section)
 
     return (
         <Link
             href={href}
+            onClick={() => startNavigation(href)}
             className={`${baseClass} ${
                 active
                     ? "font-medium text-emerald-700 dark:text-emerald-400"

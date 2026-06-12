@@ -10,7 +10,7 @@ export default async function UserNewPage() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 p-8">
                 <UserForm mode="create" actorRole={session.user.role} />
             </div>

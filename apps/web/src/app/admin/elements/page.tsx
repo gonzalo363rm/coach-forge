@@ -56,7 +56,7 @@ export default async function ElementsListPage({ searchParams }: Props) {
 
     if (!result.ok) {
         return (
-            <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+            <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
                 <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
                     <p className="text-center text-zinc-600 dark:text-zinc-400">{result.error}</p>
                     <Link
@@ -73,7 +73,7 @@ export default async function ElementsListPage({ searchParams }: Props) {
     const { elements, totalPages } = result.data
 
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
                 <header className="flex items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">

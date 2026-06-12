@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/auth/AppHeader";
-import { ToastProvider } from "@/components/ui/toast/ToastProvider";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,13 +27,13 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-dvh flex-col antialiased`}
         suppressHydrationWarning
       >
-        <ToastProvider>
+        <AppProviders>
           <AppHeader />
-          {children}
-        </ToastProvider>
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        </AppProviders>
       </body>
     </html>
   );

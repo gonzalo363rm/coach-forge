@@ -3,7 +3,7 @@
 import { logoutAction } from "@/app/actions/auth"
 import { useTransition } from "react"
 
-import { useToast } from "@/components/ui/toast/ToastProvider"
+import { useToast } from "@/hooks/use-toast"
 
 export function LogoutButton() {
   const [pending, startTransition] = useTransition()

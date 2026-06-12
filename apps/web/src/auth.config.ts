@@ -28,9 +28,13 @@ export const authConfig = {
     strategy: "jwt",
   },
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.data = user as AuthUser
+      }
+
+      if (trigger === "update" && session?.user) {
+        token.data = session.user as AuthUser
       }
 
       return token

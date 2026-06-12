@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { getElementsForPaletteAction } from "@/app/actions/elements"
 import {
     createExerciseAction,
     saveExercisePreviewAction,
@@ -22,7 +23,6 @@ import { ExerciseCanvas } from "./ExerciseCanvas"
 type EditorProps = {
     initialExercise?: ExerciseEditorInitialData | null
     sports?: SportListOption[]
-    elements?: ElementDefinition[]
     /** Ruta a la que volver tras guardar (p. ej. creación de clase). */
     returnTo?: string | null
 }
@@ -45,12 +45,27 @@ async function saveExercisePreviewIfPresent(
 export const ExerciseEditor = ({
     initialExercise = null,
     sports = [],
-    elements = [],
     returnTo = null,
 }: EditorProps) => {
     const router = useRouter()
     const [currentTool, setCurrentTool] = useState<ToolType>("select")
     const [selectedPaletteElement, setSelectedPaletteElement] = useState<ElementDefinition | null>(null)
+    const [elements, setElements] = useState<ElementDefinition[]>([])
+    const [elementsLoading, setElementsLoading] = useState(true)
+
+    useEffect(() => {
+        let cancelled = false
+
+        getElementsForPaletteAction().then((result) => {
+            if (cancelled) return
+            if (result.ok) setElements(result.data)
+            setElementsLoading(false)
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
 
     const navigateAfterSave = useCallback(
         (createdId?: string) => {
@@ -104,6 +119,7 @@ export const ExerciseEditor = ({
             <div className="w-[20%]">
                 <ToolsPanel
                     elements={elements}
+                    elementsLoading={elementsLoading}
                     sports={sports}
                     currentTool={currentTool}
                     setCurrentTool={setCurrentTool}

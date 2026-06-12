@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table/list-filter-bar"
 import { SortableTh } from "@/components/ui/table/SortableTh"
 import { tableHeaderThClass } from "@/components/ui/table/table-header"
-import { useToast } from "@/components/ui/toast/ToastProvider"
+import { useToast } from "@/hooks/use-toast"
 import type { TrainingClassListSortBy } from "@/schemas/training-class.schema"
 import type { TrainingClassListItem } from "@/services/classes.service"
 import type { Sport } from "@prisma/client"

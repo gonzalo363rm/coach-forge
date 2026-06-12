@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { IoChevronDownOutline } from "react-icons/io5"
 
 import { logoutAction } from "@/app/actions/auth"
-import { useToast } from "@/components/ui/toast/ToastProvider"
+import { useNavPending } from "@/hooks/use-nav-pending"
+import { useToast } from "@/hooks/use-toast"
 
 import { HeaderAvatar } from "./HeaderAvatar"
 
@@ -24,7 +25,9 @@ export function UserNavMenu({ firstName, lastName, avatarUrl }: Props) {
     const [pending, startTransition] = useTransition()
     const containerRef = useRef<HTMLDivElement>(null)
     const pathname = usePathname()
+    const { pendingHref, startNavigation } = useNavPending()
     const { toast } = useToast()
+    const effectivePath = pendingHref ?? pathname
 
     useEffect(() => {
         setOpen(false)
@@ -87,9 +90,12 @@ export function UserNavMenu({ firstName, lastName, avatarUrl }: Props) {
                     <Link
                         href="/profile"
                         role="menuitem"
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                            startNavigation("/profile")
+                            setOpen(false)
+                        }}
                         className={`${menuLinkClass} ${
-                            pathname === "/profile"
+                            effectivePath === "/profile"
                                 ? "bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                                 : ""
                         }`}

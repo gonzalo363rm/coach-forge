@@ -1,8 +1,7 @@
 import Link from "next/link"
 
-import { ExerciseEditor } from "@/components/exercise-canvas/ExerciseEditor"
+import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
-import { elementsListAll } from "@/services/elements.service"
 import { sportsListAll } from "@/services/sports.service"
 
 interface Props {
@@ -10,7 +9,7 @@ interface Props {
 }
 
 export default async function ExerciseNewPage({ searchParams }: Props) {
-    const [sportRows, elements] = await Promise.all([sportsListAll(), elementsListAll()])
+    const sportRows = await sportsListAll()
     const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
 
     const params = await searchParams
@@ -33,7 +32,7 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
             : null
 
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full flex-1 flex-col gap-6 p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -50,9 +49,8 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                     </h1>
                     </div>
                 </div>
-                <ExerciseEditor
+                <ExerciseEditorDynamic
                     sports={sports}
-                    elements={elements}
                     initialExercise={initialExercise}
                     returnTo={returnTo}
                 />

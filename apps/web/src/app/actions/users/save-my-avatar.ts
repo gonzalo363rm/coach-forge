@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { auth } from "@/auth"
+import { auth, unstable_update } from "@/auth"
+import type { AuthUser } from "@/types/auth-user"
 import { userSaveAvatar, type UserSafe } from "@/services/users.service"
 
 import type { UserActionResult } from "./types"
@@ -42,6 +43,8 @@ export async function saveMyAvatarAction(
         parsed.data.imageMime,
     )
     if (!result.ok) return result
+
+    await unstable_update({ user: result.data as AuthUser })
 
     revalidatePath("/profile")
     revalidatePath("/")

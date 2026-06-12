@@ -35,7 +35,7 @@ export default async function NewClassPage() {
 
 function PageRoot({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
+        <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col p-8">
                 {children}
             </main>
