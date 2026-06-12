@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+// Monorepo: raíz del repo (apps/web → ../..). No usar ../../.. (sale del repo y rompe el trace en Vercel).
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname, "../../.."),
+  outputFileTracingRoot: path.join(__dirname, "../.."),
 
   experimental: {
     serverActions: {
