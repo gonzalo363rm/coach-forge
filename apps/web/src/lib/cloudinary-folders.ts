@@ -1,4 +1,5 @@
-export const CLOUDINARY_ROOT = "coach-forge"
+const NODE_ENV = process.env.NODE_ENV === "production" ? "production" : "development";
+export const CLOUDINARY_ROOT = `coach-forge/${NODE_ENV}`
 
 export const CloudinaryFolder = {
   avatars: `${CLOUDINARY_ROOT}/avatars`,

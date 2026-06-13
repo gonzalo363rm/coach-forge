@@ -18,8 +18,13 @@ const nextConfig: NextConfig = {
     "cloudinary",
   ],
 
-  // Configuración de Turbopack
-  turbopack: {},
+  // Turbopack (next dev): equivalente a resolve.fallback de webpack para CanvasKit
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: "./empty-node-module.ts" },
+      path: { browser: "./empty-node-module.ts" },
+    },
+  },
 
   images: {
     remotePatterns: [
