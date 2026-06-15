@@ -1,6 +1,41 @@
 'use client'
 
+import { useLayoutEffect, useRef, useState } from "react"
+
 import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance, LineElementInstance, RectElementInstance } from "@/interfaces"
+
+const MENU_OFFSET = 8
+const VIEWPORT_PADDING = 8
+
+function clampMenuPosition(
+    anchorX: number,
+    anchorY: number,
+    menuWidth: number,
+    menuHeight: number,
+    parentRect: DOMRect,
+): { left: number; top: number } {
+    let viewportLeft = parentRect.left + anchorX + MENU_OFFSET
+    let viewportTop = parentRect.top + anchorY + MENU_OFFSET
+
+    if (viewportLeft + menuWidth > window.innerWidth - VIEWPORT_PADDING) {
+        viewportLeft = parentRect.left + anchorX - menuWidth - MENU_OFFSET
+    }
+    if (viewportLeft < VIEWPORT_PADDING) {
+        viewportLeft = VIEWPORT_PADDING
+    }
+
+    if (viewportTop + menuHeight > window.innerHeight - VIEWPORT_PADDING) {
+        viewportTop = parentRect.top + anchorY - menuHeight - MENU_OFFSET
+    }
+    if (viewportTop < VIEWPORT_PADDING) {
+        viewportTop = VIEWPORT_PADDING
+    }
+
+    return {
+        left: viewportLeft - parentRect.left,
+        top: viewportTop - parentRect.top,
+    }
+}
 
 interface Props {
     isOpen: boolean
@@ -41,12 +76,30 @@ export const ElementContextMenu = ({
     onDuplicate,
     onRotateArrow,
 }: Props) => {
+    const menuRef = useRef<HTMLDivElement>(null)
+    const [position, setPosition] = useState({ left: x + MENU_OFFSET, top: y + MENU_OFFSET })
+
+    useLayoutEffect(() => {
+        const menu = menuRef.current
+        if (!isOpen || !menu) return
+
+        const parent = menu.offsetParent as HTMLElement | null
+        const parentRect = parent?.getBoundingClientRect() ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+
+        menu.style.left = `${x + MENU_OFFSET}px`
+        menu.style.top = `${y + MENU_OFFSET}px`
+
+        const { width, height } = menu.getBoundingClientRect()
+        setPosition(clampMenuPosition(x, y, width, height, parentRect))
+    }, [isOpen, x, y])
+
     if (!isOpen) return null
 
     return (
         <div
+            ref={menuRef}
             className="absolute z-50 w-72 rounded-xl bg-zinc-100 p-3 shadow-xl dark:bg-zinc-800"
-            style={{ left: x + 8, top: y + 8 }}
+            style={{ left: position.left, top: position.top }}
         >
             <div className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 {targetType === "arrow" ? "Configurar flecha" : "Configurar elemento"}

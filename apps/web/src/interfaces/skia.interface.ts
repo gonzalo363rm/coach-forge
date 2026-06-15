@@ -13,5 +13,6 @@ export interface SkiaCanvasProps {
     onPointerUp?: () => void;
     onContextMenu?: (x: number, y: number) => void;
     onDrop?: (x: number, y: number, data: string) => void;
+    onReady?: () => void;
     className?: string;
 }

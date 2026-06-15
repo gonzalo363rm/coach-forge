@@ -24,15 +24,17 @@ function loadCanvasKit(): Promise<any> {
  * Compatible con Next.js sin necesidad de react-native-skia
  */
 export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
-  function SkiaCanvas({ width, height, onDraw, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDrop, className }, ref) {
+  function SkiaCanvas({ width, height, onDraw, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDrop, onReady, className }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const surfaceRef = useRef<any>(null);
   const ckRef = useRef<any>(null);
   const onDrawRef = useRef(onDraw);
+  const onReadyRef = useRef(onReady);
   const skipNextContextMenuRef = useRef(false);
   onDrawRef.current = onDraw;
+  onReadyRef.current = onReady;
 
   // Exponer funciones via ref
   useImperativeHandle(ref, () => {
@@ -103,7 +105,6 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
         }
 
         surfaceRef.current = surface;
-        setIsLoading(false);
 
         // Renderizar
         try {
@@ -111,8 +112,11 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
           canvas.clear(ck.TRANSPARENT);
           onDrawRef.current(canvas, ck);
           surface.flush();
+          setIsLoading(false);
+          onReadyRef.current?.();
         } catch (err) {
           console.error("Error al renderizar SkiaCanvas:", err);
+          setIsLoading(false);
         }
 
       } catch (err) {

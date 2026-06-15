@@ -2,3 +2,5 @@
 -En la vista de deportes, podriamos listar los elementos
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
 -Ver de agregar TanStack Query para las listas al menos
+-Agregar metadata, ico y logo
+-Ctrol + z podria deshacer los cambios en los ejercicios

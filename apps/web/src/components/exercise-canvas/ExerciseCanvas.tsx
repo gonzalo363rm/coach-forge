@@ -141,6 +141,9 @@ export const ExerciseCanvas = ({
     const [selectedElement, setSelectedElement] = useState<ContextTarget>(null)
     const [showResetModal, setShowResetModal] = useState(false)
     const [showSaveModal, setShowSaveModal] = useState(false)
+    const [isSkiaReady, setIsSkiaReady] = useState(false)
+    const [isLoadingImages, setIsLoadingImages] = useState(false)
+    const [isPreloadingPaletteImage, setIsPreloadingPaletteImage] = useState(false)
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         isOpen: false,
         x: 0,
@@ -151,6 +154,8 @@ export const ExerciseCanvas = ({
     // Todas las imagenes de los elementos que vamos a trabajar en el canvas
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const imagesCacheRef = useRef<Map<string, any>>(new Map())
+    const imageLoadGenerationRef = useRef(0)
+    const canvasContainerRef = useRef<HTMLDivElement>(null)
     const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, width: 1200, height: 600 })
 
     useEffect(() => {
@@ -236,8 +241,54 @@ export const ExerciseCanvas = ({
                 }
             })
 
-        await Promise.all(pending)
+        if (pending.length === 0) {
+            setIsLoadingImages(false)
+            return
+        }
+
+        const generation = ++imageLoadGenerationRef.current
+        setIsLoadingImages(true)
+        try {
+            await Promise.all(pending)
+        } finally {
+            if (generation === imageLoadGenerationRef.current) {
+                setIsLoadingImages(false)
+            }
+        }
     }, [images])
+
+    useEffect(() => {
+        if (!selectedPaletteElement?.image) {
+            setIsPreloadingPaletteImage(false)
+            return
+        }
+
+        const imageRef = selectedPaletteElement.image
+        if (imagesCacheRef.current.has(imageRef)) {
+            setIsPreloadingPaletteImage(false)
+            return
+        }
+
+        let cancelled = false
+        setIsPreloadingPaletteImage(true)
+
+        void loadImageAsBytes(imageRef, {
+            width: selectedPaletteElement.width * DEFAULT_SCALE,
+            height: selectedPaletteElement.height * DEFAULT_SCALE,
+            maintainAspectRatio: true,
+        }).then((imageBytes) => {
+            if (cancelled) return
+            if (imageBytes) {
+                imagesCacheRef.current.set(imageRef, imageBytes)
+                canvasRef.current?.redraw()
+            }
+            setIsPreloadingPaletteImage(false)
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [selectedPaletteElement])
 
     useEffect(() => {
         loadImages().then(() => {
@@ -938,6 +989,10 @@ export const ExerciseCanvas = ({
     const handleCanvasPointerDown = useCallback((x: number, y: number) => {
         const world = toWorldCoords(x, y)
         if (currentTool === "select" && selectedPaletteElement) {
+            const imageRef = selectedPaletteElement.image
+            if (!imagesCacheRef.current.has(imageRef)) {
+                return
+            }
             const newImageElementInstance = createImageInstanceFromDefinition(world.x, world.y, selectedPaletteElement)
             if (newImageElementInstance) {
                 setImages((prev) => [...prev, newImageElementInstance])
@@ -979,12 +1034,22 @@ export const ExerciseCanvas = ({
         handleDrop(world.x, world.y, data)
     }, [handleDrop, toWorldCoords])
 
-    const handleCanvasWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const handleCanvasWheel = useCallback((event: WheelEvent) => {
         if (!event.ctrlKey) return
         event.preventDefault()
         const direction = event.deltaY > 0 ? -0.1 : 0.1
         nudgeZoom(direction)
     }, [nudgeZoom])
+
+    useEffect(() => {
+        const container = canvasContainerRef.current
+        if (!container) return
+
+        container.addEventListener("wheel", handleCanvasWheel, { passive: false })
+        return () => container.removeEventListener("wheel", handleCanvasWheel)
+    }, [handleCanvasWheel])
+
+    const isCanvasBusy = !isSkiaReady || isLoadingImages || isPreloadingPaletteImage
 
     const clearCanvas = useCallback(() => {
         setImages([])
@@ -1064,8 +1129,8 @@ export const ExerciseCanvas = ({
         <div className="flex w-full items-start gap-4">
             <div className="flex flex-col gap-2">
                 <div
+                    ref={canvasContainerRef}
                     className="relative overflow-visible rounded-xl shadow-2xl"
-                    onWheel={handleCanvasWheel}
                     onPointerEnter={() => { isCanvasHoveredRef.current = true }}
                     onPointerLeave={() => { isCanvasHoveredRef.current = false }}
                 >
@@ -1165,6 +1230,7 @@ export const ExerciseCanvas = ({
                         width={canvasSize.width}
                         height={canvasSize.height}
                         onDraw={handleDraw}
+                        onReady={() => setIsSkiaReady(true)}
                         onPointerDown={handleCanvasPointerDown}
                         onPointerMove={handleCanvasPointerMove}
                         onPointerUp={pointer.handlePointerUp}
@@ -1172,6 +1238,20 @@ export const ExerciseCanvas = ({
                         onDrop={handleCanvasDrop}
                     />
 
+                    {isCanvasBusy && (
+                        <div
+                            className="absolute inset-0 z-30 flex items-center justify-center rounded-xl bg-zinc-900/35 backdrop-blur-[1px]"
+                            aria-busy="true"
+                            aria-live="polite"
+                        >
+                            <div className="flex flex-col items-center gap-2 rounded-lg bg-zinc-900/80 px-4 py-3 text-white shadow-lg">
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-white" />
+                                <span className="text-xs">
+                                    {!isSkiaReady ? "Iniciando canvas…" : "Preparando imágenes…"}
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {contextMenu.isOpen && contextElement && contextMenu.target && (
                         <ElementContextMenu
