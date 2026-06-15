@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance, LineElementInstance, RectElementInstance } from "@/interfaces"
 
@@ -92,6 +92,19 @@ export const ElementContextMenu = ({
         const { width, height } = menu.getBoundingClientRect()
         setPosition(clampMenuPosition(x, y, width, height, parentRect))
     }, [isOpen, x, y])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const menu = menuRef.current
+            if (!menu || menu.contains(event.target as Node)) return
+            onClose()
+        }
+
+        window.addEventListener("pointerdown", handlePointerDown)
+        return () => window.removeEventListener("pointerdown", handlePointerDown)
+    }, [isOpen, onClose])
 
     if (!isOpen) return null
 
