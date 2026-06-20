@@ -66,7 +66,7 @@ export function UserNavMenu({ firstName, lastName, avatarUrl }: Props) {
                 onClick={() => setOpen((value) => !value)}
                 aria-expanded={open}
                 aria-haspopup="menu"
-                className="inline-flex items-center gap-2 rounded-lg py-1 pr-1 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                className="cursor-pointer inline-flex items-center gap-2 rounded-lg py-1 pr-1 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
             >
                 <HeaderAvatar
                     avatarUrl={avatarUrl}

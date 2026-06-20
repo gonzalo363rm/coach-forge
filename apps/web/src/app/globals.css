@@ -85,3 +85,71 @@ html {
 .nav-progress-bar {
   animation: nav-progress 1s ease-in-out infinite;
 }
+
+/* Marca Coach Forge (navbar, auth, etc.) */
+.brand-logo {
+  --brand-accent: theme(colors.emerald.400);
+  --brand-coach: #c8d6de;
+  --brand-coach-highlight: #eef4f7;
+}
+
+.brand-logo-title {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.brand-logo-coach {
+  background: linear-gradient(180deg, var(--brand-coach-highlight) 0%, var(--brand-coach) 55%, #9aadb8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-logo-forge {
+  color: var(--brand-accent);
+}
+
+.brand-logo-tagline {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.brand-logo-dash {
+  border-radius: 9999px;
+  flex-shrink: 0;
+  height: 1.5px;
+  width: clamp(1.4rem, 3.5vw, 2.25rem);
+}
+
+.brand-logo-dash--left {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--brand-accent) 12%, transparent) 18%,
+    color-mix(in srgb, var(--brand-accent) 55%, transparent) 55%,
+    var(--brand-accent) 100%
+  );
+}
+
+.brand-logo-dash--right {
+  background: linear-gradient(
+    90deg,
+    var(--brand-accent) 0%,
+    color-mix(in srgb, var(--brand-accent) 55%, transparent) 45%,
+    color-mix(in srgb, var(--brand-accent) 12%, transparent) 82%,
+    transparent 100%
+  );
+}
+
+.brand-logo-tagline-text {
+  color: var(--brand-accent);
+  font-size: 0.4rem;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  white-space: nowrap;
+}

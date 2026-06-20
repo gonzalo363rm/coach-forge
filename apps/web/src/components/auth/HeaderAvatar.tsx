@@ -4,6 +4,8 @@ type Props = {
     avatarUrl: string | null
     firstName: string
     lastName: string
+    size?: "sm" | "md"
+    className?: string
 }
 
 function buildInitials(firstName: string, lastName: string): string {
@@ -13,22 +15,27 @@ function buildInitials(firstName: string, lastName: string): string {
     return initials || "?"
 }
 
-export function HeaderAvatar({ avatarUrl, firstName, lastName }: Props) {
+export function HeaderAvatar({ avatarUrl, firstName, lastName, size = "sm", className }: Props) {
     const initials = buildInitials(firstName, lastName)
+    const dimension = size === "md" ? "size-10" : "size-8"
+    const imageSizes = size === "md" ? "40px" : "32px"
+    const initialsClass = size === "md" ? "text-sm" : "text-xs"
 
     return (
-        <div className="relative size-8 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
+        <div
+            className={`relative ${dimension} shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 ${className ?? ""}`}
+        >
             {avatarUrl ? (
                 <Image
                     src={avatarUrl}
                     alt=""
                     fill
-                    sizes="32px"
+                    sizes={imageSizes}
                     className="object-cover"
                     unoptimized
                 />
             ) : (
-                <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span className={`flex h-full w-full items-center justify-center font-semibold text-zinc-500 dark:text-zinc-400 ${initialsClass}`}>
                     {initials}
                 </span>
             )}

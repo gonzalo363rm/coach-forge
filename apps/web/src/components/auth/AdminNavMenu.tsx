@@ -5,15 +5,11 @@ import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { IoChevronDownOutline } from "react-icons/io5"
 
+import { ADMIN_NAV_LINKS } from "@/lib/admin-nav-links"
+
 import { useNavPending } from "@/hooks/use-nav-pending"
 
-const adminLinks = [
-    { href: "/admin/classes", label: "Clases" },
-    { href: "/admin/exercises", label: "Ejercicios" },
-    { href: "/admin/elements", label: "Elementos" },
-    { href: "/admin/sports", label: "Deportes" },
-    { href: "/admin/users", label: "Usuarios" },
-] as const
+const adminLinks = ADMIN_NAV_LINKS
 
 const menuLinkClass =
     "block px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-emerald-700 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-emerald-400"
@@ -54,7 +50,7 @@ export function AdminNavMenu() {
                 onClick={() => setOpen((value) => !value)}
                 aria-expanded={open}
                 aria-haspopup="menu"
-                className={`inline-flex items-center gap-1 text-sm transition-colors ${
+                className={`cursor-pointer inline-flex items-center gap-1 text-sm transition-colors ${
                     isAdminSection
                         ? "font-medium text-emerald-700 dark:text-emerald-400"
                         : "text-zinc-600 hover:text-emerald-700 dark:text-zinc-400 dark:hover:text-emerald-400"
