@@ -6,6 +6,7 @@ import { z } from "zod"
 
 import { jsonError, jsonResponse } from "@/lib/api/json-response"
 import { parseJsonBody } from "@/lib/api/parse-json-body"
+import { requireExerciseManageAccess, RESOURCE_FORBIDDEN_ERROR } from "@/lib/resource-access"
 import { exerciseUpdateSchema } from "@/schemas/exercise.schema"
 import { exerciseGetById, exerciseUpdate } from "@/services/exercises.service"
 
@@ -37,6 +38,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const result = exerciseUpdateSchema.safeParse(parsedBody.data)
     if (!result.success) {
         return jsonError(400, "Validación fallida", z.treeifyError(result.error))
+    }
+
+    const access = await requireExerciseManageAccess(id)
+    if (!access.ok) {
+        const status =
+            access.error === "No autenticado"
+                ? 401
+                : access.error === RESOURCE_FORBIDDEN_ERROR
+                  ? 403
+                  : 404
+        return jsonError(status, access.error)
     }
 
     try {

@@ -1,7 +1,10 @@
 import Link from "next/link"
 
+import { auth } from "@/auth"
+import { OwnedResourceForbidden } from "@/components/errors/OwnedResourceForbidden"
 import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import type { ExerciseCanvas as ExerciseCanvasData } from "@/interfaces"
+import { canManageOwnedResource } from "@/lib/user-permissions"
 import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
 import { notFound } from "next/navigation"
@@ -15,8 +18,20 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
     const { id } = await params
     const sp = await searchParams
     const returnTo = sp.returnTo?.trim() ? sp.returnTo.trim() : null
+    const session = await auth()
+    if (!session?.user) notFound()
+
     const [row, sportRows] = await Promise.all([exerciseGetById(id), sportsListAll()])
     if (!row) notFound()
+    if (!canManageOwnedResource(session.user, row.creatorId)) {
+        return (
+            <OwnedResourceForbidden
+                resourceType="exercise"
+                backHref={returnTo ?? undefined}
+                backLabel={returnTo ? "Volver" : undefined}
+            />
+        )
+    }
     const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
 
     const initialExercise = {

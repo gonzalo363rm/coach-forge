@@ -7,6 +7,8 @@ type Props = {
     title: string
     description: string
     hint?: string
+    backHref?: string
+    backLabel?: string
 }
 
 export function FunErrorPage({
@@ -15,6 +17,8 @@ export function FunErrorPage({
     title,
     description,
     hint,
+    backHref = "/",
+    backLabel = "Volver al inicio",
 }: Props) {
     return (
         <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center bg-zinc-50 px-6 py-12 dark:bg-black">
@@ -35,10 +39,10 @@ export function FunErrorPage({
                     </p>
                 ) : null}
                 <Link
-                    href="/"
+                    href={backHref}
                     className="mt-8 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
                 >
-                    Volver al inicio
+                    {backLabel}
                 </Link>
             </div>
         </div>

@@ -3,6 +3,7 @@
 import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
+import { requireExerciseManageAccess } from "@/lib/resource-access"
 import { exerciseDeleteParamsSchema } from "@/schemas/exercise.schema"
 import { exerciseDelete } from "@/services/exercises.service"
 
@@ -19,6 +20,9 @@ export async function deleteExerciseAction(input: unknown): Promise<ExerciseActi
             details: z.treeifyError(parsed.error),
         }
     }
+
+    const access = await requireExerciseManageAccess(parsed.data.id)
+    if (!access.ok) return access
 
     const result = await exerciseDelete(parsed.data.id)
     if (!result.ok) return result

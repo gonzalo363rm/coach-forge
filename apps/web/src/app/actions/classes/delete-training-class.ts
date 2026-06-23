@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { requireTrainingClassManageAccess } from "@/lib/resource-access"
 import { trainingClassDeleteSchema } from "@/schemas/training-class.schema"
 import { trainingClassDelete } from "@/services/classes.service"
 
@@ -20,6 +21,9 @@ export async function deleteTrainingClassAction(
             details: z.treeifyError(parsed.error),
         }
     }
+
+    const access = await requireTrainingClassManageAccess(parsed.data.id)
+    if (!access.ok) return access
 
     const result = await trainingClassDelete(parsed.data.id)
     if (!result.ok) return result

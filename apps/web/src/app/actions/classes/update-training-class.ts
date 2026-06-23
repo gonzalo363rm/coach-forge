@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { requireTrainingClassManageAccess } from "@/lib/resource-access"
 import { trainingClassUpdateSchema } from "@/schemas/training-class.schema"
 import { trainingClassUpdate } from "@/services/classes.service"
 
@@ -22,6 +23,9 @@ export async function updateTrainingClassAction(
             details: z.treeifyError(parsed.error),
         }
     }
+
+    const access = await requireTrainingClassManageAccess(parsed.data.id)
+    if (!access.ok) return access
 
     const result = await trainingClassUpdate(parsed.data)
     if (!result.ok) return result

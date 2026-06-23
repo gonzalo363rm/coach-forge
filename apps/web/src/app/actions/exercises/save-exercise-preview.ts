@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { requireExerciseManageAccess } from "@/lib/resource-access"
 import { exerciseSavePreview } from "@/services/exercises.service"
 
 import { revalidateExercisesViews } from "./revalidate-exercises"
@@ -24,6 +25,9 @@ export async function saveExercisePreviewAction(
             details: z.treeifyError(parsed.error),
         }
     }
+
+    const access = await requireExerciseManageAccess(parsed.data.exerciseId)
+    if (!access.ok) return access
 
     let buf: Buffer
     try {

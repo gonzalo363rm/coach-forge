@@ -6,6 +6,15 @@ export function isStaffRole(role: Role): boolean {
     return role === "admin" || role === "superadmin"
 }
 
+export function canManageOwnedResource(
+    actor: { id: string; role: Role },
+    creatorId: string | null | undefined,
+): boolean {
+    if (isStaffRole(actor.role)) return true
+    if (!creatorId) return false
+    return creatorId === actor.id
+}
+
 export function canManageUserRoles(actorRole: Role): boolean {
     return actorRole === "superadmin"
 }

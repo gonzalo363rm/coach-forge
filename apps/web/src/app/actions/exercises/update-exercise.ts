@@ -3,6 +3,7 @@
 import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
+import { requireExerciseManageAccess } from "@/lib/resource-access"
 import { exerciseReplaceSchema } from "@/schemas/exercise.schema"
 import { exerciseUpdate } from "@/services/exercises.service"
 
@@ -24,6 +25,9 @@ export async function updateExerciseAction(
     }
 
     const { id, ...rest } = parsed.data
+
+    const access = await requireExerciseManageAccess(id)
+    if (!access.ok) return access
 
     try {
         const data = await exerciseUpdate(id, rest)

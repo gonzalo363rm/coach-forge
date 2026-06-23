@@ -2,7 +2,10 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { auth } from "@/auth"
 import { ClassCreateForm } from "@/components/classes/ClassCreateForm"
+import { OwnedResourceForbidden } from "@/components/errors/OwnedResourceForbidden"
+import { canManageOwnedResource } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
 import { sportsListAll } from "@/services/sports.service"
 import { trainingClassToDraft } from "@/utils/training-class-to-draft"
@@ -13,6 +16,9 @@ interface Props {
 
 export default async function EditClassPage({ params }: Props) {
     const { id } = await params
+    const session = await auth()
+    if (!session?.user) notFound()
+
     const [trainingClass, sports] = await Promise.all([
         trainingClassGetById(id),
         sportsListAll(),
@@ -20,6 +26,10 @@ export default async function EditClassPage({ params }: Props) {
 
     if (!trainingClass) {
         notFound()
+    }
+
+    if (!canManageOwnedResource(session.user, trainingClass.creatorId)) {
+        return <OwnedResourceForbidden resourceType="class" />
     }
 
     const initialDraft = await trainingClassToDraft(trainingClass)
