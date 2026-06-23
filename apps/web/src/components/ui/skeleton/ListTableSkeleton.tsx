@@ -1,4 +1,9 @@
-import { listFilterFormClass } from "@/components/ui/table/list-filter-bar"
+import {
+    listFilterSkeletonButtonClass,
+    listFilterSkeletonFormClass,
+    listFilterSkeletonSearchClass,
+    listFilterSkeletonSelectClass,
+} from "@/components/ui/table/list-filter-bar"
 
 import { Skeleton } from "./Skeleton"
 
@@ -14,13 +19,13 @@ export function ListTableSkeleton({
     columnCount = 5,
 }: Props) {
     return (
-        <div className="flex flex-col gap-4">
-            <div className={listFilterFormClass} aria-hidden>
-                <Skeleton className="min-h-8 w-full flex-1 basis-full sm:basis-0" />
+        <div className="flex min-w-0 flex-col gap-4">
+            <div className={listFilterSkeletonFormClass} aria-hidden>
+                <Skeleton className={listFilterSkeletonSearchClass} />
                 {Array.from({ length: filterCount }, (_, i) => (
-                    <Skeleton key={i} className="h-8 w-36 shrink-0" />
+                    <Skeleton key={i} className={listFilterSkeletonSelectClass} />
                 ))}
-                <Skeleton className="h-8 w-20 shrink-0" />
+                <Skeleton className={listFilterSkeletonButtonClass} />
             </div>
 
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">

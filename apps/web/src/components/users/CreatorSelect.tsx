@@ -4,7 +4,10 @@ import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { IoChevronDownOutline, IoClose } from "react-icons/io5"
 
 import { searchUsersForSelectAction } from "@/app/actions/users"
-import { listFilterSelectClass } from "@/components/ui/table/list-filter-bar"
+import {
+    listFilterFieldClass,
+    listFilterSelectClass,
+} from "@/components/ui/table/list-filter-bar"
 import { formatUserDisplayName, type UserSelectOption } from "@/lib/user-display"
 
 type Props = {
@@ -132,7 +135,7 @@ export function CreatorSelect({
     }
 
     return (
-        <div ref={containerRef} className="relative shrink-0 min-w-44 sm:min-w-48">
+        <div ref={containerRef} className={`relative ${listFilterFieldClass} sm:min-w-48`}>
             <button
                 type="button"
                 onClick={() => setOpen((current) => !current)}
