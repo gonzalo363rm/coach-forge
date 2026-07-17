@@ -19,6 +19,10 @@ import type {
 } from "@/interfaces"
 import SkiaCanvas from "@/components/skia/SkiaCanvas"
 import { loadImageAsBytes } from "@/utils/image"
+import {
+    buildOrderedItemsFromCanvas,
+    playerOptionsFromCanvas,
+} from "@/utils/exercise-ordered-items"
 import { buildOrderOverlayBadges } from "@/utils/order-overlay-badges"
 import { ExerciseOrderPanel, type OrderedItemSummary } from "./ExerciseOrderPanel"
 import { ElementContextMenu } from "./ElementContextMenu"
@@ -31,7 +35,6 @@ import {
     getArrowLengthFromPoints,
     getControlPointCount,
     getShapeBounds,
-    getReadableTextColor,
     hexToColor,
     initControlPoints,
     isPointNearArrow,
@@ -675,45 +678,19 @@ export const ExerciseCanvas = ({
         setAssignedPlayersDraft((contextElement.assignedPlayers ?? []).join(", "))
     }, [contextElement, contextMenu.isOpen])
 
-    const playerOptions = useMemo(() => {
-        const players = [...images, ...arrows]
-            .flatMap((element) => element.assignedPlayers ?? [])
-            .map((player) => player.trim())
-            .filter((player): player is string => Boolean(player))
-        return Array.from(new Set(players)).sort((a, b) => a.localeCompare(b))
-    }, [arrows, images])
+    const playerOptions = useMemo(
+        () => playerOptionsFromCanvas({ images, arrows, circles, rects, lines }),
+        [arrows, circles, images, lines, rects],
+    )
 
-    const orderedItems = useMemo<OrderedItemSummary[]>(() => {
-        const toSummary = (
-            element: ImageElementInstance | ArrowElementInstance,
-            index: number,
-            type: "image" | "arrow"
-        ): OrderedItemSummary | null => {
-            if (typeof element.order !== "number") return null
-            if (playerFilter !== "all" && !(element.assignedPlayers ?? []).includes(playerFilter)) return null
-
-            return {
-                key: `${type}-${element.id ?? index}`,
-                order: element.order,
-                label: element.label?.trim() || "Sin titulo",
-                description: element.description?.trim(),
-                assignedPlayers: element.assignedPlayers?.map((player) => player.trim()).filter(Boolean),
-                badgeColor: element.style?.strokeColor ?? (type === "arrow" ? DEFAULT_ARROW_COLOR : DEFAULT_ELEMENT_COLOR),
-                badgeTextColor: getReadableTextColor(
-                    element.style?.strokeColor ?? (type === "arrow" ? DEFAULT_ARROW_COLOR : DEFAULT_ELEMENT_COLOR)
-                ),
-                targetType: type,
-                targetIndex: index,
-            }
-        }
-
-        return [
-            ...images.map((element, index) => toSummary(element, index, "image")),
-            ...arrows.map((element, index) => toSummary(element, index, "arrow")),
-        ]
-            .filter((item): item is OrderedItemSummary => item !== null)
-            .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
-    }, [arrows, images, playerFilter])
+    const orderedItems = useMemo(
+        () =>
+            buildOrderedItemsFromCanvas(
+                { images, arrows, circles, rects, lines },
+                playerFilter,
+            ),
+        [arrows, circles, images, lines, playerFilter, rects],
+    )
 
     // Drop de elemento del menú (de momento solo imagenes)
     const createImageInstanceFromDefinition = useCallback((x: number, y: number, elementDefinition: ElementDefinition): ImageElementInstance | null => {
@@ -861,17 +838,25 @@ export const ExerciseCanvas = ({
     }, [canvasSize.height, canvasSize.width])
 
     const handleEditOrderedItem = useCallback((item: OrderedItemSummary) => {
-        const target: ContextTarget =
-            item.targetType === "image"
-                ? { type: "image", index: item.targetIndex }
-                : { type: "arrow", index: item.targetIndex }
+        const target: NonNullable<ContextTarget> = {
+            type: item.targetType,
+            index: item.targetIndex,
+        }
+
+        const exists =
+            (target.type === "image" && Boolean(images[target.index])) ||
+            (target.type === "arrow" && Boolean(arrows[target.index])) ||
+            (target.type === "circle" && Boolean(circles[target.index])) ||
+            (target.type === "rect" && Boolean(rects[target.index])) ||
+            (target.type === "line" && Boolean(lines[target.index]))
+
+        if (!exists) return
 
         if (target.type === "arrow") {
             const arrow = arrows[target.index]
             if (!arrow) return
             setSelectedArrowId(arrow.id)
         } else {
-            if (!images[target.index]) return
             setSelectedArrowId(null)
         }
 
@@ -882,7 +867,7 @@ export const ExerciseCanvas = ({
             y: 16,
             target,
         })
-    }, [arrows, canvasSize.width, images])
+    }, [arrows, canvasSize.width, circles, images, lines, rects])
 
     useEffect(() => {
         if (!showCanvasOptions) return

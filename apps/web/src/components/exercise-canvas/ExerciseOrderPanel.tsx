@@ -8,7 +8,7 @@ export interface OrderedItemSummary {
     assignedPlayers?: string[]
     badgeColor: string
     badgeTextColor: string
-    targetType: "image" | "arrow"
+    targetType: "image" | "arrow" | "circle" | "rect" | "line"
     targetIndex: number
 }
 
