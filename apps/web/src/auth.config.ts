@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth"
 
+import { toAuthUser } from "@/lib/auth-user"
 import { isStaffRole } from "@/lib/user-permissions"
 import type { AuthUser } from "@/types/auth-user"
 
@@ -30,11 +31,11 @@ export const authConfig = {
   callbacks: {
     jwt({ token, user, trigger, session }) {
       if (user) {
-        token.data = user as AuthUser
+        token.data = toAuthUser(user as AuthUser)
       }
 
       if (trigger === "update" && session?.user) {
-        token.data = session.user as AuthUser
+        token.data = toAuthUser(session.user as AuthUser)
       }
 
       return token
@@ -51,6 +52,11 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isPublicRoute = publicRoutes.includes(nextUrl.pathname)
+      const isHome = nextUrl.pathname === "/"
+
+      if (isHome) {
+        return true
+      }
 
       if (isPublicRoute) {
         if (isLoggedIn) {

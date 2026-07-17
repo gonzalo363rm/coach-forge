@@ -1,7 +1,11 @@
 import Link from "next/link"
+import { notFound } from "next/navigation"
 
+import { auth } from "@/auth"
 import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
+import { canManageOwnedResource } from "@/lib/user-permissions"
+import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
 
 interface Props {
@@ -16,20 +20,34 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
     const fromId = params.from?.trim() ? params.from.trim() : null
     const returnTo = params.returnTo?.trim() ? params.returnTo.trim() : null
 
-    const canvasResult = fromId ? await getExerciseCanvasAction(fromId) : null
-    const initialExercise =
-        canvasResult && canvasResult.ok
-            ? {
-                  title: "",
-                  sportId: null,
-                  minPlayers: null,
-                  maxPlayers: null,
-                  difficulty: 3,
-                  isPublic: false,
-                  videoLink: null,
-                  canvas: canvasResult.data,
-              }
-            : null
+    let initialExercise = null
+    if (fromId) {
+        const session = await auth()
+        if (!session?.user) notFound()
+
+        const source = await exerciseGetById(fromId)
+        if (
+            !source ||
+            (!source.isPublic && !canManageOwnedResource(session.user, source.creatorId))
+        ) {
+            notFound()
+        }
+
+        const canvasResult = await getExerciseCanvasAction(fromId)
+        initialExercise =
+            canvasResult && canvasResult.ok
+                ? {
+                      title: "",
+                      sportId: null,
+                      minPlayers: null,
+                      maxPlayers: null,
+                      difficulty: 3,
+                      isPublic: false,
+                      videoLink: null,
+                      canvas: canvasResult.data,
+                  }
+                : null
+    }
 
     return (
         <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
@@ -41,11 +59,11 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                             href={returnTo}
                             className="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
                         >
-                            ← Volver a la clase
+                            ← Volver
                         </Link>
                     ) : null}
                     <h1 className="mt-2 text-2xl font-bold text-zinc-800 dark:text-white">
-                        Nuevo ejercicio
+                        {initialExercise ? "Nuevo ejercicio desde plantilla" : "Nuevo ejercicio"}
                     </h1>
                     </div>
                 </div>

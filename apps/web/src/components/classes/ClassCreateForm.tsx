@@ -57,6 +57,8 @@ export function ClassCreateForm({
     useEffect(() => {
         if (isEdit && initialDraft) {
             setDraft(initialDraft)
+        } else if (initialDraft) {
+            setDraft(initialDraft)
         } else {
             const stored = loadClassDraft()
             setDraft(stored ?? defaultClassDraft())
@@ -65,9 +67,9 @@ export function ClassCreateForm({
     }, [isEdit, initialDraft])
 
     useEffect(() => {
-        if (!hydrated || isEdit) return
+        if (!hydrated || isEdit || initialDraft) return
         saveClassDraft(draft)
-    }, [draft, hydrated, isEdit])
+    }, [draft, hydrated, isEdit, initialDraft])
 
     const applyAddedExercise = useCallback(async (exerciseId: string) => {
         const result = await getExerciseSummaryAction({ id: exerciseId })

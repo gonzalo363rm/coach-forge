@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 
 import { authConfig } from "@/auth.config"
+import { toAuthUser } from "@/lib/auth-user"
 import { signInSchema } from "@/schemas/auth.schema"
 import { authenticateUser } from "@/services/auth.service"
 
@@ -24,7 +25,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
           const { passwordHash, ...userWithoutPassword } = result.data
 
-          return userWithoutPassword
+          return toAuthUser(userWithoutPassword)
         } catch (error) {
           console.error(error)
           return null

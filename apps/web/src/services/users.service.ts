@@ -107,6 +107,14 @@ export async function userGetById(id: string): Promise<UserSafe | null> {
     return user ? toUserSafe(user) : null
 }
 
+export async function userGetAvatarUrl(userId: string): Promise<string | null> {
+    const user = await getPrisma().user.findUnique({
+        where: { id: userId },
+        select: { avatarUrl: true },
+    })
+    return user?.avatarUrl ?? null
+}
+
 export async function usersListPaginated(
     page: number,
     take: number,
