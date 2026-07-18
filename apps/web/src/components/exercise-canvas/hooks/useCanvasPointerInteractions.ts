@@ -89,6 +89,7 @@ interface Args {
     getShapeBounds: (shape: TempShape) => { left: number; top: number; width: number; height: number }
     findArrowHandleAt: (x: number, y: number) => DragTarget
     findTopElementAt: (x: number, y: number) => ContextTarget
+    onHistoryCheckpoint: () => void
 }
 
 export const useCanvasPointerInteractions = ({
@@ -138,6 +139,7 @@ export const useCanvasPointerInteractions = ({
     getShapeBounds,
     findArrowHandleAt,
     findTopElementAt,
+    onHistoryCheckpoint,
 }: Args) => {
     const canvasSnapshot = () => ({ images, arrows, circles, rects, lines })
 
@@ -206,6 +208,7 @@ export const useCanvasPointerInteractions = ({
                 selection[0].id === handleArrow.id
 
             if (onlyThisArrowSelected || selection.length === 0) {
+                onHistoryCheckpoint()
                 draggingRef.current = arrowHandle
                 setSelectedArrowId(handleArrow?.id ?? null)
                 if (handleIndex >= 0) {
@@ -247,6 +250,7 @@ export const useCanvasPointerInteractions = ({
             setSelectedArrowId(item.type === "arrow" ? item.id : null)
         }
 
+        onHistoryCheckpoint()
         draggingRef.current = { type: "selection-group" }
         offsetRef.current = { x, y }
         setShowSelectionMenu(false)
@@ -266,6 +270,7 @@ export const useCanvasPointerInteractions = ({
         isDrawingMarqueeRef,
         isDrawingShapeRef,
         lines,
+        onHistoryCheckpoint,
         rects,
         selection,
         setContextMenu,
@@ -488,6 +493,7 @@ export const useCanvasPointerInteractions = ({
             const points = completedArrow.data.points
             const length = getArrowLengthFromPoints(points[0], points[points.length - 1])
             if (length > minArrowLength) {
+                onHistoryCheckpoint()
                 setArrows((prev) => [...prev, completedArrow])
                 setSelectedArrowId(completedArrow.id)
                 if (completedArrow.id) {
@@ -510,6 +516,7 @@ export const useCanvasPointerInteractions = ({
             const hasMinimumSize = isLineTool ? lineLength > 8 : width > 8 && height > 8
 
             if (hasMinimumSize) {
+                onHistoryCheckpoint()
                 if (tempShape.tool === "circle") {
                     const radius = Math.min(width, height) / 2
                     const id = generateId()
@@ -562,8 +569,8 @@ export const useCanvasPointerInteractions = ({
                             type: "rect",
                             x: left,
                             y: top,
-                            zIndex: 0,
                             data: { width, height },
+                            zIndex: 0,
                             style: { strokeWidth: 3, strokeColor: defaultRectColor },
                         },
                     ])
@@ -576,7 +583,6 @@ export const useCanvasPointerInteractions = ({
             isDrawingShapeRef.current = false
             setCurrentTool("select")
         }
-
         if (draggingRef.current?.type === "selection-group" || draggingRef.current) {
             setShowSelectionMenu((prev) => prev || selection.length > 0)
             if (selection.length > 0) {
@@ -604,6 +610,7 @@ export const useCanvasPointerInteractions = ({
         isDrawingShape,
         isDrawingShapeRef,
         minArrowLength,
+        onHistoryCheckpoint,
         selection,
         setArrows,
         setCircles,

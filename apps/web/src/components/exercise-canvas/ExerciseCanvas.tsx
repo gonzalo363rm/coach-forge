@@ -44,6 +44,7 @@ import {
     type TempShape,
 } from "./canvas-helpers"
 import { useCanvasPointerInteractions } from "./hooks/useCanvasPointerInteractions"
+import { useCanvasHistory } from "./hooks/useCanvasHistory"
 import {
     drawArrow as drawArrowHelper,
     drawBackground as drawBackgroundHelper,
@@ -143,6 +144,15 @@ export const ExerciseCanvas = ({
     const isDrawingMarqueeRef = useRef(false)
     const offsetRef = useRef({ x: 0, y: 0 })
     const selectionRef = useRef<SelectionItem[]>([])
+    const elementsRef = useRef<CanvasElementsSnapshot>({
+        images: [],
+        circles: [],
+        rects: [],
+        lines: [],
+        arrows: [],
+    })
+    const contextEditCheckpointRef = useRef(false)
+    const history = useCanvasHistory()
 
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 })
     const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
@@ -201,7 +211,8 @@ export const ExerciseCanvas = ({
         setRects(c.rects)
         setLines(c.lines)
         setArrows(c.arrows)
-    }, [initialData])
+        history.clear()
+    }, [history, initialData])
 
     useEffect(() => {
         selectionRef.current = selection
@@ -211,6 +222,47 @@ export const ExerciseCanvas = ({
         (): CanvasElementsSnapshot => ({ images, circles, rects, lines, arrows }),
         [images, circles, rects, lines, arrows],
     )
+
+    useEffect(() => {
+        elementsRef.current = canvasElementsSnapshot
+    }, [canvasElementsSnapshot])
+
+    const pushHistoryCheckpoint = useCallback(() => {
+        history.push(elementsRef.current)
+    }, [history])
+
+    const applyHistorySnapshot = useCallback((snapshot: CanvasElementsSnapshot) => {
+        history.runWithoutRecording(() => {
+            setImages(snapshot.images)
+            setCircles(snapshot.circles)
+            setRects(snapshot.rects)
+            setLines(snapshot.lines)
+            setArrows(snapshot.arrows)
+            setSelection([])
+            setShowSelectionMenu(false)
+            setSelectedArrowId(null)
+            setSelectedElement(null)
+            setMarquee(null)
+            setTempArrow(null)
+            setTempShape(null)
+            setIsDrawingArrow(false)
+            setIsDrawingShape(false)
+            setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
+            contextEditCheckpointRef.current = false
+        })
+    }, [history])
+
+    const handleUndo = useCallback(() => {
+        const previous = history.undo(elementsRef.current)
+        if (!previous) return
+        applyHistorySnapshot(previous)
+    }, [applyHistorySnapshot, history])
+
+    const handleRedo = useCallback(() => {
+        const next = history.redo(elementsRef.current)
+        if (!next) return
+        applyHistorySnapshot(next)
+    }, [applyHistorySnapshot, history])
 
     const selectionBounds = useMemo(
         () => getSelectionUnionBounds(selection, canvasElementsSnapshot),
@@ -650,6 +702,11 @@ export const ExerciseCanvas = ({
     ) => {
         if (!contextMenu.target) return
 
+        if (!contextEditCheckpointRef.current) {
+            pushHistoryCheckpoint()
+            contextEditCheckpointRef.current = true
+        }
+
         if (contextMenu.target.type === "image") {
             setImages((prev) => {
                 const updated = [...prev]
@@ -701,10 +758,12 @@ export const ExerciseCanvas = ({
             updated[contextMenu.target!.index] = updater(current) as ArrowElementInstance
             return updated
         })
-    }, [contextMenu.target])
+    }, [contextMenu.target, pushHistoryCheckpoint])
 
     const deleteContextElement = useCallback(() => {
         if (!contextMenu.target) return
+
+        pushHistoryCheckpoint()
 
         if (contextMenu.target.type === "image") {
             setImages((prev) => prev.filter((_, index) => index !== contextMenu.target!.index))
@@ -726,7 +785,8 @@ export const ExerciseCanvas = ({
         setShowSelectionMenu(false)
         setSelectedElement(null)
         setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
-    }, [arrows, contextMenu.target, selectedArrowId])
+        contextEditCheckpointRef.current = false
+    }, [arrows, contextMenu.target, pushHistoryCheckpoint, selectedArrowId])
 
     const contextElement = contextMenu.target
         ? contextMenu.target.type === "image"
@@ -795,6 +855,7 @@ export const ExerciseCanvas = ({
         const newImageElementInstance = createImageInstanceFromDefinition(x, y, elementDefinition)
         if (!newImageElementInstance) return
 
+        pushHistoryCheckpoint()
         setImages((prev) => [...prev, newImageElementInstance])
         setSelectedPaletteElement(null)
         setCurrentTool("select")
@@ -802,7 +863,7 @@ export const ExerciseCanvas = ({
             setSelection([{ type: "image", id: newImageElementInstance.id }])
             setShowSelectionMenu(true)
         }
-    }, [createImageInstanceFromDefinition, setCurrentTool, setSelectedPaletteElement])
+    }, [createImageInstanceFromDefinition, pushHistoryCheckpoint, setCurrentTool, setSelectedPaletteElement])
 
     const handleRotateArrow = useCallback((nextRotation: number) => {
         updateContextElement((element) => {
@@ -833,6 +894,7 @@ export const ExerciseCanvas = ({
     const handleDuplicateContextElement = useCallback(() => {
         if (!contextMenu.target) return
 
+        pushHistoryCheckpoint()
         const offset = 24
         if (contextMenu.target.type === "image") {
             const source = images[contextMenu.target.index]
@@ -899,7 +961,7 @@ export const ExerciseCanvas = ({
         }
 
         setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
-    }, [arrows, circles, contextMenu.target, images, lines, rects])
+    }, [arrows, circles, contextMenu.target, images, lines, pushHistoryCheckpoint, rects])
 
     const handleResizeStart = useCallback((event: React.MouseEvent, direction: ResizeDirection) => {
         event.preventDefault()
@@ -961,6 +1023,7 @@ export const ExerciseCanvas = ({
 
     const handleDeleteSelection = useCallback(() => {
         if (selection.length === 0) return
+        pushHistoryCheckpoint()
         const next = removeSelectionFromCanvas(selection, canvasElementsSnapshot)
         setImages(next.images)
         setCircles(next.circles)
@@ -972,10 +1035,11 @@ export const ExerciseCanvas = ({
         setSelectedArrowId(null)
         setSelectedElement(null)
         setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
-    }, [canvasElementsSnapshot, selection])
+    }, [canvasElementsSnapshot, pushHistoryCheckpoint, selection])
 
     const handlePasteClipboard = useCallback(() => {
         if (!clipboard || !clipboardHasContent(clipboard)) return
+        pushHistoryCheckpoint()
         const { canvas: pasted, selection: nextSelection } = pasteClipboard(clipboard, generateId)
         setImages((prev) => [...prev, ...pasted.images])
         setCircles((prev) => [...prev, ...pasted.circles])
@@ -990,12 +1054,13 @@ export const ExerciseCanvas = ({
                 ? nextSelection[0].id
                 : null,
         )
-    }, [clipboard])
+    }, [clipboard, pushHistoryCheckpoint])
 
     const handleDuplicateSelection = useCallback(() => {
         if (selection.length === 0) return
         const payload = copySelectionToClipboard(selection, canvasElementsSnapshot)
         if (!clipboardHasContent(payload)) return
+        pushHistoryCheckpoint()
         const { canvas: pasted, selection: nextSelection } = pasteClipboard(payload, generateId)
         setImages((prev) => [...prev, ...pasted.images])
         setCircles((prev) => [...prev, ...pasted.circles])
@@ -1010,7 +1075,7 @@ export const ExerciseCanvas = ({
                 ? nextSelection[0].id
                 : null,
         )
-    }, [canvasElementsSnapshot, selection])
+    }, [canvasElementsSnapshot, pushHistoryCheckpoint, selection])
 
     const clientToWorld = useCallback((clientX: number, clientY: number) => {
         const container = canvasContainerRef.current
@@ -1032,6 +1097,7 @@ export const ExerciseCanvas = ({
             const start = clientToWorld(event.clientX, event.clientY)
             if (!start) return
 
+            pushHistoryCheckpoint()
             draggingRef.current = { type: "selection-group" }
             offsetRef.current = start
             event.currentTarget.setPointerCapture(event.pointerId)
@@ -1101,7 +1167,7 @@ export const ExerciseCanvas = ({
             window.addEventListener("pointermove", onMove)
             window.addEventListener("pointerup", onUp)
         },
-        [clientToWorld],
+        [clientToWorld, pushHistoryCheckpoint],
     )
 
     useEffect(() => {
@@ -1130,6 +1196,24 @@ export const ExerciseCanvas = ({
                 if (!isCanvasHoveredRef.current) return
                 event.preventDefault()
                 handlePasteClipboard()
+                return
+            }
+
+            if (mod && (event.key === "z" || event.key === "Z")) {
+                if (!isCanvasHoveredRef.current) return
+                event.preventDefault()
+                if (event.shiftKey) {
+                    handleRedo()
+                } else {
+                    handleUndo()
+                }
+                return
+            }
+
+            if (mod && (event.key === "y" || event.key === "Y")) {
+                if (!isCanvasHoveredRef.current) return
+                event.preventDefault()
+                handleRedo()
                 return
             }
 
@@ -1173,7 +1257,7 @@ export const ExerciseCanvas = ({
 
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [handleCopySelection, handleDeleteSelection, handlePasteClipboard, nudgeZoom, selection.length])
+    }, [handleCopySelection, handleDeleteSelection, handlePasteClipboard, handleRedo, handleUndo, nudgeZoom, selection.length])
 
     const pointer = useCanvasPointerInteractions({
         currentTool,
@@ -1222,6 +1306,7 @@ export const ExerciseCanvas = ({
         getShapeBounds,
         findArrowHandleAt,
         findTopElementAt,
+        onHistoryCheckpoint: pushHistoryCheckpoint,
     })
 
     const toWorldCoords = useCallback((x: number, y: number) => ({
@@ -1242,6 +1327,7 @@ export const ExerciseCanvas = ({
                 selectedPaletteElement,
             )
             if (newImageElementInstance) {
+                pushHistoryCheckpoint()
                 setImages((prev) => [...prev, newImageElementInstance])
                 setSelectedPaletteElement(null)
                 if (newImageElementInstance.id) {
@@ -1256,6 +1342,7 @@ export const ExerciseCanvas = ({
         createImageInstanceFromDefinition,
         currentTool,
         pointer,
+        pushHistoryCheckpoint,
         selectedPaletteElement,
         setSelectedPaletteElement,
         toWorldCoords,
@@ -1310,6 +1397,7 @@ export const ExerciseCanvas = ({
     const isCanvasBusy = !isSkiaReady || isLoadingImages || isPreloadingPaletteImage
 
     const clearCanvas = useCallback(() => {
+        pushHistoryCheckpoint()
         setImages([])
         setCircles([])
         setRects([])
@@ -1324,7 +1412,8 @@ export const ExerciseCanvas = ({
         setShowSelectionMenu(false)
         setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
         setAssignedPlayersDraft("")
-    }, [])
+        contextEditCheckpointRef.current = false
+    }, [pushHistoryCheckpoint])
 
     const handleClearCanvasConfirm = useCallback(() => {
         clearCanvas()
@@ -1533,7 +1622,10 @@ export const ExerciseCanvas = ({
                                 }))
                             }}
                             onUpdate={updateContextElement}
-                            onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))}
+                            onClose={() => {
+                                contextEditCheckpointRef.current = false
+                                setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
+                            }}
                             onDelete={deleteContextElement}
                             onDuplicate={handleDuplicateContextElement}
                             onRotateArrow={(value) => handleRotateArrow(clampRotation(value, MAX_ROTATION))}
