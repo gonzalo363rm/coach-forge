@@ -3,6 +3,7 @@ export const revalidate = 60
 
 import type { Metadata } from "next"
 import Link from "next/link"
+import { ButtonLink } from "@/components/ui/button"
 
 import { getMyExercisesPaginatedAction } from "@/app/actions/exercises"
 import { ExercisesPaginatedTable } from "@/components/exercises/ExercisesPaginatedTable"
@@ -107,12 +108,7 @@ export default async function MyExercisesPage({ searchParams }: Props) {
                     <p className="text-center text-zinc-600 dark:text-zinc-400">
                         {result.error}
                     </p>
-                    <Link
-                        href="/"
-                        className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                    >
-                        Volver al inicio
-                    </Link>
+                    <ButtonLink href="/" variant="primary">Volver al inicio</ButtonLink>
                 </main>
             </div>
         )

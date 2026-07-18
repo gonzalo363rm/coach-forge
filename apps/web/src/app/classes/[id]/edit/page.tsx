@@ -6,6 +6,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { ClassCreateForm } from "@/components/classes/ClassCreateForm"
 import { OwnedResourceForbidden } from "@/components/errors/OwnedResourceForbidden"
+import { ButtonLink } from "@/components/ui/button"
 import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
@@ -60,12 +61,13 @@ export default async function EditClassPage({ params }: Props) {
                     </p>
                 </div>
                 {trainingClass.items.length > 0 ? (
-                    <Link
+                    <ButtonLink
                         href={`/classes/${id}/start`}
-                        className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                        variant="primary"
+                        className="shrink-0"
                     >
                         Comenzar clase
-                    </Link>
+                    </ButtonLink>
                 ) : null}
             </header>
             <Suspense

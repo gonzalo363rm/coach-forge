@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import {
@@ -14,6 +13,9 @@ import {
     computeTotalMinutes,
 } from "@/schemas/training-class.schema"
 import type { Sport } from "@prisma/client"
+
+import { Button, ButtonLink } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/FormActions"
 
 import { AddExerciseModal } from "./AddExerciseModal"
 import { ClassExerciseList } from "./ClassExerciseList"
@@ -289,20 +291,22 @@ export function ClassCreateForm({
                         onView={setViewItem}
                     />
                     <div className="flex flex-col gap-2 sm:flex-row">
-                        <button
+                        <Button
                             type="button"
+                            variant="soft"
+                            className="flex-1 border-dashed py-3"
                             onClick={() => setAddModalOpen(true)}
-                            className="flex-1 rounded-lg border border-dashed border-emerald-600 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
                         >
                             + Añadir ejercicio
-                        </button>
-                        <Link
+                        </Button>
+                        <ButtonLink
                             href={`/exercises/new?returnTo=${returnToEncoded}`}
-                            className="flex-1 rounded-lg border border-zinc-300 py-3 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                            variant="secondary"
+                            className="flex-1 py-3"
                             onClick={() => saveClassDraft(draft)}
                         >
                             + Nuevo ejercicio
-                        </Link>
+                        </ButtonLink>
                     </div>
                 </section>
             </LayoutGrid>
@@ -313,26 +317,15 @@ export function ClassCreateForm({
                 </p>
             ) : null}
 
-            <div className="flex flex-wrap justify-end gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-                <Link
-                    href="/classes/mine"
-                    className="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-                >
-                    Cancelar
-                </Link>
-                <button
-                    type="button"
-                    disabled={pending || draft.items.length === 0 || !draft.title.trim()}
-                    onClick={handleSave}
-                    className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                    {pending
-                        ? "Guardando…"
-                        : isEdit
-                          ? "Guardar cambios"
-                          : "Guardar clase"}
-                </button>
-            </div>
+            <FormActions
+                borderTop
+                pending={pending}
+                cancelHref="/classes/mine"
+                submitType="button"
+                onSubmitClick={handleSave}
+                submitDisabled={draft.items.length === 0 || !draft.title.trim()}
+                submitLabel={isEdit ? "Guardar cambios" : "Guardar clase"}
+            />
 
             <AddExerciseModal
                 open={addModalOpen}

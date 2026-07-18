@@ -1,11 +1,11 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { createElementAction, updateElementAction } from "@/app/actions/elements"
+import { FormActions } from "@/components/ui/FormActions"
 import type { SportListOption } from "@/interfaces"
 import {
     isImageFileTooLarge,
@@ -268,21 +268,7 @@ export function ElementForm(props: Props) {
                     ) : null}
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-3">
-                    <button
-                        type="submit"
-                        disabled={pending}
-                        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                        {pending ? "Guardando…" : "Guardar"}
-                    </button>
-                    <Link
-                        href="/admin/elements"
-                        className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    >
-                        Cancelar
-                    </Link>
-                </div>
+                <FormActions pending={pending} cancelHref="/admin/elements" className="mt-2" />
             </form>
         </div>
     )

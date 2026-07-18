@@ -1,5 +1,6 @@
-import Link from "next/link"
 import type { ReactNode } from "react"
+
+import { ButtonLink } from "@/components/ui/button"
 
 type Props = {
     code: string
@@ -38,12 +39,9 @@ export function FunErrorPage({
                         {hint}
                     </p>
                 ) : null}
-                <Link
-                    href={backHref}
-                    className="mt-8 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                >
+                <ButtonLink href={backHref} variant="primary" className="mt-8">
                     {backLabel}
-                </Link>
+                </ButtonLink>
             </div>
         </div>
     )

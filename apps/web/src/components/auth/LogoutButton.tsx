@@ -3,6 +3,7 @@
 import { logoutAction } from "@/app/actions/auth"
 import { useTransition } from "react"
 
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 
 export function LogoutButton() {
@@ -20,13 +21,14 @@ export function LogoutButton() {
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="sm"
       onClick={handleLogout}
       disabled={pending}
-      className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
     >
       {pending ? "Cerrando sesión..." : "Cerrar sesión"}
-    </button>
+    </Button>
   )
 }

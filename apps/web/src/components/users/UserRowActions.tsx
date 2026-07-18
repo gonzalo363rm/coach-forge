@@ -1,7 +1,9 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useId, useState } from "react"
+
+import { Button, ButtonLink } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/FormActions"
 
 type DeleteResult = { ok: true } | { ok: false; error: string }
 
@@ -62,7 +64,9 @@ export function UserRowActions({
 
     if (!canEdit && !canDelete) {
         return (
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">No puedes gestionar este usuario</span>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                No puedes gestionar este usuario
+            </span>
         )
     }
 
@@ -70,22 +74,20 @@ export function UserRowActions({
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
                 {canEdit ? (
-                    <Link
-                        href={`/admin/users/${id}/edit`}
-                        className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                    >
+                    <ButtonLink href={`/admin/users/${id}/edit`} variant="secondary" size="sm">
                         Editar
-                    </Link>
+                    </ButtonLink>
                 ) : null}
                 {canDelete ? (
-                    <button
+                    <Button
                         type="button"
+                        variant="danger"
+                        size="sm"
                         disabled={deleting}
                         onClick={openConfirm}
-                        className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/70"
                     >
                         Eliminar
-                    </button>
+                    </Button>
                 ) : null}
             </div>
 
@@ -122,24 +124,21 @@ export function UserRowActions({
                                 {error}
                             </p>
                         ) : null}
-                        <div className="mt-6 flex flex-wrap justify-end gap-2">
-                            <button
-                                type="button"
-                                disabled={deleting}
-                                onClick={closeConfirm}
-                                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                disabled={deleting}
-                                onClick={() => void confirmDelete()}
-                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {deleting ? "Eliminando…" : "Eliminar"}
-                            </button>
-                        </div>
+                        <FormActions
+                            className="mt-6"
+                            pending={deleting}
+                            onCancel={closeConfirm}
+                            submit={
+                                <Button
+                                    type="button"
+                                    variant="danger"
+                                    disabled={deleting}
+                                    onClick={() => void confirmDelete()}
+                                >
+                                    {deleting ? "Eliminando…" : "Eliminar"}
+                                </Button>
+                            }
+                        />
                     </div>
                 </div>
             ) : null}

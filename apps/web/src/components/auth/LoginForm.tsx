@@ -13,6 +13,7 @@ import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { IoRefreshCircleOutline } from "react-icons/io5"
 
+import { Button } from "@/components/ui/button"
 import { type SignInFormInput, signInSchema } from "@/schemas/auth.schema"
 
 import { AuthFieldError } from "./AuthFieldError"
@@ -118,7 +119,7 @@ export function LoginForm() {
                 disabled={pending || resendPending}
                 title="Reenviar correo de verificación"
                 aria-label="Reenviar correo de verificación"
-                className="shrink-0 rounded-full p-0.5 text-red-700 transition-colors hover:bg-red-100 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-200 dark:hover:bg-red-950 dark:hover:text-red-50"
+                className="shrink-0 rounded-full p-0.5 text-red-700 transition-colors hover:bg-red-100 hover:text-red-900 disabled:cursor-default disabled:opacity-50 dark:text-red-200 dark:hover:bg-red-950 dark:hover:text-red-50"
               >
                 <IoRefreshCircleOutline
                   className={clsx(
@@ -169,13 +170,9 @@ export function LoginForm() {
         <AuthFieldError message={errors.password?.message} />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" variant="primary" fullWidth disabled={pending}>
         {pending ? "Iniciando sesión..." : "Iniciar sesión"}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
         ¿No tienes cuenta?{" "}

@@ -1,7 +1,9 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useId, useState } from "react"
+
+import { Button, ButtonLink } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/FormActions"
 
 type DeleteResult = { ok: true } | { ok: false; error: string }
 
@@ -24,7 +26,7 @@ export function ElementRowActions({ id, name, deleteElement }: Props) {
         }
         document.addEventListener("keydown", onKeyDown)
         return () => document.removeEventListener("keydown", onKeyDown)
-    }, [confirmOpen, deleting])
+    }, [confirmOpen, deleting, error])
 
     function openConfirm() {
         setError(null)
@@ -55,20 +57,18 @@ export function ElementRowActions({ id, name, deleteElement }: Props) {
     return (
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-                <Link
-                    href={`/admin/elements/${id}/edit`}
-                    className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
+                <ButtonLink href={`/admin/elements/${id}/edit`} variant="secondary" size="sm">
                     Editar
-                </Link>
-                <button
+                </ButtonLink>
+                <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
                     disabled={deleting}
                     onClick={openConfirm}
-                    className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/70"
                 >
                     Eliminar
-                </button>
+                </Button>
             </div>
 
             {confirmOpen ? (
@@ -107,24 +107,22 @@ export function ElementRowActions({ id, name, deleteElement }: Props) {
                                 {error}
                             </p>
                         ) : null}
-                        <div className="mt-6 flex flex-wrap justify-end gap-2">
-                            <button
-                                type="button"
-                                disabled={deleting}
-                                onClick={closeConfirm}
-                                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                            >
-                                {error ? "Cerrar" : "Cancelar"}
-                            </button>
-                            <button
-                                type="button"
-                                disabled={deleting}
-                                onClick={() => void confirmDelete()}
-                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {deleting ? "Eliminando…" : "Eliminar"}
-                            </button>
-                        </div>
+                        <FormActions
+                            className="mt-6"
+                            pending={deleting}
+                            cancelLabel={error ? "Cerrar" : "Cancelar"}
+                            onCancel={closeConfirm}
+                            submit={
+                                <Button
+                                    type="button"
+                                    variant="danger"
+                                    disabled={deleting}
+                                    onClick={() => void confirmDelete()}
+                                >
+                                    {deleting ? "Eliminando…" : "Eliminar"}
+                                </Button>
+                            }
+                        />
                     </div>
                 </div>
             ) : null}

@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 
+import { Button } from "@/components/ui/button"
 import {
   type ForgotPasswordFormInput,
   forgotPasswordSchema,
@@ -95,13 +96,9 @@ export function ForgotPasswordForm() {
         <AuthFieldError message={errors.email?.message} />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" variant="primary" fullWidth disabled={pending}>
         {pending ? "Enviando enlace..." : "Enviar enlace de recuperación"}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
         <Link

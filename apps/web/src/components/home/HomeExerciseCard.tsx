@@ -1,5 +1,4 @@
-import Link from "next/link"
-
+import { ButtonLink } from "@/components/ui/button"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
 import type { PublicHomeExercise } from "@/services/home-catalog.service"
 
@@ -30,12 +29,14 @@ export function HomeExerciseCard({ exercise, isLoggedIn }: Props) {
                     Dificultad {exercise.difficulty} / 5
                 </p>
                 {isLoggedIn ? (
-                    <Link
+                    <ButtonLink
                         href={templateHref}
-                        className="mt-auto inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-950/70"
+                        variant="soft"
+                        size="sm"
+                        className="mt-auto w-full"
                     >
                         Usar plantilla
-                    </Link>
+                    </ButtonLink>
                 ) : null}
             </div>
         </article>

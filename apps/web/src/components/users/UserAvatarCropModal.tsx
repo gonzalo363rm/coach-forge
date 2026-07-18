@@ -4,6 +4,7 @@ import * as Slider from "@radix-ui/react-slider"
 import { useCallback, useState } from "react"
 import Cropper, { type Area } from "react-easy-crop"
 
+import { Button } from "@/components/ui/button"
 import { getCroppedImageFile } from "@/utils/crop-image"
 
 type Props = {
@@ -102,22 +103,22 @@ export function UserAvatarCropModal({ imageSrc, onClose, onConfirm }: Props) {
                 ) : null}
 
                 <div className="flex justify-end gap-2 border-t border-zinc-200 px-4 py-3 dark:border-zinc-700">
-                    <button
+                    <Button
                         type="button"
+                        variant="secondary"
                         disabled={pending}
                         onClick={onClose}
-                        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                     >
                         Cancelar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="button"
+                        variant="primary"
                         disabled={pending || !croppedAreaPixels}
                         onClick={() => void handleConfirm()}
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                     >
                         {pending ? "Guardando…" : "Usar foto"}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

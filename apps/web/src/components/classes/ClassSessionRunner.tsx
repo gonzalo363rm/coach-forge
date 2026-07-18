@@ -11,6 +11,8 @@ import {
     IoRefresh,
 } from "react-icons/io5"
 
+import { Button } from "@/components/ui/button"
+
 import { ClassExercisePreviewModal } from "./ClassExercisePreviewModal"
 import {
     DEFAULT_REST_SECONDS,
@@ -34,7 +36,7 @@ type Props = {
 }
 
 const iconBtn =
-    "inline-flex size-9 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+    "inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-default disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
 
 const PREVIEW_PLACEHOLDER = "/exercises/placeholder-preview.svg"
 
@@ -213,31 +215,34 @@ export function ClassSessionRunner({ session }: Props) {
                         )}
 
                         <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
-                            <button
+                            <Button
                                 type="button"
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => timer.startRest(DEFAULT_REST_SECONDS)}
-                                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
                             >
                                 Descanso (1 min)
-                            </button>
+                            </Button>
                             {timer.phase === "rest" ? (
                                 <>
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="secondary"
+                                        size="sm"
                                         onClick={() =>
                                             timer.addRestTime(REST_INCREMENT_SECONDS)
                                         }
-                                        className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
                                     >
                                         +1 min
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         type="button"
+                                        variant="primary"
+                                        size="sm"
                                         onClick={timer.skipRest}
-                                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                                     >
                                         Saltar descanso
-                                    </button>
+                                    </Button>
                                 </>
                             ) : null}
                         </div>
@@ -313,7 +318,7 @@ function ExerciseControls({
             <button
                 type="button"
                 onClick={onRepeat}
-                className="rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                className="cursor-pointer rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
                 Repetir
             </button>

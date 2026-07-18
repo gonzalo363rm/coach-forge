@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { Button } from "@/components/ui/button"
 import type { Exercise, ExerciseCanvas, SportListOption } from "@/interfaces"
 import { EXERCISE_EMPTY_CANVAS_MESSAGE } from "@/schemas/exercise.schema"
 
@@ -255,12 +256,24 @@ export const SaveExerciseModal = ({
                     </p>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-2">
-                    <button type="button" disabled={isSaving} onClick={onClose} className="cf-btn-neutral">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={isSaving}
+                        onClick={onClose}
+                    >
                         Cancelar
-                    </button>
-                    <button type="button" disabled={isSaving} onClick={handleConfirm} className="cf-btn-success">
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={isSaving}
+                        onClick={handleConfirm}
+                    >
                         {isSaving ? "Guardando..." : "Aceptar"}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

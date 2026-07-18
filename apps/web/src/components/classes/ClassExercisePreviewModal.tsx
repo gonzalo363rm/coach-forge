@@ -10,6 +10,7 @@ import {
 
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
 import { ExerciseOrderPanel } from "@/components/exercise-canvas/ExerciseOrderPanel"
+import { Button } from "@/components/ui/button"
 import type { ExerciseCanvas } from "@/interfaces"
 import {
     buildOrderedItemsFromCanvas,
@@ -276,20 +277,12 @@ function ExercisePreviewContent({
 
             {!isFullscreen ? (
                 <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-3 dark:border-zinc-700">
-                    <button
-                        type="button"
-                        onClick={onToggleExpand}
-                        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-                    >
+                    <Button type="button" variant="secondary" onClick={onToggleExpand}>
                         Pantalla completa
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-                    >
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={onClose}>
                         Cerrar
-                    </button>
+                    </Button>
                 </div>
             ) : null}
         </>

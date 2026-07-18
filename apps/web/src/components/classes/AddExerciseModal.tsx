@@ -6,6 +6,7 @@ import { IoChevronBackOutline, IoChevronForwardOutline, IoCloseOutline } from "r
 
 import { getExercisesPaginatedAction } from "@/app/actions/exercises"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
+import { Button } from "@/components/ui/button"
 import type { ExerciseListItem } from "@/services/exercises.service"
 import type { Sport } from "@prisma/client"
 
@@ -234,13 +235,15 @@ export function AddExerciseModal({
                                 className="max-w-xs sm:max-w-sm"
                             />
 
-                            <button
+                            <Button
                                 type="submit"
+                                variant="primary"
+                                size="sm"
+                                className="shrink-0"
                                 disabled={pending}
-                                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                             >
                                 Buscar
-                            </button>
+                            </Button>
                         </div>
                     </form>
                     {/* </div> */}
@@ -316,16 +319,17 @@ export function AddExerciseModal({
                                                     {exercise.difficulty}/5
                                                 </td>
                                                 <td className="px-3 py-2 text-right">
-                                                    <button
+                                                    <Button
                                                         type="button"
+                                                        variant="primary"
+                                                        size="sm"
                                                         disabled={already}
                                                         onClick={() =>
                                                             setConfigureExercise(exercise)
                                                         }
-                                                        className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         {already ? "En la clase" : "Añadir"}
-                                                    </button>
+                                                    </Button>
                                                 </td>
                                             </tr>
                                         )

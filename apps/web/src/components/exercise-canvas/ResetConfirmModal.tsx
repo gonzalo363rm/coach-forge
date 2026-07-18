@@ -1,5 +1,7 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
+
 export type ResetConfirmModalProps = {
     open: boolean
     isTemplateExercise: boolean
@@ -41,17 +43,17 @@ export const ResetConfirmModal = ({
                         : "Esto limpiara todo el canvas actual."}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                    <button type="button" onClick={onClose} className="cf-btn-neutral">
+                    <Button type="button" variant="secondary" size="sm" onClick={onClose}>
                         Cancelar
-                    </button>
-                    {isTemplateExercise && (
-                        <button type="button" onClick={onResetTemplate} className="cf-btn-info">
+                    </Button>
+                    {isTemplateExercise ? (
+                        <Button type="button" variant="info" size="sm" onClick={onResetTemplate}>
                             Reiniciar template
-                        </button>
-                    )}
-                    <button type="button" onClick={onClearCanvas} className="cf-btn-danger">
+                        </Button>
+                    ) : null}
+                    <Button type="button" variant="danger" size="sm" onClick={onClearCanvas}>
                         Limpiar canvas
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

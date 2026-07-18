@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 
-import type { ClassDraftExerciseItem } from "./class-draft-storage"
+import { Button } from "@/components/ui/button"
 import type { ExerciseListItem } from "@/services/exercises.service"
+
+import type { ClassDraftExerciseItem } from "./class-draft-storage"
 
 type AddProps = {
     mode: "add"
@@ -111,31 +113,25 @@ export function ClassExerciseConfigModal(props: Props) {
                 </div>
                 <div className="mt-6 flex flex-wrap justify-end gap-2">
                     {props.mode === "edit" && props.onRemove ? (
-                        <button
+                        <Button
                             type="button"
+                            variant="danger"
+                            size="sm"
+                            className="mr-auto"
                             onClick={() => {
                                 props.onRemove?.()
                                 props.onClose()
                             }}
-                            className="mr-auto rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/70"
                         >
                             Quitar de la clase
-                        </button>
+                        </Button>
                     ) : null}
-                    <button
-                        type="button"
-                        onClick={props.onClose}
-                        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-                    >
+                    <Button type="button" variant="secondary" onClick={props.onClose}>
                         Cancelar
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleConfirm}
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                    >
+                    </Button>
+                    <Button type="button" variant="primary" onClick={handleConfirm}>
                         {confirmLabel}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

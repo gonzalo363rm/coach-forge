@@ -19,8 +19,10 @@ export const listFilterSelectClass = [
     "min-h-8 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200",
 ].join(" ")
 
+/** Primary sm + layout de barra de filtros. */
 export const listFilterButtonClass = [
-    "col-span-2 min-h-8 w-full rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50 sm:col-span-1 sm:w-auto sm:shrink-0",
+    "col-span-2 min-h-8 w-full sm:col-span-1 sm:w-auto sm:shrink-0",
+    "inline-flex cursor-pointer items-center justify-center rounded-lg border border-transparent bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50 dark:focus-visible:ring-offset-zinc-950",
 ].join(" ")
 
 export const listFilterSkeletonFormClass = [

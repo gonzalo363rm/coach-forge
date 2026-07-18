@@ -1,7 +1,6 @@
-import Link from "next/link"
-
 import { HeaderAvatar } from "@/components/auth/HeaderAvatar"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
+import { ButtonLink } from "@/components/ui/button"
 import { formatUserDisplayName } from "@/lib/user-display"
 import type { PublicHomeClass } from "@/services/home-catalog.service"
 
@@ -61,18 +60,12 @@ export function HomeClassBlock({ trainingClass, isLoggedIn }: Props) {
 
                 {isLoggedIn ? (
                     <div className="flex shrink-0 flex-wrap gap-2">
-                        <Link
-                            href={startHref}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
-                        >
+                        <ButtonLink href={startHref} variant="primary" size="sm">
                             Comenzar
-                        </Link>
-                        <Link
-                            href={templateHref}
-                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-950/70"
-                        >
+                        </ButtonLink>
+                        <ButtonLink href={templateHref} variant="soft" size="sm">
                             Usar plantilla
-                        </Link>
+                        </ButtonLink>
                     </div>
                 ) : null}
             </div>

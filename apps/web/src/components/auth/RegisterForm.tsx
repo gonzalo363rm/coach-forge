@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 
+import { Button } from "@/components/ui/button"
 import {
   type RegisterFormInput,
   registerSchema,
@@ -138,13 +139,9 @@ export function RegisterForm() {
         <AuthFieldError message={errors.confirmPassword?.message} />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" variant="primary" fullWidth disabled={pending}>
         {pending ? "Creando cuenta..." : "Crear cuenta"}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
         ¿Ya tienes cuenta?{" "}

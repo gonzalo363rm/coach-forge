@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { clsx } from "clsx"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
@@ -14,6 +13,7 @@ import {
     updateProfileAction,
     updateUserAction,
 } from "@/app/actions/users"
+import { FormActions } from "@/components/ui/FormActions"
 import { UserAvatarField } from "@/components/users/UserAvatarField"
 import {
     assignableRolesForActor,
@@ -186,7 +186,7 @@ function UserCreateForm({ actorRole }: { actorRole: Role }) {
                     canEditRole={canEditRole}
                     assignableRoles={assignableRoles}
                 />
-                <FormActions pending={pending} cancelHref="/admin/users" />
+                <FormActions pending={pending} cancelHref="/admin/users" className="mt-2" />
             </form>
         </div>
     )
@@ -293,7 +293,7 @@ function UserEditForm({ user, actorRole }: { user: UserSafe; actorRole: Role }) 
                     canEditRole={canEditRole}
                     assignableRoles={assignableRoles}
                 />
-                <FormActions pending={pending} cancelHref="/admin/users" />
+                <FormActions pending={pending} cancelHref="/admin/users" className="mt-2" />
             </form>
         </div>
     )
@@ -385,7 +385,7 @@ function UserProfileForm({ user }: { user: UserSafe }) {
                 />
 
                 <ProfileFields register={register} errors={errors} />
-                <FormActions pending={pending} cancelHref="/" />
+                <FormActions pending={pending} cancelHref="/" className="mt-2" />
             </form>
         </div>
     )
@@ -690,28 +690,3 @@ function UserFields({
     )
 }
 
-function FormActions({
-    pending,
-    cancelHref,
-}: {
-    pending: boolean
-    cancelHref: string
-}) {
-    return (
-        <div className="mt-2 flex flex-wrap gap-3">
-            <button
-                type="submit"
-                disabled={pending}
-                className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-            >
-                {pending ? "Guardando…" : "Guardar"}
-            </button>
-            <Link
-                href={cancelHref}
-                className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-                Cancelar
-            </Link>
-        </div>
-    )
-}

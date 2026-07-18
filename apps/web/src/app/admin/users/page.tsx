@@ -3,6 +3,7 @@ export const revalidate = 60
 
 import type { Metadata } from "next"
 import Link from "next/link"
+import { ButtonLink } from "@/components/ui/button"
 import { redirect } from "next/navigation"
 import type { Role } from "@prisma/client"
 
@@ -82,12 +83,7 @@ export default async function UsersListPage({ searchParams }: Props) {
             <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
                 <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
                     <p className="text-center text-zinc-600 dark:text-zinc-400">{result.error}</p>
-                    <Link
-                        href="/"
-                        className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                    >
-                        Volver al inicio
-                    </Link>
+                    <ButtonLink href="/" variant="primary">Volver al inicio</ButtonLink>
                 </main>
             </div>
         )
