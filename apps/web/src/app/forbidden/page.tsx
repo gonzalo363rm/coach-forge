@@ -1,11 +1,14 @@
 import type { Metadata } from "next"
 
 import { FunErrorPage } from "@/components/errors/FunErrorPage"
+import { createPageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-    title: "Sin permisos | Coach Forge",
-    description: "No tienes permisos para acceder a esta sección.",
-}
+export const metadata: Metadata = createPageMetadata({
+    title: "Sin permisos",
+    description: "No tenés permisos para acceder a esta sección de Coach Forge.",
+    path: "/forbidden",
+    noIndex: true,
+})
 
 export default function ForbiddenPage() {
     return (

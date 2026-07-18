@@ -1,6 +1,15 @@
-import { SportForm } from "@/components/sports/SportForm"
-import { sportsGetById } from "@/services/sports.service"
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+
+import { SportForm } from "@/components/sports/SportForm"
+import { createPageMetadata } from "@/lib/seo"
+import { sportsGetById } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Editar deporte",
+    description: "Editá un deporte de la plataforma.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

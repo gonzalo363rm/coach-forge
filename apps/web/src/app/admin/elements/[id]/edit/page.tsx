@@ -1,7 +1,16 @@
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
+
 import { ElementForm } from "@/components/elements/ElementForm"
+import { createPageMetadata } from "@/lib/seo"
 import { elementGetById } from "@/services/elements.service"
 import { sportsListAll } from "@/services/sports.service"
-import { notFound } from "next/navigation"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Editar elemento",
+    description: "Editá un elemento del canvas.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

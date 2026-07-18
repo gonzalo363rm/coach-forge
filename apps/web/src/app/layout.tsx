@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/auth/AppHeader";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { getAppUrl } from "@/lib/app-url";
+import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "@/styles/exercise-canvas-modals.css";
 
@@ -16,8 +18,42 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Coach Forge - Editor de Gráficos",
-  description: "Editor de gráficos 2D dinámicos",
+  metadataBase: new URL(getAppUrl()),
+  title: {
+    default: `${SITE_NAME} | Editor de ejercicios y clases`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  keywords: [
+    "coach",
+    "entrenamiento",
+    "ejercicios",
+    "clases",
+    "deportes",
+    "editor visual",
+    "plantillas",
+    "Coach Forge",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "es",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} | Editor de ejercicios y clases`,
+    description: DEFAULT_DESCRIPTION,
+    url: getAppUrl(),
+  },
+  twitter: {
+    card: "summary",
+    title: `${SITE_NAME} | Editor de ejercicios y clases`,
+    description: DEFAULT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

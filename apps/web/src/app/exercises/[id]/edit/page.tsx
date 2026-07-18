@@ -1,13 +1,21 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { auth } from "@/auth"
 import { OwnedResourceForbidden } from "@/components/errors/OwnedResourceForbidden"
 import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import type { ExerciseCanvas as ExerciseCanvasData } from "@/interfaces"
+import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
 import { notFound } from "next/navigation"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Editar ejercicio",
+    description: "Editá un ejercicio en el editor visual de Coach Forge.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

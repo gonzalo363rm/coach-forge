@@ -1,13 +1,22 @@
 /** Revalidación: lista de elementos */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { getElementsPaginatedAction } from "@/app/actions/elements"
 import { ElementsPaginatedTable } from "@/components/elements/ElementsPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
+import { createPageMetadata } from "@/lib/seo"
 import { elementListSortBySchema, type ElementListSortBy } from "@/schemas/element.schema"
 import { sportsListAll } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Elementos",
+    description: "Administrá los elementos del canvas por deporte.",
+    path: "/admin/elements",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

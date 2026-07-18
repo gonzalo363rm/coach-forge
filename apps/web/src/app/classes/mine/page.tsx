@@ -1,16 +1,25 @@
 /** Revalidación: mis clases */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { getMyTrainingClassesPaginatedAction } from "@/app/actions/classes"
 import { ClassesPaginatedTable } from "@/components/classes/ClassesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
+import { createPageMetadata } from "@/lib/seo"
 import {
     trainingClassListSortBySchema,
     type TrainingClassListSortBy,
 } from "@/schemas/training-class.schema"
 import { sportsListAll } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Mis clases",
+    description: "Gestioná tus clases de entrenamiento y arrancá sesiones en Coach Forge.",
+    path: "/classes/mine",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

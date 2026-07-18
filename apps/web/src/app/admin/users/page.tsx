@@ -1,19 +1,28 @@
 /** Revalidación: lista de usuarios */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import type { Role } from "@prisma/client"
 
 import { getUsersPaginatedAction } from "@/app/actions/users"
 import { auth } from "@/auth"
 import { ListNewLink } from "@/components/ui/ListNewLink"
 import { UsersPaginatedTable } from "@/components/users/UsersPaginatedTable"
+import { createPageMetadata } from "@/lib/seo"
 import { filterableRolesForActor, isStaffRole } from "@/lib/user-permissions"
 import {
     userListSortBySchema,
     type UserListSortBy,
 } from "@/schemas/user.schema"
-import type { Role } from "@prisma/client"
-import { redirect } from "next/navigation"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Usuarios",
+    description: "Administrá los usuarios de la plataforma.",
+    path: "/admin/users",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

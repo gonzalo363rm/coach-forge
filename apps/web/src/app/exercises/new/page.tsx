@@ -1,12 +1,21 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { auth } from "@/auth"
 import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
+import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { exerciseGetById } from "@/services/exercises.service"
 import { sportsListAll } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Nuevo ejercicio",
+    description: "Creá un ejercicio visual con el editor 2D de Coach Forge.",
+    path: "/exercises/new",
+    noIndex: true,
+})
 
 interface Props {
     searchParams: Promise<{ from?: string; returnTo?: string }>

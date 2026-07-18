@@ -1,7 +1,16 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { AuthShell } from "@/components/auth/AuthShell"
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm"
+import { createPageMetadata } from "@/lib/seo"
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Nueva contraseña",
+  description: "Definí una nueva contraseña para tu cuenta de Coach Forge.",
+  path: "/reset-password",
+  noIndex: true,
+})
 
 type Props = {
   searchParams: Promise<{

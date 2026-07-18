@@ -1,16 +1,25 @@
 /** Revalidación: mis ejercicios */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { getMyExercisesPaginatedAction } from "@/app/actions/exercises"
 import { ExercisesPaginatedTable } from "@/components/exercises/ExercisesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
+import { createPageMetadata } from "@/lib/seo"
 import {
     exerciseListSortBySchema,
     type ExerciseListSortBy,
 } from "@/schemas/exercise.schema"
 import { sportsListAll } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Mis ejercicios",
+    description: "Listá, editá y organizá tus ejercicios de entrenamiento en Coach Forge.",
+    path: "/exercises/mine",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

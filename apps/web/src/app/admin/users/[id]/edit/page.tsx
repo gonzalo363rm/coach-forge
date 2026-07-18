@@ -1,8 +1,17 @@
+import type { Metadata } from "next"
+import { notFound, redirect } from "next/navigation"
+
 import { auth } from "@/auth"
 import { UserForm } from "@/components/users/UserForm"
+import { createPageMetadata } from "@/lib/seo"
 import { canAdminViewUser, isStaffRole } from "@/lib/user-permissions"
 import { userGetById } from "@/services/users.service"
-import { notFound, redirect } from "next/navigation"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Editar usuario",
+    description: "Editá un usuario de la plataforma.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

@@ -1,9 +1,17 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { ClassSessionRunner } from "@/components/classes/ClassSessionRunner"
+import { createPageMetadata } from "@/lib/seo"
 import { buildClassSessionData } from "@/utils/build-class-session-data"
 import { trainingClassGetById } from "@/services/classes.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Sesión de clase",
+    description: "Ejecutá una sesión de entrenamiento en vivo con el runner de Coach Forge.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

@@ -1,11 +1,13 @@
 /** Revalidación: lista de clases */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { getTrainingClassesPaginatedAction } from "@/app/actions/classes"
 import { ClassesPaginatedTable } from "@/components/classes/ClassesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
+import { createPageMetadata } from "@/lib/seo"
 import {
     trainingClassListSortBySchema,
     type TrainingClassListSortBy,
@@ -13,6 +15,13 @@ import {
 import { sportsListAll } from "@/services/sports.service"
 import { formatUserDisplayName } from "@/lib/user-display"
 import { userGetById } from "@/services/users.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Clases",
+    description: "Administrá todas las clases de entrenamiento de la plataforma.",
+    path: "/admin/classes",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

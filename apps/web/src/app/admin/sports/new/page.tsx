@@ -1,4 +1,14 @@
+import type { Metadata } from "next"
+
 import { SportForm } from "@/components/sports/SportForm"
+import { createPageMetadata } from "@/lib/seo"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Nuevo deporte",
+    description: "Creá un nuevo deporte en la plataforma.",
+    path: "/admin/sports/new",
+    noIndex: true,
+})
 
 export default function SportNewPage() {
     return (

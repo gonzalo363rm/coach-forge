@@ -1,8 +1,17 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { auth } from "@/auth"
 import { UserForm } from "@/components/users/UserForm"
+import { createPageMetadata } from "@/lib/seo"
 import { userGetById } from "@/services/users.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Mi perfil",
+    description: "Editá tus datos de perfil y avatar en Coach Forge.",
+    path: "/profile",
+    noIndex: true,
+})
 
 export default async function ProfilePage() {
     const session = await auth()

@@ -1,7 +1,17 @@
+import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+
 import { auth } from "@/auth"
 import { UserForm } from "@/components/users/UserForm"
+import { createPageMetadata } from "@/lib/seo"
 import { isStaffRole } from "@/lib/user-permissions"
-import { redirect } from "next/navigation"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Nuevo usuario",
+    description: "Creá un nuevo usuario en la plataforma.",
+    path: "/admin/users/new",
+    noIndex: true,
+})
 
 export default async function UserNewPage() {
     const session = await auth()

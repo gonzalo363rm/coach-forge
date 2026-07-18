@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -5,10 +6,17 @@ import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { ClassCreateForm } from "@/components/classes/ClassCreateForm"
 import { OwnedResourceForbidden } from "@/components/errors/OwnedResourceForbidden"
+import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
 import { sportsListAll } from "@/services/sports.service"
 import { trainingClassToDraft } from "@/utils/training-class-to-draft"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Editar clase",
+    description: "Editá una clase de entrenamiento y su secuencia de ejercicios.",
+    noIndex: true,
+})
 
 interface Props {
     params: Promise<{ id: string }>

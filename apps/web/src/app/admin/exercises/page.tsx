@@ -1,11 +1,13 @@
 /** Revalidación: lista de ejercicios */
 export const revalidate = 60
 
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { getExercisesPaginatedAction } from "@/app/actions/exercises"
 import { ExercisesPaginatedTable } from "@/components/exercises/ExercisesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
+import { createPageMetadata } from "@/lib/seo"
 import {
     exerciseListSortBySchema,
     type ExerciseListSortBy,
@@ -13,6 +15,13 @@ import {
 import { sportsListAll } from "@/services/sports.service"
 import { formatUserDisplayName } from "@/lib/user-display"
 import { userGetById } from "@/services/users.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Ejercicios",
+    description: "Administrá todos los ejercicios de la plataforma.",
+    path: "/admin/exercises",
+    noIndex: true,
+})
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return ""

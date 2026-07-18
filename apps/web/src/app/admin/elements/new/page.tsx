@@ -1,5 +1,15 @@
+import type { Metadata } from "next"
+
 import { ElementForm } from "@/components/elements/ElementForm"
+import { createPageMetadata } from "@/lib/seo"
 import { sportsListAll } from "@/services/sports.service"
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Nuevo elemento",
+    description: "Creá un nuevo elemento para el canvas.",
+    path: "/admin/elements/new",
+    noIndex: true,
+})
 
 export default async function ElementNewPage() {
     const sportRows = await sportsListAll()

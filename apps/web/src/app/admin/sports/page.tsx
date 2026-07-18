@@ -1,14 +1,24 @@
 /** Revalidación ISR: 7 días */
 export const revalidate = 604800;
 
+import type { Metadata } from "next";
+import Link from "next/link";
+
 import { getSportsPaginatedAction } from "@/app/actions/sports";
 import { ListNewLink } from "@/components/ui/ListNewLink";
 import { SportsPaginatedTable } from "@/components/sports/SportsPaginatedTable";
+import { createPageMetadata } from "@/lib/seo";
 import {
     sportListSortBySchema,
     type SportListSortBy,
 } from "@/schemas/sport.schema";
-import Link from "next/link";
+
+export const metadata: Metadata = createPageMetadata({
+    title: "Admin · Deportes",
+    description: "Administrá los deportes disponibles en la plataforma.",
+    path: "/admin/sports",
+    noIndex: true,
+});
 
 function firstQueryValue(v: string | string[] | undefined): string {
     if (v === undefined) return "";

@@ -1,6 +1,15 @@
+import type { Metadata } from "next"
 import { AuthShell } from "@/components/auth/AuthShell"
+import { createPageMetadata } from "@/lib/seo"
 import { verifyEmailToken } from "@/services/auth.service"
 import Link from "next/link"
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Verificar email",
+  description: "Confirmá tu correo electrónico para activar tu cuenta en Coach Forge.",
+  path: "/verify-email",
+  noIndex: true,
+})
 
 type Props = {
   searchParams: Promise<{
