@@ -390,3 +390,69 @@ export const drawOrderBadges = (canvas: any, ck: any, badges: OrderOverlayBadge[
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const drawMarqueeRect = (
+    canvas: any,
+    ck: any,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number,
+) => {
+    const paint = new ck.Paint()
+    paint.setAntiAlias(true)
+    paint.setStyle(ck.PaintStyle.Stroke)
+    paint.setStrokeWidth(2)
+    paint.setColor(ck.Color(59, 130, 246, 255))
+    if (typeof paint.setPathEffect === "function" && typeof ck.PathEffect?.MakeDash === "function") {
+        paint.setPathEffect(ck.PathEffect.MakeDash([8, 5], 0))
+    }
+    canvas.drawRect(ck.LTRBRect(left, top, right, bottom), paint)
+    paint.delete()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const drawSelectionBounds = (
+    canvas: any,
+    ck: any,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number,
+) => {
+    const paint = new ck.Paint()
+    paint.setAntiAlias(true)
+    paint.setStyle(ck.PaintStyle.Stroke)
+    paint.setStrokeWidth(2)
+    paint.setColor(ck.Color(59, 130, 246, 255))
+    if (typeof paint.setPathEffect === "function" && typeof ck.PathEffect?.MakeDash === "function") {
+        paint.setPathEffect(ck.PathEffect.MakeDash([8, 4], 0))
+    }
+    canvas.drawRect(ck.LTRBRect(left - 2, top - 2, right + 2, bottom + 2), paint)
+    paint.delete()
+
+    // Esquinas para reforzar que hay una selección activa (sin relleno).
+    const corner = 10
+    const cornerPaint = new ck.Paint()
+    cornerPaint.setAntiAlias(true)
+    cornerPaint.setStyle(ck.PaintStyle.Stroke)
+    cornerPaint.setStrokeWidth(2.5)
+    cornerPaint.setColor(ck.Color(37, 99, 235, 255))
+
+    const drawCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number) => {
+        if (typeof canvas.drawLine !== "function") return
+        canvas.drawLine(x1, y1, x2, y2, cornerPaint)
+        canvas.drawLine(x2, y2, x3, y3, cornerPaint)
+    }
+
+    const l = left - 2
+    const t = top - 2
+    const r = right + 2
+    const b = bottom + 2
+    drawCorner(l, t + corner, l, t, l + corner, t)
+    drawCorner(r - corner, t, r, t, r, t + corner)
+    drawCorner(l, b - corner, l, b, l + corner, b)
+    drawCorner(r - corner, b, r, b, r, b - corner)
+    cornerPaint.delete()
+}
+

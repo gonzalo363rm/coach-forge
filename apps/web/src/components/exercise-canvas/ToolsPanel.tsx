@@ -66,6 +66,34 @@ export const ToolsPanel = ({
             <div className="mb-1 h-px bg-zinc-300 dark:bg-zinc-600" />
 
             <button
+                type="button"
+                onClick={() => {
+                    setCurrentTool("select")
+                    setSelectedPaletteElement(null)
+                }}
+                className={clsx(
+                    "flex items-center justify-center gap-2 rounded-lg p-2.5 text-sm font-medium transition-all",
+                    {
+                        "bg-violet-600 text-white":
+                            currentTool === "select" && selectedPaletteElement === null,
+                        "bg-white text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600":
+                            !(currentTool === "select" && selectedPaletteElement === null),
+                    },
+                )}
+            >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4l6.5 15.5L13 13l6.5-2.5L4 4z"
+                    />
+                </svg>
+                Seleccionar
+            </button>
+
+            <button
+                type="button"
                 onClick={() => {
                     setCurrentTool("arrow")
                     setSelectedPaletteElement(null)

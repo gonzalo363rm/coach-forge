@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { PointerEvent as ReactPointerEvent } from "react"
 
 import type {
     ArrowElementInstance,
@@ -52,12 +53,29 @@ import {
     drawRectElement as drawRectElementHelper,
     drawOrderBadges as drawOrderBadgesHelper,
     drawTempShape as drawTempShapeHelper,
+    drawMarqueeRect as drawMarqueeRectHelper,
+    drawSelectionBounds as drawSelectionBoundsHelper,
 } from "./canvas-drawers"
+import { SelectionActionsMenu } from "./SelectionActionsMenu"
+import {
+    applyDeltaToSelection,
+    clipboardFromPasted,
+    clipboardHasContent,
+    copySelectionToClipboard,
+    getSelectionUnionBounds,
+    normalizeMarquee,
+    pasteClipboard,
+    removeSelectionFromCanvas,
+    type CanvasElementsSnapshot,
+    type MarqueeRect,
+    type SelectionItem,
+} from "./canvas-selection"
 
 interface Props {
     currentTool: ToolType
     setCurrentTool: (tool: ToolType) => void
     selectedPaletteElement: ElementDefinition | null
+    setSelectedPaletteElement: (element: ElementDefinition | null) => void
     isTemplateExercise?: boolean
     onExerciseSave?: ExerciseSaveHandler
     initialData?: ExerciseEditorInitialData | null
@@ -72,6 +90,7 @@ type DragTarget =
     | { type: "arrow-start"; index: number }
     | { type: "arrow-end"; index: number }
     | { type: "arrow-control"; index: number; controlIndex: number }
+    | { type: "selection-group" }
     | null
 
 type ContextTarget =
@@ -110,6 +129,7 @@ export const ExerciseCanvas = ({
     currentTool,
     setCurrentTool,
     selectedPaletteElement,
+    setSelectedPaletteElement,
     isTemplateExercise = false,
     onExerciseSave,
     initialData = null,
@@ -120,7 +140,9 @@ export const ExerciseCanvas = ({
     const isCanvasHoveredRef = useRef(false)
     const draggingRef = useRef<DragTarget>(null)
     const isDrawingShapeRef = useRef(false)
+    const isDrawingMarqueeRef = useRef(false)
     const offsetRef = useRef({ x: 0, y: 0 })
+    const selectionRef = useRef<SelectionItem[]>([])
 
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 })
     const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
@@ -132,6 +154,10 @@ export const ExerciseCanvas = ({
     const [lines, setLines] = useState<LineElementInstance[]>([])
     const [arrows, setArrows] = useState<ArrowElementInstance[]>([])
     const [selectedArrowId, setSelectedArrowId] = useState<string | null>(null)
+    const [selection, setSelection] = useState<SelectionItem[]>([])
+    const [marquee, setMarquee] = useState<MarqueeRect | null>(null)
+    const [showSelectionMenu, setShowSelectionMenu] = useState(false)
+    const [clipboard, setClipboard] = useState<CanvasElementsSnapshot | null>(null)
     const [isDrawingArrow, setIsDrawingArrow] = useState(false)
     const [tempArrow, setTempArrow] = useState<ArrowElementInstance | null>(null)
     const [isDrawingShape, setIsDrawingShape] = useState(false)
@@ -176,6 +202,28 @@ export const ExerciseCanvas = ({
         setLines(c.lines)
         setArrows(c.arrows)
     }, [initialData])
+
+    useEffect(() => {
+        selectionRef.current = selection
+    }, [selection])
+
+    const canvasElementsSnapshot = useMemo(
+        (): CanvasElementsSnapshot => ({ images, circles, rects, lines, arrows }),
+        [images, circles, rects, lines, arrows],
+    )
+
+    const selectionBounds = useMemo(
+        () => getSelectionUnionBounds(selection, canvasElementsSnapshot),
+        [selection, canvasElementsSnapshot],
+    )
+
+    const selectionMenuPosition = useMemo(() => {
+        if (!selectionBounds) return { x: 16, y: 16 }
+        return {
+            x: Math.max(8, Math.min(canvasSize.width - 220, selectionBounds.left * canvasZoom)),
+            y: Math.max(8, selectionBounds.top * canvasZoom - 44),
+        }
+    }, [canvasSize.width, canvasZoom, selectionBounds])
 
     const saveModalFieldDefaults = useMemo(
         () =>
@@ -337,6 +385,8 @@ export const ExerciseCanvas = ({
         arrows,
         tempArrow,
         tempShape,
+        marquee,
+        selectionBounds,
         selectedArrowId,
         canvasSize,
         canvasBackgroundColor,
@@ -468,6 +518,22 @@ export const ExerciseCanvas = ({
             drawTempShapeHelper(canvas, ck, tempShape)
         }
 
+        if (marquee) {
+            const box = normalizeMarquee(marquee)
+            drawMarqueeRectHelper(canvas, ck, box.left, box.top, box.right, box.bottom)
+        }
+
+        if (selectionBounds) {
+            drawSelectionBoundsHelper(
+                canvas,
+                ck,
+                selectionBounds.left,
+                selectionBounds.top,
+                selectionBounds.right,
+                selectionBounds.bottom,
+            )
+        }
+
         if (showOrderOverlay && orderOverlayItems.length > 0) {
             drawOrderBadgesHelper(canvas, ck, orderOverlayItems)
         }
@@ -485,8 +551,10 @@ export const ExerciseCanvas = ({
         drawRectElement,
         images,
         lines,
+        marquee,
         orderOverlayItems,
         rects,
+        selectionBounds,
         showOrderOverlay,
         tempArrow,
         tempShape,
@@ -654,6 +722,8 @@ export const ExerciseCanvas = ({
             setArrows((prev) => prev.filter((_, index) => index !== contextMenu.target!.index))
         }
 
+        setSelection([])
+        setShowSelectionMenu(false)
         setSelectedElement(null)
         setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
     }, [arrows, contextMenu.target, selectedArrowId])
@@ -726,7 +796,13 @@ export const ExerciseCanvas = ({
         if (!newImageElementInstance) return
 
         setImages((prev) => [...prev, newImageElementInstance])
-    }, [createImageInstanceFromDefinition])
+        setSelectedPaletteElement(null)
+        setCurrentTool("select")
+        if (newImageElementInstance.id) {
+            setSelection([{ type: "image", id: newImageElementInstance.id }])
+            setShowSelectionMenu(true)
+        }
+    }, [createImageInstanceFromDefinition, setCurrentTool, setSelectedPaletteElement])
 
     const handleRotateArrow = useCallback((nextRotation: number) => {
         updateContextElement((element) => {
@@ -876,10 +952,160 @@ export const ExerciseCanvas = ({
         return () => window.removeEventListener("pointerdown", closeOptions)
     }, [showCanvasOptions])
 
+    const handleCopySelection = useCallback(() => {
+        if (selection.length === 0) return
+        const payload = copySelectionToClipboard(selection, canvasElementsSnapshot)
+        if (!clipboardHasContent(payload)) return
+        setClipboard(payload)
+    }, [canvasElementsSnapshot, selection])
+
+    const handleDeleteSelection = useCallback(() => {
+        if (selection.length === 0) return
+        const next = removeSelectionFromCanvas(selection, canvasElementsSnapshot)
+        setImages(next.images)
+        setCircles(next.circles)
+        setRects(next.rects)
+        setLines(next.lines)
+        setArrows(next.arrows)
+        setSelection([])
+        setShowSelectionMenu(false)
+        setSelectedArrowId(null)
+        setSelectedElement(null)
+        setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
+    }, [canvasElementsSnapshot, selection])
+
+    const handlePasteClipboard = useCallback(() => {
+        if (!clipboard || !clipboardHasContent(clipboard)) return
+        const { canvas: pasted, selection: nextSelection } = pasteClipboard(clipboard, generateId)
+        setImages((prev) => [...prev, ...pasted.images])
+        setCircles((prev) => [...prev, ...pasted.circles])
+        setRects((prev) => [...prev, ...pasted.rects])
+        setLines((prev) => [...prev, ...pasted.lines])
+        setArrows((prev) => [...prev, ...pasted.arrows])
+        setClipboard(clipboardFromPasted(pasted))
+        setSelection(nextSelection)
+        setShowSelectionMenu(nextSelection.length > 0)
+        setSelectedArrowId(
+            nextSelection.length === 1 && nextSelection[0]?.type === "arrow"
+                ? nextSelection[0].id
+                : null,
+        )
+    }, [clipboard])
+
+    const handleDuplicateSelection = useCallback(() => {
+        if (selection.length === 0) return
+        const payload = copySelectionToClipboard(selection, canvasElementsSnapshot)
+        if (!clipboardHasContent(payload)) return
+        const { canvas: pasted, selection: nextSelection } = pasteClipboard(payload, generateId)
+        setImages((prev) => [...prev, ...pasted.images])
+        setCircles((prev) => [...prev, ...pasted.circles])
+        setRects((prev) => [...prev, ...pasted.rects])
+        setLines((prev) => [...prev, ...pasted.lines])
+        setArrows((prev) => [...prev, ...pasted.arrows])
+        setClipboard(clipboardFromPasted(pasted))
+        setSelection(nextSelection)
+        setShowSelectionMenu(nextSelection.length > 0)
+        setSelectedArrowId(
+            nextSelection.length === 1 && nextSelection[0]?.type === "arrow"
+                ? nextSelection[0].id
+                : null,
+        )
+    }, [canvasElementsSnapshot, selection])
+
+    const clientToWorld = useCallback((clientX: number, clientY: number) => {
+        const container = canvasContainerRef.current
+        const canvasEl = container?.querySelector("canvas")
+        if (!canvasEl) return null
+        const rect = canvasEl.getBoundingClientRect()
+        return {
+            x: (clientX - rect.left) / canvasZoom,
+            y: (clientY - rect.top) / canvasZoom,
+        }
+    }, [canvasZoom])
+
+    const handleSelectionMovePointerDown = useCallback(
+        (event: ReactPointerEvent<HTMLButtonElement>) => {
+            event.preventDefault()
+            event.stopPropagation()
+            if (selectionRef.current.length === 0) return
+
+            const start = clientToWorld(event.clientX, event.clientY)
+            if (!start) return
+
+            draggingRef.current = { type: "selection-group" }
+            offsetRef.current = start
+            event.currentTarget.setPointerCapture(event.pointerId)
+
+            const onMove = (ev: PointerEvent) => {
+                if (draggingRef.current?.type !== "selection-group") return
+                const world = clientToWorld(ev.clientX, ev.clientY)
+                if (!world) return
+                const dx = world.x - offsetRef.current.x
+                const dy = world.y - offsetRef.current.y
+                if (dx === 0 && dy === 0) return
+                offsetRef.current = world
+                const selected = selectionRef.current
+                setImages((prev) =>
+                    applyDeltaToSelection(
+                        selected,
+                        { images: prev, circles: [], rects: [], lines: [], arrows: [] },
+                        dx,
+                        dy,
+                    ).images,
+                )
+                setCircles((prev) =>
+                    applyDeltaToSelection(
+                        selected,
+                        { images: [], circles: prev, rects: [], lines: [], arrows: [] },
+                        dx,
+                        dy,
+                    ).circles,
+                )
+                setRects((prev) =>
+                    applyDeltaToSelection(
+                        selected,
+                        { images: [], circles: [], rects: prev, lines: [], arrows: [] },
+                        dx,
+                        dy,
+                    ).rects,
+                )
+                setLines((prev) =>
+                    applyDeltaToSelection(
+                        selected,
+                        { images: [], circles: [], rects: [], lines: prev, arrows: [] },
+                        dx,
+                        dy,
+                    ).lines,
+                )
+                setArrows((prev) =>
+                    applyDeltaToSelection(
+                        selected,
+                        { images: [], circles: [], rects: [], lines: [], arrows: prev },
+                        dx,
+                        dy,
+                    ).arrows,
+                )
+            }
+
+            const onUp = (ev: PointerEvent) => {
+                draggingRef.current = null
+                window.removeEventListener("pointermove", onMove)
+                window.removeEventListener("pointerup", onUp)
+                try {
+                    event.currentTarget.releasePointerCapture(ev.pointerId)
+                } catch {
+                    // capture may already be released
+                }
+            }
+
+            window.addEventListener("pointermove", onMove)
+            window.addEventListener("pointerup", onUp)
+        },
+        [clientToWorld],
+    )
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!event.ctrlKey || event.metaKey || !isCanvasHoveredRef.current) return
-
             const target = event.target as HTMLElement | null
             if (target) {
                 const tagName = target.tagName.toLowerCase()
@@ -890,6 +1116,31 @@ export const ExerciseCanvas = ({
                     tagName === "select"
                 if (isEditable) return
             }
+
+            const mod = event.ctrlKey || event.metaKey
+
+            if (mod && (event.key === "c" || event.key === "C")) {
+                if (!isCanvasHoveredRef.current || selection.length === 0) return
+                event.preventDefault()
+                handleCopySelection()
+                return
+            }
+
+            if (mod && (event.key === "v" || event.key === "V")) {
+                if (!isCanvasHoveredRef.current) return
+                event.preventDefault()
+                handlePasteClipboard()
+                return
+            }
+
+            if (event.key === "Delete" || event.key === "Backspace") {
+                if (!isCanvasHoveredRef.current || selection.length === 0) return
+                event.preventDefault()
+                handleDeleteSelection()
+                return
+            }
+
+            if (!mod || !isCanvasHoveredRef.current) return
 
             const plusPressed =
                 event.code === "NumpadAdd" ||
@@ -922,16 +1173,19 @@ export const ExerciseCanvas = ({
 
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [nudgeZoom])
+    }, [handleCopySelection, handleDeleteSelection, handlePasteClipboard, nudgeZoom, selection.length])
 
     const pointer = useCanvasPointerInteractions({
         currentTool,
+        hasPaletteStamp: Boolean(selectedPaletteElement),
         contextMenuIsOpen: contextMenu.isOpen,
         images,
         arrows,
         circles,
         rects,
         lines,
+        selection,
+        selectionRef,
         isDrawingArrow,
         tempArrow,
         isDrawingShape,
@@ -943,6 +1197,9 @@ export const ExerciseCanvas = ({
         setIsDrawingShape,
         setSelectedArrowId,
         setSelectedElement,
+        setSelection,
+        setMarquee,
+        setShowSelectionMenu,
         setCurrentTool,
         setCircles,
         setRects,
@@ -951,6 +1208,7 @@ export const ExerciseCanvas = ({
         setImages,
         draggingRef,
         isDrawingShapeRef,
+        isDrawingMarqueeRef,
         offsetRef,
         generateId,
         defaultArrowColor: DEFAULT_ARROW_COLOR,
@@ -978,15 +1236,30 @@ export const ExerciseCanvas = ({
             if (!imagesCacheRef.current.has(imageRef)) {
                 return
             }
-            const newImageElementInstance = createImageInstanceFromDefinition(world.x, world.y, selectedPaletteElement)
+            const newImageElementInstance = createImageInstanceFromDefinition(
+                world.x,
+                world.y,
+                selectedPaletteElement,
+            )
             if (newImageElementInstance) {
                 setImages((prev) => [...prev, newImageElementInstance])
+                setSelectedPaletteElement(null)
+                if (newImageElementInstance.id) {
+                    setSelection([{ type: "image", id: newImageElementInstance.id }])
+                    setShowSelectionMenu(true)
+                }
                 return
             }
         }
         pointer.handlePointerDown(world.x, world.y)
-    }, [createImageInstanceFromDefinition, currentTool, pointer, selectedPaletteElement, toWorldCoords])
-
+    }, [
+        createImageInstanceFromDefinition,
+        currentTool,
+        pointer,
+        selectedPaletteElement,
+        setSelectedPaletteElement,
+        toWorldCoords,
+    ])
     const handleCanvasPointerMove = useCallback((x: number, y: number) => {
         const world = toWorldCoords(x, y)
         pointer.handlePointerMove(world.x, world.y)
@@ -1046,6 +1319,9 @@ export const ExerciseCanvas = ({
         setTempShape(null)
         setSelectedArrowId(null)
         setSelectedElement(null)
+        setSelection([])
+        setMarquee(null)
+        setShowSelectionMenu(false)
         setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
         setAssignedPlayersDraft("")
     }, [])
@@ -1264,6 +1540,15 @@ export const ExerciseCanvas = ({
                         />
                     )}
 
+                    {showSelectionMenu && selection.length > 0 && !contextMenu.isOpen && !marquee ? (
+                        <SelectionActionsMenu
+                            x={selectionMenuPosition.x}
+                            y={selectionMenuPosition.y}
+                            onDuplicate={handleDuplicateSelection}
+                            onDelete={handleDeleteSelection}
+                            onMovePointerDown={handleSelectionMovePointerDown}
+                        />
+                    ) : null}
                     <button
                         type="button"
                         aria-label="Redimensionar ancho"

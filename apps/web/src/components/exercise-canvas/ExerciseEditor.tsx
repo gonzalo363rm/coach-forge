@@ -132,6 +132,7 @@ export const ExerciseEditor = ({
                     currentTool={currentTool}
                     setCurrentTool={setCurrentTool}
                     selectedPaletteElement={selectedPaletteElement}
+                    setSelectedPaletteElement={setSelectedPaletteElement}
                     onExerciseSave={handleExerciseSave}
                     initialData={initialExercise ?? undefined}
                     sports={sports}
