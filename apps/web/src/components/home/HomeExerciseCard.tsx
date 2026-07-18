@@ -1,6 +1,6 @@
 import Link from "next/link"
-import Image from "next/image"
 
+import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
 import type { PublicHomeExercise } from "@/services/home-catalog.service"
 
 const PLACEHOLDER = "/exercises/placeholder-preview.svg"
@@ -15,16 +15,13 @@ export function HomeExerciseCard({ exercise, isLoggedIn }: Props) {
 
     return (
         <article className="flex w-44 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:w-52 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="relative aspect-[4/3] w-full bg-zinc-100 dark:bg-zinc-900">
-                <Image
-                    src={exercise.previewUrl}
-                    alt={`Vista previa de ${exercise.title}`}
-                    fill
-                    sizes="(max-width: 640px) 176px, 208px"
-                    unoptimized={exercise.previewUrl.endsWith(".svg")}
-                    className="object-cover"
-                />
-            </div>
+            <ExercisePreviewThumb
+                previewUrl={exercise.previewUrl}
+                title={exercise.title}
+                className="w-full rounded-none"
+                imageClassName="relative block aspect-[4/3] w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900"
+                sizes="(max-width: 640px) 176px, 208px"
+            />
             <div className="flex flex-1 flex-col gap-2 p-3">
                 <h3 className="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     {exercise.title}

@@ -1,7 +1,7 @@
 import Link from "next/link"
-import Image from "next/image"
 
 import { HeaderAvatar } from "@/components/auth/HeaderAvatar"
+import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
 import { formatUserDisplayName } from "@/lib/user-display"
 import type { PublicHomeClass } from "@/services/home-catalog.service"
 
@@ -88,16 +88,13 @@ export function HomeClassBlock({ trainingClass, isLoggedIn }: Props) {
                                 key={exercise.id}
                                 className="flex w-36 shrink-0 snap-start flex-col gap-2 sm:w-40"
                             >
-                                <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
-                                    <Image
-                                        src={exercise.previewUrl}
-                                        alt={exercise.title}
-                                        fill
-                                        sizes="160px"
-                                        unoptimized={exercise.previewUrl.endsWith(".svg")}
-                                        className="object-cover"
-                                    />
-                                </div>
+                                <ExercisePreviewThumb
+                                    previewUrl={exercise.previewUrl}
+                                    title={exercise.title}
+                                    className="w-full"
+                                    imageClassName="relative block aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900"
+                                    sizes="160px"
+                                />
                                 <p className="line-clamp-2 text-xs font-medium text-zinc-800 dark:text-zinc-200">
                                     {exercise.title}
                                 </p>

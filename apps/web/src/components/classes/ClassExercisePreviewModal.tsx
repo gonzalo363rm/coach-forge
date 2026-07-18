@@ -246,7 +246,8 @@ function ExercisePreviewContent({
                                     ? "(max-width: 1024px) 100vw, 70vw"
                                     : "(max-width: 1024px) 100vw, 420px"
                             }
-                            unoptimized={previewSrc.endsWith(".svg")}
+                            quality={95}
+                            unoptimized
                             className="object-contain"
                             onError={() => setPreviewSrc(PREVIEW_PLACEHOLDER)}
                         />

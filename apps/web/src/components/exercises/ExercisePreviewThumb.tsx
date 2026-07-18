@@ -9,9 +9,20 @@ const PREVIEW_PLACEHOLDER = "/exercises/placeholder-preview.svg"
 type Props = {
     previewUrl: string
     title: string
+    /** Clases del botón (p. ej. `w-full` en cards). */
+    className?: string
+    /** Clases del contenedor de la miniatura. */
+    imageClassName?: string
+    sizes?: string
 }
 
-export function ExercisePreviewThumb({ previewUrl, title }: Props) {
+export function ExercisePreviewThumb({
+    previewUrl,
+    title,
+    className = "",
+    imageClassName = "relative block h-14 w-24 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700",
+    sizes = "96px",
+}: Props) {
     const [open, setOpen] = useState(false)
     const [thumbSrc, setThumbSrc] = useState(previewUrl)
     const [fullSrc, setFullSrc] = useState(previewUrl)
@@ -49,16 +60,17 @@ export function ExercisePreviewThumb({ previewUrl, title }: Props) {
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950 cursor-pointer"
+                className={`cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950 ${className}`.trim()}
                 aria-label={`Abrir vista previa de ${title}`}
                 title={`Vista previa: ${title}`}
             >
-                <span className="relative block h-14 w-24 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+                <span className={imageClassName}>
                     <Image
                         src={thumbSrc}
                         alt={`Vista previa de ${title}`}
                         fill
-                        sizes="96px"
+                        sizes={sizes}
+                        quality={90}
                         unoptimized={thumbSrc.endsWith(".svg")}
                         className="object-cover"
                         onError={() => setThumbSrc(PREVIEW_PLACEHOLDER)}
@@ -102,7 +114,8 @@ export function ExercisePreviewThumb({ previewUrl, title }: Props) {
                                 alt={`Vista previa de ${title}`}
                                 fill
                                 sizes="(max-width: 896px) 100vw, 896px"
-                                unoptimized={fullSrc.endsWith(".svg")}
+                                // Evita re-comprimir el WebP ya exportado a alta calidad.
+                                unoptimized
                                 className="object-contain"
                                 onError={() => setFullSrc(PREVIEW_PLACEHOLDER)}
                             />

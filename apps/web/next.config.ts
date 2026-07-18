@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
 
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      // Previews WebP a 2× pueden superar 2 MB en base64.
+      bodySizeLimit: "5mb",
     },
   },
   

@@ -612,6 +612,58 @@ export const ExerciseCanvas = ({
         tempShape,
     ])
 
+    /** Vista previa: zoom 1×, sin marquee/selección/overlays de edición. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const drawForPreviewSnapshot = useCallback((canvas: any, ck: any) => {
+        canvas.save()
+        drawBackgroundHelper(
+            canvas,
+            ck,
+            canvasSize.width,
+            canvasSize.height,
+            hexToColor(canvasBackgroundColor),
+        )
+        const renderQueue: Array<{ type: "image" | "arrow" | "circle" | "rect" | "line"; index: number; zIndex: number; sequence: number }> = [
+            ...images.map((_, index) => ({ type: "image" as const, index, zIndex: getElementZ(images[index]), sequence: index })),
+            ...circles.map((_, index) => ({ type: "circle" as const, index, zIndex: getElementZ(circles[index]), sequence: images.length + index })),
+            ...rects.map((_, index) => ({ type: "rect" as const, index, zIndex: getElementZ(rects[index]), sequence: images.length + circles.length + index })),
+            ...lines.map((_, index) => ({ type: "line" as const, index, zIndex: getElementZ(lines[index]), sequence: images.length + circles.length + rects.length + index })),
+            ...arrows.map((_, index) => ({ type: "arrow" as const, index, zIndex: getElementZ(arrows[index]), sequence: images.length + circles.length + rects.length + lines.length + index })),
+        ]
+
+        renderQueue
+            .sort((a, b) => a.zIndex - b.zIndex || a.sequence - b.sequence)
+            .forEach((item) => {
+                if (item.type === "image") {
+                    drawImageElement(canvas, ck, images[item.index])
+                } else if (item.type === "circle") {
+                    drawCircleElement(canvas, ck, circles[item.index])
+                } else if (item.type === "rect") {
+                    drawRectElement(canvas, ck, rects[item.index])
+                } else if (item.type === "line") {
+                    drawLineElement(canvas, ck, lines[item.index])
+                } else {
+                    drawArrow(canvas, ck, arrows[item.index])
+                }
+            })
+
+        canvas.restore()
+    }, [
+        arrows,
+        canvasBackgroundColor,
+        canvasSize.height,
+        canvasSize.width,
+        circles,
+        drawArrow,
+        drawCircleElement,
+        drawImageElement,
+        drawLineElement,
+        drawRectElement,
+        images,
+        lines,
+        rects,
+    ])
+
     const findArrowHandleAt = (x: number, y: number): DragTarget => {
         if (!selectedArrowId) return null
 
@@ -1468,11 +1520,14 @@ export const ExerciseCanvas = ({
             if (!onExerciseSave) return
             let previewWebp: Uint8Array | null = null
             if (hasPreviewableCanvasContent) {
-                previewWebp = (await canvasRef.current?.getWebpSnapshot()) ?? null
+                previewWebp =
+                    (await canvasRef.current?.getWebpSnapshot({
+                        draw: drawForPreviewSnapshot,
+                    })) ?? null
             }
             await onExerciseSave(exercise, previewWebp)
         },
-        [hasPreviewableCanvasContent, onExerciseSave],
+        [drawForPreviewSnapshot, hasPreviewableCanvasContent, onExerciseSave],
     )
 
     return (

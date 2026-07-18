@@ -1,18 +1,27 @@
+export type SkiaSnapshotDraw = (canvas: any, ck: any) => void
+
+export type SkiaWebpSnapshotOptions = {
+    /** Multiplicador de resolución (default 2). */
+    scale?: number
+    /** Draw custom; si no se pasa, usa el `onDraw` del canvas. */
+    draw?: SkiaSnapshotDraw
+}
+
 export interface SkiaCanvasHandle {
-    redraw: () => void;
-    getWebpSnapshot: () => Promise<Uint8Array | null>
-    saveAsImage: (filename?: string) => void;
+    redraw: () => void
+    getWebpSnapshot: (options?: SkiaWebpSnapshotOptions) => Promise<Uint8Array | null>
+    saveAsImage: (filename?: string) => void
 }
 
 export interface SkiaCanvasProps {
-    width: number;
-    height: number;
-    onDraw: (canvas: any, ck: any) => void;
-    onPointerDown?: (x: number, y: number) => void;
-    onPointerMove?: (x: number, y: number) => void;
-    onPointerUp?: () => void;
-    onContextMenu?: (x: number, y: number) => void;
-    onDrop?: (x: number, y: number, data: string) => void;
-    onReady?: () => void;
-    className?: string;
+    width: number
+    height: number
+    onDraw: (canvas: any, ck: any) => void
+    onPointerDown?: (x: number, y: number) => void
+    onPointerMove?: (x: number, y: number) => void
+    onPointerUp?: () => void
+    onContextMenu?: (x: number, y: number) => void
+    onDrop?: (x: number, y: number, data: string) => void
+    onReady?: () => void
+    className?: string
 }

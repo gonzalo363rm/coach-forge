@@ -446,6 +446,7 @@ function ExerciseSessionCard({
                             alt={`Vista previa de ${exercise.title}`}
                             fill
                             sizes="(max-width: 640px) 96px, 112px"
+                            quality={90}
                             unoptimized={previewSrc.endsWith(".svg")}
                             className="object-cover"
                             onError={() => setPreviewSrc(PREVIEW_PLACEHOLDER)}

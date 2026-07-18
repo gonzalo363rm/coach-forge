@@ -5,8 +5,14 @@
  * Devuelve null si hay algún error durante la carga.
  */
 
-/** Calidad WebP para vistas previas de ejercicios (0–1, `toBlob`). */
-export const EXERCISE_PREVIEW_WEBP_QUALITY = 0.85
+/** Calidad WebP para vistas previas de ejercicios (0–1, `toBlob` / fallback). */
+export const EXERCISE_PREVIEW_WEBP_QUALITY = 0.92
+
+/** Calidad 0–100 para `Image.encodeToBytes` de CanvasKit. */
+export const EXERCISE_PREVIEW_WEBP_QUALITY_PERCENT = 92
+
+/** Escala de rasterización al exportar la vista previa (2 = retina). */
+export const EXERCISE_PREVIEW_PIXEL_RATIO = 2
 
 export function htmlCanvasToEncodedBytes(
     canvas: HTMLCanvasElement,

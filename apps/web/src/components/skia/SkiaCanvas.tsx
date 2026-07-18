@@ -3,8 +3,12 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import CanvasKitInit from "canvaskit-wasm/bin/full/canvaskit";
 
-import { SkiaCanvasHandle, SkiaCanvasProps } from "@/interfaces";
-import { webglCanvasToWebpBytes } from "@/utils/image"
+import { SkiaCanvasHandle, SkiaCanvasProps, SkiaWebpSnapshotOptions } from "@/interfaces";
+import {
+  EXERCISE_PREVIEW_PIXEL_RATIO,
+  EXERCISE_PREVIEW_WEBP_QUALITY_PERCENT,
+  webglCanvasToWebpBytes,
+} from "@/utils/image"
 
 // Cache global para CanvasKit (singleton)
 let canvasKitPromise: Promise<any> | null = null;
@@ -54,8 +58,64 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
       }
     };
 
-    const getWebpSnapshot = async (): Promise<Uint8Array | null> => {
-      if (!canvasRef.current) return null;
+    const getWebpSnapshot = async (
+      options?: SkiaWebpSnapshotOptions,
+    ): Promise<Uint8Array | null> => {
+      const ck = ckRef.current;
+      const el = canvasRef.current;
+      if (!ck || !el) return null;
+
+      const scale = Math.max(
+        1,
+        Math.min(3, options?.scale ?? EXERCISE_PREVIEW_PIXEL_RATIO),
+      );
+      const draw =
+        options?.draw ??
+        ((canvas: any, ckArg: any) => {
+          onDrawRef.current(canvas, ckArg);
+        });
+
+      const w = el.width;
+      const h = el.height;
+      if (w < 1 || h < 1) return null;
+
+      const outW = Math.round(w * scale);
+      const outH = Math.round(h * scale);
+
+      // Surface de software a mayor resolución: nítido y sin depender del buffer WebGL.
+      const surface = typeof ck.MakeSurface === "function" ? ck.MakeSurface(outW, outH) : null;
+      if (surface) {
+        try {
+          const canvas = surface.getCanvas();
+          canvas.clear(ck.TRANSPARENT);
+          canvas.save();
+          canvas.scale(scale, scale);
+          draw(canvas, ck);
+          canvas.restore();
+          surface.flush();
+
+          const image = surface.makeImageSnapshot();
+          if (image) {
+            try {
+              const bytes = image.encodeToBytes(
+                ck.ImageFormat.WEBP,
+                EXERCISE_PREVIEW_WEBP_QUALITY_PERCENT,
+              );
+              if (bytes && bytes.byteLength > 0) {
+                return bytes;
+              }
+            } finally {
+              image.delete();
+            }
+          }
+        } catch (err) {
+          console.error("Error en snapshot hi-res de SkiaCanvas:", err);
+        } finally {
+          surface.delete();
+        }
+      }
+
+      // Fallback: leer el canvas WebGL visible a 1×.
       if (!paintFrame()) return null;
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
       if (!canvasRef.current) return null;
