@@ -1,3 +1,11 @@
+Urgente:
+-Si estoy en una clase comenzada, salgo y vuelvo a entrar, debe continuar (mantener estados)
+-Permitir agregar ejercicios de forma temporal en una clase ya comenzada (crear o agregar desde ahi, solo si la clase es propia, sino advertir que primero debe crear una clase a partir de esa plantilla, -ver punto siguiente-)
+-Al duplicar una clase se permite editar ejercicios que no son propios, eso esta mal:
+    1. agregar control de owner
+    2. al duplicar (en caso de que no sea el owner), duplicar los ejercicios (ver como hacer con la imagen, quizas resubimos la del ejercicio original pero con el id del nuevo ejercicio). Antes de esto se debe pedir confirmacion diciendo que se duplicaran los ejercicio tambien, una vez duplicados los ejercicios la clase no se creara hasta que se guarde, pero los ejercicios deben listarse (los duplicados no los originales).
+
+
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
 -En la vista de deportes, podriamos listar los elementos
 (opcional)-Permitir agrupar elementos
