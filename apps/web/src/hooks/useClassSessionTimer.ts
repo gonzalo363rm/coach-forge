@@ -21,6 +21,19 @@ function emptyNumArray(n: number): number[] {
     return Array.from({ length: n }, () => 0)
 }
 
+function emptyNullableNumArray(n: number): (number | null)[] {
+    return Array.from({ length: n }, () => null)
+}
+
+/** Ancla: `Date.now() - elapsedSec * 1000` para leer segundos con reloj de pared. */
+function wallAnchorFromElapsed(elapsedSec: number, now = Date.now()): number {
+    return now - elapsedSec * 1000
+}
+
+function elapsedFromWallAnchor(anchorMs: number, now = Date.now()): number {
+    return Math.max(0, Math.floor((now - anchorMs) / 1000))
+}
+
 export function useClassSessionTimer({
     exerciseCount,
     exerciseDurations,
@@ -45,34 +58,88 @@ export function useClassSessionTimer({
     const phaseRef = useRef(phase)
     const exerciseRunningRef = useRef(exerciseRunning)
     const restRunningRef = useRef(restRunning)
+    const sessionSecondsRef = useRef(sessionSeconds)
     const restEndHandledRef = useRef(false)
     const exerciseAlarmFiredRef = useRef(emptyBoolArray(exerciseCount))
+
+    /** Anclas de pared: null = pausado / no activo. */
+    const sessionAnchorRef = useRef<number | null>(null)
+    const restAnchorRef = useRef<number | null>(null)
+    const exerciseAnchorsRef = useRef<(number | null)[]>(
+        emptyNullableNumArray(exerciseCount),
+    )
+
     phaseRef.current = phase
     exerciseRunningRef.current = exerciseRunning
     restRunningRef.current = restRunning
+    sessionSecondsRef.current = sessionSeconds
 
     const anyExerciseRunning = exerciseRunning.some(Boolean)
     const clockActive = restRunning || anyExerciseRunning
 
+    const syncFromWallClock = useCallback(() => {
+        const now = Date.now()
+
+        if (sessionAnchorRef.current != null) {
+            const next = elapsedFromWallAnchor(sessionAnchorRef.current, now)
+            sessionSecondsRef.current = next
+            setSessionSeconds(next)
+        }
+
+        if (restRunningRef.current && restAnchorRef.current != null) {
+            setRestSeconds(elapsedFromWallAnchor(restAnchorRef.current, now))
+        }
+
+        if (exerciseRunningRef.current.some(Boolean)) {
+            setExerciseElapsed((prev) =>
+                prev.map((sec, i) => {
+                    const anchor = exerciseAnchorsRef.current[i]
+                    if (!exerciseRunningRef.current[i] || anchor == null) return sec
+                    return elapsedFromWallAnchor(anchor, now)
+                }),
+            )
+        }
+    }, [])
+
     useEffect(() => {
-        if (!clockActive) return
-        const id = window.setInterval(() => {
-            setSessionSeconds((s) => s + 1)
-            if (phaseRef.current === "rest" && restRunningRef.current) {
-                setRestSeconds((r) => r + 1)
+        if (!clockActive) {
+            if (sessionAnchorRef.current != null) {
+                syncFromWallClock()
+                sessionAnchorRef.current = null
             }
-            if (exerciseRunningRef.current.some(Boolean)) {
-                setExerciseElapsed((prev) =>
-                    prev.map((sec, i) =>
-                        exerciseRunningRef.current[i] ? sec + 1 : sec,
-                    ),
-                )
-            }
-        }, 1000)
-        return () => window.clearInterval(id)
-    }, [clockActive])
+            return
+        }
+
+        if (sessionAnchorRef.current == null) {
+            sessionAnchorRef.current = wallAnchorFromElapsed(sessionSecondsRef.current)
+        }
+
+        syncFromWallClock()
+        const id = window.setInterval(syncFromWallClock, 250)
+
+        const onVisibility = () => {
+            if (document.visibilityState === "visible") syncFromWallClock()
+        }
+        document.addEventListener("visibilitychange", onVisibility)
+        window.addEventListener("focus", syncFromWallClock)
+
+        return () => {
+            window.clearInterval(id)
+            document.removeEventListener("visibilitychange", onVisibility)
+            window.removeEventListener("focus", syncFromWallClock)
+        }
+    }, [clockActive, syncFromWallClock])
 
     const pauseAllExercises = useCallback(() => {
+        const now = Date.now()
+        setExerciseElapsed((prev) =>
+            prev.map((sec, i) => {
+                const anchor = exerciseAnchorsRef.current[i]
+                if (!exerciseRunningRef.current[i] || anchor == null) return sec
+                return elapsedFromWallAnchor(anchor, now)
+            }),
+        )
+        exerciseAnchorsRef.current = emptyNullableNumArray(exerciseCount)
         setExerciseRunning(emptyBoolArray(exerciseCount))
     }, [exerciseCount])
 
@@ -80,6 +147,10 @@ export function useClassSessionTimer({
         (index: number) => {
             if (completed[index]) return
             setPhase("exercise")
+            if (restRunningRef.current && restAnchorRef.current != null) {
+                setRestSeconds(elapsedFromWallAnchor(restAnchorRef.current))
+            }
+            restAnchorRef.current = null
             setRestRunning(false)
             setFocusedIndex(index)
             setExerciseRunning((prev) => {
@@ -87,11 +158,25 @@ export function useClassSessionTimer({
                 next[index] = true
                 return next
             })
+            setExerciseElapsed((prev) => {
+                exerciseAnchorsRef.current[index] = wallAnchorFromElapsed(prev[index] ?? 0)
+                return prev
+            })
         },
         [completed],
     )
 
     const pauseExercise = useCallback((index: number) => {
+        const anchor = exerciseAnchorsRef.current[index]
+        if (anchor != null) {
+            const elapsed = elapsedFromWallAnchor(anchor)
+            setExerciseElapsed((prev) => {
+                const next = [...prev]
+                next[index] = elapsed
+                return next
+            })
+            exerciseAnchorsRef.current[index] = null
+        }
         setExerciseRunning((prev) => {
             const next = [...prev]
             next[index] = false
@@ -103,6 +188,10 @@ export function useClassSessionTimer({
     const focusExercise = useCallback((index: number) => {
         setFocusedIndex(index)
         setPhase("exercise")
+        if (restRunningRef.current && restAnchorRef.current != null) {
+            setRestSeconds(elapsedFromWallAnchor(restAnchorRef.current))
+        }
+        restAnchorRef.current = null
         setRestRunning(false)
     }, [])
 
@@ -120,6 +209,9 @@ export function useClassSessionTimer({
 
     const resetExerciseTimer = useCallback((index: number) => {
         exerciseAlarmFiredRef.current[index] = false
+        exerciseAnchorsRef.current[index] = exerciseRunningRef.current[index]
+            ? wallAnchorFromElapsed(0)
+            : null
         setExerciseElapsed((prev) => {
             const next = [...prev]
             next[index] = 0
@@ -147,6 +239,7 @@ export function useClassSessionTimer({
             setPhase("rest")
             setRestSeconds(0)
             setRestTargetSeconds(seconds)
+            restAnchorRef.current = wallAnchorFromElapsed(0)
             setRestRunning(true)
         },
         [defaultRestSeconds, pauseAllExercises],
@@ -179,24 +272,38 @@ export function useClassSessionTimer({
             resetExerciseTimer(index)
             setFocusedIndex(index)
             setPhase("exercise")
+            restAnchorRef.current = null
             setRestRunning(false)
         },
         [resetExerciseTimer],
     )
 
-    const addRestTime = useCallback((seconds: number) => {
-        pauseAllExercises()
-        restEndHandledRef.current = false
-        setPhase("rest")
-        setRestTargetSeconds((t) => Math.max(restSeconds, t) + seconds)
-        setRestRunning(true)
-    }, [pauseAllExercises, restSeconds])
+    const addRestTime = useCallback(
+        (seconds: number) => {
+            pauseAllExercises()
+            restEndHandledRef.current = false
+            setPhase("rest")
+            const currentRest =
+                restRunningRef.current && restAnchorRef.current != null
+                    ? elapsedFromWallAnchor(restAnchorRef.current)
+                    : restSeconds
+            setRestSeconds(currentRest)
+            setRestTargetSeconds((t) => Math.max(currentRest, t) + seconds)
+            restAnchorRef.current = wallAnchorFromElapsed(currentRest)
+            setRestRunning(true)
+        },
+        [pauseAllExercises, restSeconds],
+    )
 
     const completedCount = completed.filter(Boolean).length
     const runningCount = exerciseRunning.filter(Boolean).length
     const allCompleted = exerciseCount > 0 && completedCount === exerciseCount
 
     const skipRest = useCallback(() => {
+        if (restAnchorRef.current != null) {
+            setRestSeconds(elapsedFromWallAnchor(restAnchorRef.current))
+        }
+        restAnchorRef.current = null
         setRestRunning(false)
         setRestSeconds(0)
         setPhase("exercise")
@@ -207,10 +314,21 @@ export function useClassSessionTimer({
         })
     }, [focusedIndex, findNextIncomplete])
 
-    const pauseRest = useCallback(() => setRestRunning(false), [])
+    const pauseRest = useCallback(() => {
+        if (restAnchorRef.current != null) {
+            setRestSeconds(elapsedFromWallAnchor(restAnchorRef.current))
+            restAnchorRef.current = null
+        }
+        setRestRunning(false)
+    }, [])
+
     const resumeRest = useCallback(() => {
         pauseAllExercises()
         setPhase("rest")
+        setRestSeconds((prev) => {
+            restAnchorRef.current = wallAnchorFromElapsed(prev)
+            return prev
+        })
         setRestRunning(true)
     }, [pauseAllExercises])
 
