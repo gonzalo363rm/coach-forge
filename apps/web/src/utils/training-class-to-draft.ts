@@ -14,6 +14,7 @@ export async function trainingClassToDraft(
             sortOrder: item.sortOrder,
             durationMinutes: item.durationMinutes,
             isOptional: item.isOptional,
+            creatorId: item.exercise.creatorId,
         })),
     )
 

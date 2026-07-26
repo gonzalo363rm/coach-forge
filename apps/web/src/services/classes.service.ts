@@ -25,6 +25,7 @@ export type TrainingClassWithItems = TrainingClass & {
             title: string
             difficulty: number
             sportId: string | null
+            creatorId: string | null
         }
     }[]
 }
@@ -137,6 +138,7 @@ const trainingClassItemsInclude = {
                     title: true,
                     difficulty: true,
                     sportId: true,
+                    creatorId: true,
                 },
             },
         },

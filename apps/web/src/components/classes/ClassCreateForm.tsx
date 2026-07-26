@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import type { Role, Sport } from "@prisma/client"
 
 import {
     createTrainingClassAction,
@@ -12,7 +13,6 @@ import {
     computeExerciseCount,
     computeTotalMinutes,
 } from "@/schemas/training-class.schema"
-import type { Sport } from "@prisma/client"
 
 import { Button, ButtonLink } from "@/components/ui/button"
 import { FormActions } from "@/components/ui/FormActions"
@@ -32,11 +32,17 @@ import { ClassExerciseConfigModal } from "./ClassExerciseConfigModal"
 import { ClassExercisePreviewModal } from "./ClassExercisePreviewModal"
 import type { ExerciseListItem } from "@/services/exercises.service"
 
+type Viewer = {
+    id: string
+    role: Role
+}
+
 type Props = {
     sports: Sport[]
     mode?: "create" | "edit"
     classId?: string
     initialDraft?: ClassDraft
+    viewer?: Viewer | null
 }
 
 export function ClassCreateForm({
@@ -44,6 +50,7 @@ export function ClassCreateForm({
     mode = "create",
     classId,
     initialDraft,
+    viewer = null,
 }: Props) {
     const isEdit = mode === "edit"
     const router = useRouter()
@@ -286,6 +293,7 @@ export function ClassCreateForm({
                     <ClassExerciseList
                         items={draft.items}
                         returnTo={returnToPath}
+                        viewer={viewer}
                         onChange={(items) => setDraft((p) => ({ ...p, items }))}
                         onEdit={setEditItem}
                         onView={setViewItem}

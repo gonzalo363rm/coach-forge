@@ -6,6 +6,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { ClassCreateForm } from "@/components/classes/ClassCreateForm"
 import type { ClassDraft } from "@/components/classes/class-draft-storage"
+import { ClassTemplatePrepareGate } from "@/components/classes/ClassTemplatePrepareGate"
 import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
@@ -30,7 +31,13 @@ export default async function NewClassPage({ searchParams }: Props) {
 
     const [sports, session] = await Promise.all([sportsListAll(), auth()])
 
-    let initialDraft: ClassDraft | undefined
+    let readyDraft: ClassDraft | null = null
+    let templateMeta: {
+        sourceClassId: string
+        sourceTitle: string
+        foreignExerciseCount: number
+    } | null = null
+
     if (fromId) {
         if (!session?.user) notFound()
 
@@ -43,13 +50,31 @@ export default async function NewClassPage({ searchParams }: Props) {
             notFound()
         }
 
-        const draft = await trainingClassToDraft(sourceClass)
-        initialDraft = {
-            ...draft,
-            title: "",
-            isPublic: false,
+        const userId = session.user.id
+        const foreignExerciseCount = sourceClass.items.filter(
+            (item) => item.exercise.creatorId !== userId,
+        ).length
+
+        if (foreignExerciseCount === 0) {
+            const draft = await trainingClassToDraft(sourceClass)
+            readyDraft = {
+                ...draft,
+                title: "",
+                isPublic: false,
+            }
+        } else {
+            templateMeta = {
+                sourceClassId: sourceClass.id,
+                sourceTitle: sourceClass.title,
+                foreignExerciseCount,
+            }
         }
     }
+
+    const isFromTemplate = Boolean(fromId)
+    const viewer = session?.user
+        ? { id: session.user.id, role: session.user.role }
+        : null
 
     return (
         <PageRoot>
@@ -71,7 +96,7 @@ export default async function NewClassPage({ searchParams }: Props) {
                         </Link>
                     )}
                     <h1 className="mt-2 text-2xl font-bold text-zinc-800 dark:text-white">
-                        {initialDraft ? "Nueva clase desde plantilla" : "Nueva clase"}
+                        {isFromTemplate ? "Nueva clase desde plantilla" : "Nueva clase"}
                     </h1>
                 </div>
             </header>
@@ -80,7 +105,21 @@ export default async function NewClassPage({ searchParams }: Props) {
                     <p className="text-sm text-zinc-500">Cargando formulario…</p>
                 }
             >
-                <ClassCreateForm sports={sports} initialDraft={initialDraft} />
+                {isFromTemplate && viewer ? (
+                    <ClassTemplatePrepareGate
+                        sports={sports}
+                        returnTo={returnTo}
+                        readyDraft={readyDraft}
+                        template={templateMeta}
+                        viewer={viewer}
+                    />
+                ) : (
+                    <ClassCreateForm
+                        sports={sports}
+                        initialDraft={readyDraft ?? undefined}
+                        viewer={viewer}
+                    />
+                )}
             </Suspense>
         </PageRoot>
     )

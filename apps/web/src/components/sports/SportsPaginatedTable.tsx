@@ -107,13 +107,6 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                     <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
                         <thead className="bg-zinc-100 dark:bg-zinc-900">
                             <tr>
-                                <th
-                                    scope="col"
-                                    className={tableHeaderThClass}
-                                >
-                                    ID
-                                </th>
-
                                 <SortableTh
                                     column="name"
                                     label="Nombre"
@@ -149,7 +142,7 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                             {optimisticSports.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={4}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         No hay deportes con estos filtros.{" "}
@@ -168,9 +161,6 @@ export function SportsPaginatedTable({ sports, totalPages, listState }: Props) {
                                         key={sport.id}
                                         className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                                     >
-                                        <td className="whitespace-nowrap px-4 py-2 font-mono text-sm text-zinc-600 dark:text-zinc-400">
-                                            {sport.id}
-                                        </td>
                                         <td className="whitespace-nowrap px-4 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                                             {sport.name}
                                         </td>

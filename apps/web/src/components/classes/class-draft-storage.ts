@@ -8,6 +8,8 @@ export type ClassDraftExerciseItem = {
     sortOrder: number
     durationMinutes: number | null
     isOptional: boolean
+    /** Creador del ejercicio; null si desconocido / huérfano. */
+    creatorId: string | null
 }
 
 export type ClassDraft = {
@@ -30,7 +32,10 @@ export function loadClassDraft(): ClassDraft | null {
         return {
             ...defaultClassDraft(),
             ...parsed,
-            items: parsed.items ?? [],
+            items: (parsed.items ?? []).map((item) => ({
+                ...item,
+                creatorId: item.creatorId ?? null,
+            })),
         }
     } catch {
         return null
@@ -71,5 +76,6 @@ export function exerciseToDraftItem(
         sortOrder,
         durationMinutes: overrides?.durationMinutes ?? 5,
         isOptional: overrides?.isOptional ?? false,
+        creatorId: exercise.creatorId ?? exercise.creator?.id ?? null,
     }
 }

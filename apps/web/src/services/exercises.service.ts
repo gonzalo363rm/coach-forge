@@ -1,8 +1,15 @@
+import { existsSync } from "node:fs"
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+
 import { Prisma, type Exercise } from "@prisma/client"
 
 import { getPrisma } from "@/lib/prisma"
 import { exercisePreviewPublicId } from "@/lib/cloudinary-url"
-import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
+import {
+  EXERCISE_PREVIEW_PLACEHOLDER,
+  resolveExercisePreviewUrl,
+} from "@/lib/exercise-preview-resolve"
 import type {
   ExerciseCreateInput,
   ExerciseListFilters,
@@ -13,6 +20,7 @@ import {
   deleteCloudinaryImage,
   uploadImageBuffer,
 } from "@/services/cloudinary.service"
+import { exercisePreviewFilename } from "@/utils/exercise-preview-url"
 
 function buildExerciseWhereFilters(
     filters: ExerciseListFilters,
@@ -294,6 +302,61 @@ export async function exerciseCreate(
             canvas: data.canvas as unknown as Prisma.InputJsonValue,
         },
     })
+}
+
+/** Copia la preview del ejercicio origen al destino (Cloudinary). Fallos no propagan. */
+async function copyExercisePreview(sourceId: string, targetId: string): Promise<void> {
+    const url = await resolveExercisePreviewUrl(sourceId)
+    if (url === EXERCISE_PREVIEW_PLACEHOLDER) return
+
+    let buf: Buffer
+    try {
+        if (url.startsWith("/exercises/")) {
+            const abs = join(process.cwd(), "public", "exercises", exercisePreviewFilename(sourceId))
+            if (!existsSync(abs)) return
+            buf = await readFile(abs)
+        } else {
+            const res = await fetch(url)
+            if (!res.ok) return
+            buf = Buffer.from(await res.arrayBuffer())
+        }
+        await exerciseSavePreview(targetId, buf)
+    } catch (e) {
+        console.error("[copyExercisePreview]", sourceId, "→", targetId, e)
+    }
+}
+
+/**
+ * Clona un ejercicio para un usuario: mismo canvas/metadatos, siempre privado,
+ * con preview re-subida bajo el nuevo id cuando exista.
+ */
+export async function exerciseCloneForUser(
+    sourceId: string,
+    creatorId: string,
+): Promise<Exercise> {
+    const source = await exerciseGetById(sourceId)
+    if (!source) {
+        throw new Error("Ejercicio no encontrado")
+    }
+
+    const created = await getPrisma().exercise.create({
+        data: {
+            ...(source.sportId
+                ? { sport: { connect: { id: source.sportId } } }
+                : {}),
+            creator: { connect: { id: creatorId } },
+            title: source.title,
+            minPlayers: source.minPlayers,
+            maxPlayers: source.maxPlayers,
+            difficulty: source.difficulty,
+            isPublic: false,
+            videoLink: source.videoLink,
+            canvas: source.canvas as Prisma.InputJsonValue,
+        },
+    })
+
+    await copyExercisePreview(sourceId, created.id)
+    return created
 }
 
 export async function exerciseUpdate(

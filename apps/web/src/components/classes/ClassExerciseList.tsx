@@ -18,16 +18,25 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import type { Role } from "@prisma/client"
 import { IoMenu } from "react-icons/io5"
+
+import { canManageOwnedResource } from "@/lib/user-permissions"
 
 import type { ClassDraftExerciseItem } from "./class-draft-storage"
 
 const btnBase =
     "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
 
+type Viewer = {
+    id: string
+    role: Role
+}
+
 type Props = {
     items: ClassDraftExerciseItem[]
     returnTo: string
+    viewer?: Viewer | null
     onChange: (items: ClassDraftExerciseItem[]) => void
     onEdit: (item: ClassDraftExerciseItem) => void
     onView: (item: ClassDraftExerciseItem) => void
@@ -39,7 +48,14 @@ function formatDuration(item: ClassDraftExerciseItem): string {
     return `${min} min`
 }
 
-export function ClassExerciseList({ items, returnTo, onChange, onEdit, onView }: Props) {
+export function ClassExerciseList({
+    items,
+    returnTo,
+    viewer = null,
+    onChange,
+    onEdit,
+    onView,
+}: Props) {
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -78,6 +94,11 @@ export function ClassExerciseList({ items, returnTo, onChange, onEdit, onView }:
                             key={item.exerciseId}
                             item={item}
                             returnTo={returnTo}
+                            canEditExercise={
+                                viewer
+                                    ? canManageOwnedResource(viewer, item.creatorId)
+                                    : false
+                            }
                             onEdit={() => onEdit(item)}
                             onView={() => onView(item)}
                         />
@@ -91,11 +112,13 @@ export function ClassExerciseList({ items, returnTo, onChange, onEdit, onView }:
 function SortableExerciseRow({
     item,
     returnTo,
+    canEditExercise,
     onEdit,
     onView,
 }: {
     item: ClassDraftExerciseItem
     returnTo: string
+    canEditExercise: boolean
     onEdit: () => void
     onView: () => void
 }) {
@@ -134,7 +157,7 @@ function SortableExerciseRow({
             <RowActions
                 onEdit={onEdit}
                 onView={onView}
-                editExerciseHref={editExerciseHref}
+                editExerciseHref={canEditExercise ? editExerciseHref : null}
             />
         </li>
     )
@@ -147,7 +170,7 @@ function RowActions({
 }: {
     onEdit: () => void
     onView: () => void
-    editExerciseHref: string
+    editExerciseHref: string | null
 }) {
     return (
         <div className="flex items-center gap-2">
@@ -165,12 +188,14 @@ function RowActions({
             >
                 Ver
             </button>
-            <Link
-                href={editExerciseHref}
-                className={`${btnBase} border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800`}
-            >
-                Ir al ejercicio
-            </Link>
+            {editExerciseHref ? (
+                <Link
+                    href={editExerciseHref}
+                    className={`${btnBase} border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800`}
+                >
+                    Ir al ejercicio
+                </Link>
+            ) : null}
         </div>
     )
 }

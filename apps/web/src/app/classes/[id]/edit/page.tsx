@@ -80,6 +80,7 @@ export default async function EditClassPage({ params }: Props) {
                     mode="edit"
                     classId={id}
                     initialDraft={initialDraft}
+                    viewer={session.user}
                 />
             </Suspense>
         </PageRoot>
