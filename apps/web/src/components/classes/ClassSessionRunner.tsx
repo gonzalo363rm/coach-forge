@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useMemo, useState, type MouseEvent } from "react"
+import { useEffect, useId, useMemo, useState, useTransition, type MouseEvent } from "react"
 import {
     IoCheckmark,
     IoEyeOutline,
@@ -10,13 +10,20 @@ import {
     IoPlay,
     IoRefresh,
 } from "react-icons/io5"
+import type { Sport } from "@prisma/client"
 
-import { Button } from "@/components/ui/button"
+import { updateTrainingClassAction } from "@/app/actions/classes"
+import { Button, ButtonLink } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/FormActions"
+import { useToast } from "@/hooks/use-toast"
+import type { ExerciseListItem } from "@/services/exercises.service"
 
+import { AddExerciseModal } from "./AddExerciseModal"
 import { ClassExercisePreviewModal } from "./ClassExercisePreviewModal"
 import {
     DEFAULT_REST_SECONDS,
     REST_INCREMENT_SECONDS,
+    computeEstimatedTotalSeconds,
     type ClassSessionData,
     type ClassSessionExercise,
 } from "./class-session"
@@ -33,6 +40,8 @@ import {
 
 type Props = {
     session: ClassSessionData
+    canManage: boolean
+    sports: Sport[]
 }
 
 const iconBtn =
@@ -59,9 +68,30 @@ const elapsedTimerText: Record<TimerVisualVariant, string> = {
     rest: "text-sky-400",
 }
 
-export function ClassSessionRunner({ session }: Props) {
-    const { exercises, title, sportName, difficulty, estimatedTotalSeconds, description } = session
-    console.log(session)
+export function ClassSessionRunner({ session, canManage, sports }: Props) {
+    const { toast } = useToast()
+    const templateWarnTitleId = useId()
+    const [exercises, setExercises] = useState(session.exercises)
+    const [addModalOpen, setAddModalOpen] = useState(false)
+    const [templateWarnOpen, setTemplateWarnOpen] = useState(false)
+    const [addError, setAddError] = useState<string | null>(null)
+    const [pendingAdd, startAddTransition] = useTransition()
+
+    const {
+        title,
+        sportName,
+        difficulty,
+        description,
+        classId,
+        sportId,
+        isPublic,
+    } = session
+
+    const estimatedTotalSeconds = useMemo(
+        () => computeEstimatedTotalSeconds(exercises),
+        [exercises],
+    )
+
     const timer = useClassSessionTimer({
         exerciseCount: exercises.length,
         exerciseDurations: exercises.map((ex) => ex.durationSeconds),
@@ -72,6 +102,8 @@ export function ClassSessionRunner({ session }: Props) {
     const [previewExercise, setPreviewExercise] = useState<ClassSessionExercise | null>(
         null,
     )
+
+    const templateHref = `/classes/new?from=${encodeURIComponent(classId)}&returnTo=${encodeURIComponent(`/classes/${classId}/start`)}`
 
     const subtitle = [sportName, `Dificultad ${difficulty}`].filter(Boolean).join(" · ")
     const focusedExercise = exercises[timer.focusedIndex]
@@ -144,6 +176,91 @@ export function ClassSessionRunner({ session }: Props) {
         timer.completedCount,
         exercises.length,
     ])
+
+    useEffect(() => {
+        if (!templateWarnOpen) return
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.key === "Escape") setTemplateWarnOpen(false)
+        }
+        document.addEventListener("keydown", onKeyDown)
+        return () => document.removeEventListener("keydown", onKeyDown)
+    }, [templateWarnOpen])
+
+    function handleAddClick() {
+        setAddError(null)
+        if (canManage) {
+            setAddModalOpen(true)
+            return
+        }
+        setTemplateWarnOpen(true)
+    }
+
+    function handleAddExercise(
+        exercise: ExerciseListItem,
+        config: { durationMinutes: number | null; isOptional: boolean },
+    ) {
+        if (exercises.some((item) => item.exerciseId === exercise.id)) {
+            toast({
+                type: "error",
+                title: "Ejercicio ya incluido",
+                message: "Ese ejercicio ya está en esta clase.",
+            })
+            return
+        }
+
+        const newExercise: ClassSessionExercise = {
+            key: `local-${exercise.id}-${Date.now()}`,
+            exerciseId: exercise.id,
+            title: exercise.title,
+            previewUrl: exercise.previewUrl,
+            durationSeconds: config.isOptional
+                ? null
+                : Math.max(60, (config.durationMinutes ?? 5) * 60),
+            isOptional: config.isOptional,
+        }
+
+        const previous = exercises
+        const nextExercises = [...exercises, newExercise]
+        setExercises(nextExercises)
+        setAddModalOpen(false)
+        setAddError(null)
+
+        startAddTransition(async () => {
+            const result = await updateTrainingClassAction({
+                id: classId,
+                title,
+                description,
+                sportId,
+                difficulty,
+                isPublic,
+                items: nextExercises.map((item, idx) => ({
+                    exerciseId: item.exerciseId,
+                    sortOrder: idx,
+                    durationMinutes: item.isOptional
+                        ? null
+                        : Math.max(1, Math.round((item.durationSeconds ?? 300) / 60)),
+                    isOptional: item.isOptional,
+                })),
+            })
+
+            if (!result.ok) {
+                setExercises(previous)
+                setAddError(result.error)
+                toast({
+                    type: "error",
+                    title: "No se pudo añadir el ejercicio",
+                    message: result.error,
+                })
+                return
+            }
+
+            toast({
+                type: "success",
+                title: "Ejercicio añadido",
+                message: `«${exercise.title}» se agregó a la clase.`,
+            })
+        })
+    }
 
     return (
         <div className="flex flex-col gap-6">
@@ -252,6 +369,27 @@ export function ClassSessionRunner({ session }: Props) {
 
             <hr className="border-zinc-200 dark:border-zinc-800" />
 
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                    Ejercicios
+                </h2>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={pendingAdd}
+                    onClick={handleAddClick}
+                >
+                    Añadir ejercicio
+                </Button>
+            </div>
+
+            {addError ? (
+                <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+                    {addError}
+                </p>
+            ) : null}
+
             <ul className="flex flex-col gap-6">
                 {exercises.map((exercise, index) => (
                     <ExerciseSessionCard
@@ -294,6 +432,54 @@ export function ClassSessionRunner({ session }: Props) {
                         : null
                 }
             />
+
+            <AddExerciseModal
+                open={addModalOpen}
+                onClose={() => setAddModalOpen(false)}
+                sports={sports}
+                excludeExerciseIds={exercises.map((item) => item.exerciseId)}
+                onAdd={handleAddExercise}
+            />
+
+            {templateWarnOpen ? (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 dark:bg-black/70"
+                    role="presentation"
+                    onPointerDown={(e) => {
+                        if (e.target === e.currentTarget) setTemplateWarnOpen(false)
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={templateWarnTitleId}
+                        className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                        onPointerDown={(e) => e.stopPropagation()}
+                    >
+                        <h2
+                            id={templateWarnTitleId}
+                            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+                        >
+                            No podés editar esta clase
+                        </h2>
+                        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                            Esta clase no es tuya, así que no se pueden agregar ejercicios
+                            acá. Creá una clase nueva usando esta como plantilla y ahí sí
+                            vas a poder modificarla.
+                        </p>
+                        <FormActions
+                            className="mt-6"
+                            onCancel={() => setTemplateWarnOpen(false)}
+                            cancelLabel="Cerrar"
+                            submit={
+                                <ButtonLink href={templateHref} variant="primary">
+                                    Usar como plantilla
+                                </ButtonLink>
+                            }
+                        />
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }

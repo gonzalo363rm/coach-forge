@@ -2,10 +2,13 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { auth } from "@/auth"
 import { ClassSessionRunner } from "@/components/classes/ClassSessionRunner"
 import { createPageMetadata } from "@/lib/seo"
+import { canManageOwnedResource } from "@/lib/user-permissions"
 import { buildClassSessionData } from "@/utils/build-class-session-data"
 import { trainingClassGetById } from "@/services/classes.service"
+import { sportsListAll } from "@/services/sports.service"
 
 export const metadata: Metadata = createPageMetadata({
     title: "Sesión de clase",
@@ -19,7 +22,11 @@ interface Props {
 
 export default async function StartClassPage({ params }: Props) {
     const { id } = await params
-    const trainingClass = await trainingClassGetById(id)
+    const [trainingClass, sports, session] = await Promise.all([
+        trainingClassGetById(id),
+        sportsListAll(),
+        auth(),
+    ])
 
     if (!trainingClass) {
         notFound()
@@ -48,11 +55,18 @@ export default async function StartClassPage({ params }: Props) {
         )
     }
 
-    const session = await buildClassSessionData(trainingClass)
+    const classSession = await buildClassSessionData(trainingClass)
+    const canManage = Boolean(
+        session?.user && canManageOwnedResource(session.user, trainingClass.creatorId),
+    )
 
     return (
         <PageRoot>
-            <ClassSessionRunner session={session} />
+            <ClassSessionRunner
+                session={classSession}
+                canManage={canManage}
+                sports={sports}
+            />
         </PageRoot>
     )
 }

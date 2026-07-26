@@ -16,8 +16,10 @@ export type ClassSessionData = {
     classId: string
     title: string
     sportName: string | null
+    sportId: string | null
     difficulty: number
     description: string | null
+    isPublic: boolean
     estimatedTotalSeconds: number
     exercises: ClassSessionExercise[]
 }

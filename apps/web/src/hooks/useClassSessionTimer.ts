@@ -74,6 +74,34 @@ export function useClassSessionTimer({
     restRunningRef.current = restRunning
     sessionSecondsRef.current = sessionSeconds
 
+    /** Extiende arrays/refs cuando se añaden ejercicios en vivo. */
+    useEffect(() => {
+        const pad = <T,>(prev: T[], fill: T): T[] => {
+            if (prev.length >= exerciseCount) return prev
+            return [
+                ...prev,
+                ...Array.from({ length: exerciseCount - prev.length }, () => fill),
+            ]
+        }
+
+        setExerciseElapsed((prev) => pad(prev, 0))
+        setExerciseRunning((prev) => pad(prev, false))
+        setCompleted((prev) => pad(prev, false))
+
+        if (exerciseAnchorsRef.current.length < exerciseCount) {
+            exerciseAnchorsRef.current = [
+                ...exerciseAnchorsRef.current,
+                ...emptyNullableNumArray(exerciseCount - exerciseAnchorsRef.current.length),
+            ]
+        }
+        if (exerciseAlarmFiredRef.current.length < exerciseCount) {
+            exerciseAlarmFiredRef.current = [
+                ...exerciseAlarmFiredRef.current,
+                ...emptyBoolArray(exerciseCount - exerciseAlarmFiredRef.current.length),
+            ]
+        }
+    }, [exerciseCount])
+
     const anyExerciseRunning = exerciseRunning.some(Boolean)
     const clockActive = restRunning || anyExerciseRunning
 

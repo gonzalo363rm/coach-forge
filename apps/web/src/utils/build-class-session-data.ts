@@ -25,8 +25,10 @@ export async function buildClassSessionData(
         classId: trainingClass.id,
         title: trainingClass.title,
         sportName: trainingClass.sport?.name ?? null,
+        sportId: trainingClass.sportId,
         difficulty: trainingClass.difficulty,
         description: trainingClass.description ?? null,
+        isPublic: trainingClass.isPublic,
         estimatedTotalSeconds: computeEstimatedTotalSeconds(exercises),
         exercises,
     }
