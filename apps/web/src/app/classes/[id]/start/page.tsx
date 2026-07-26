@@ -66,6 +66,7 @@ export default async function StartClassPage({ params }: Props) {
                 session={classSession}
                 canManage={canManage}
                 sports={sports}
+                userId={session?.user?.id ?? null}
             />
         </PageRoot>
     )

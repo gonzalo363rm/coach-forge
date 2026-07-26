@@ -2,7 +2,15 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useId, useMemo, useState, useTransition, type MouseEvent } from "react"
+import {
+    useEffect,
+    useId,
+    useMemo,
+    useRef,
+    useState,
+    useTransition,
+    type MouseEvent,
+} from "react"
 import {
     IoCheckmark,
     IoEyeOutline,
@@ -17,6 +25,11 @@ import { Button, ButtonLink } from "@/components/ui/button"
 import { FormActions } from "@/components/ui/FormActions"
 import { useToast } from "@/hooks/use-toast"
 import type { ExerciseListItem } from "@/services/exercises.service"
+import {
+    buildClassSessionSnapshot,
+    hydrateTimerFromSnapshot,
+    useClassSessionStore,
+} from "@/stores/class-session.store"
 
 import { AddExerciseModal } from "./AddExerciseModal"
 import { ClassExercisePreviewModal } from "./ClassExercisePreviewModal"
@@ -42,6 +55,7 @@ type Props = {
     session: ClassSessionData
     canManage: boolean
     sports: Sport[]
+    userId: string | null
 }
 
 const iconBtn =
@@ -51,9 +65,11 @@ const PREVIEW_PLACEHOLDER = "/exercises/placeholder-preview.svg"
 
 function exerciseTimerVariant(
     isRunning: boolean,
+    isResting: boolean,
     isCompleted: boolean,
     isPaused: boolean,
 ): TimerVisualVariant {
+    if (isResting) return "rest"
     if (isRunning) return "running"
     if (isCompleted) return "completed"
     if (isPaused) return "paused"
@@ -68,14 +84,46 @@ const elapsedTimerText: Record<TimerVisualVariant, string> = {
     rest: "text-sky-400",
 }
 
-export function ClassSessionRunner({ session, canManage, sports }: Props) {
+export function ClassSessionRunner(props: Props) {
+    const [persistReady, setPersistReady] = useState(
+        () => !props.userId || useClassSessionStore.persist.hasHydrated(),
+    )
+
+    useEffect(() => {
+        if (!props.userId) {
+            setPersistReady(true)
+            return
+        }
+        if (useClassSessionStore.persist.hasHydrated()) {
+            setPersistReady(true)
+            return
+        }
+        return useClassSessionStore.persist.onFinishHydration(() => {
+            setPersistReady(true)
+        })
+    }, [props.userId])
+
+    if (!persistReady) {
+        return (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Restaurando sesión…
+            </p>
+        )
+    }
+
+    return <ClassSessionRunnerInner {...props} />
+}
+
+function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) {
     const { toast } = useToast()
     const templateWarnTitleId = useId()
+    const saveSnapshot = useClassSessionStore((s) => s.saveSnapshot)
     const [exercises, setExercises] = useState(session.exercises)
     const [addModalOpen, setAddModalOpen] = useState(false)
     const [templateWarnOpen, setTemplateWarnOpen] = useState(false)
     const [addError, setAddError] = useState<string | null>(null)
     const [pendingAdd, startAddTransition] = useTransition()
+    const persistLatestRef = useRef<() => void>(() => {})
 
     const {
         title,
@@ -87,6 +135,16 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
         isPublic,
     } = session
 
+    const [timerInitial] = useState(() => {
+        if (!userId) return null
+        const snapshot = useClassSessionStore.getState().getSnapshot(userId, classId)
+        return hydrateTimerFromSnapshot(
+            snapshot,
+            session.exercises.map((ex) => ex.exerciseId),
+            DEFAULT_REST_SECONDS,
+        )
+    })
+
     const estimatedTotalSeconds = useMemo(
         () => computeEstimatedTotalSeconds(exercises),
         [exercises],
@@ -95,9 +153,10 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
     const timer = useClassSessionTimer({
         exerciseCount: exercises.length,
         exerciseDurations: exercises.map((ex) => ex.durationSeconds),
+        initialState: timerInitial,
     })
 
-    const isRestMode = timer.phase === "rest"
+    const isRestMode = timer.focusedResting
 
     const [previewExercise, setPreviewExercise] = useState<ClassSessionExercise | null>(
         null,
@@ -110,21 +169,76 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
 
     const focusedElapsed = timer.exerciseElapsed[timer.focusedIndex] ?? 0
     const focusedRunning = timer.exerciseRunning[timer.focusedIndex] ?? false
+    const focusedResting = timer.resting[timer.focusedIndex] ?? false
+    const focusedRestElapsed = timer.restElapsed[timer.focusedIndex] ?? 0
+    const focusedRestTarget =
+        timer.restTargetSeconds[timer.focusedIndex] ?? DEFAULT_REST_SECONDS
     const focusedCompleted = timer.completed[timer.focusedIndex] ?? false
     const focusedPaused =
-        !focusedCompleted && !focusedRunning && focusedElapsed > 0
+        !focusedCompleted &&
+        !focusedRunning &&
+        !focusedResting &&
+        focusedElapsed > 0
     const focusedVariant = exerciseTimerVariant(
         focusedRunning,
+        focusedResting,
         focusedCompleted,
         focusedPaused,
     )
 
+    useEffect(() => {
+        if (!userId) return
+
+        const persistNow = () => {
+            saveSnapshot(
+                buildClassSessionSnapshot({
+                    userId,
+                    classId,
+                    exerciseIds: exercises.map((ex) => ex.exerciseId),
+                    focusedIndex: timer.focusedIndex,
+                    sessionSeconds: timer.sessionSeconds,
+                    exerciseElapsed: timer.exerciseElapsed,
+                    exerciseRunning: timer.exerciseRunning,
+                    resting: timer.resting,
+                    restElapsed: timer.restElapsed,
+                    restTargetSeconds: timer.restTargetSeconds,
+                    completed: timer.completed,
+                    exerciseAlarmFired: timer.exerciseAlarmFired,
+                }),
+            )
+        }
+
+        persistLatestRef.current = persistNow
+        const handle = window.setTimeout(persistNow, 400)
+        return () => window.clearTimeout(handle)
+    }, [
+        userId,
+        classId,
+        exercises,
+        saveSnapshot,
+        timer.focusedIndex,
+        timer.sessionSeconds,
+        timer.exerciseElapsed,
+        timer.exerciseRunning,
+        timer.resting,
+        timer.restElapsed,
+        timer.restTargetSeconds,
+        timer.completed,
+        timer.exerciseAlarmFired,
+    ])
+
+    useEffect(() => {
+        return () => {
+            persistLatestRef.current()
+        }
+    }, [])
+
     const timerRing = useMemo(() => {
-        if (timer.phase === "rest" && timer.restRunning) {
+        if (focusedResting) {
             return {
                 kind: "countdown" as const,
-                durationSeconds: timer.restTargetSeconds,
-                elapsedSeconds: timer.restSeconds,
+                durationSeconds: focusedRestTarget,
+                elapsedSeconds: focusedRestElapsed,
                 label: "descanso",
                 variant: "rest" as const,
             }
@@ -148,10 +262,9 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
             variant: focusedVariant,
         }
     }, [
-        timer.phase,
-        timer.restRunning,
-        timer.restTargetSeconds,
-        timer.restSeconds,
+        focusedResting,
+        focusedRestTarget,
+        focusedRestElapsed,
         focusedElapsed,
         focusedCompleted,
         focusedVariant,
@@ -164,15 +277,17 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
         }
         const parts: string[] = []
         if (timer.runningCount > 0) {
-            parts.push(
-                `${timer.runningCount} en curso`,
-            )
+            parts.push(`${timer.runningCount} en curso`)
+        }
+        if (timer.restingCount > 0) {
+            parts.push(`${timer.restingCount} en descanso`)
         }
         parts.push(`${timer.completedCount} / ${exercises.length} completados`)
         return parts.join(" · ")
     }, [
         timer.allCompleted,
         timer.runningCount,
+        timer.restingCount,
         timer.completedCount,
         exercises.length,
     ])
@@ -336,11 +451,12 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
                                 type="button"
                                 variant="secondary"
                                 size="sm"
+                                disabled={focusedCompleted}
                                 onClick={() => timer.startRest(DEFAULT_REST_SECONDS)}
                             >
                                 Descanso (1 min)
                             </Button>
-                            {timer.phase === "rest" ? (
+                            {isRestMode ? (
                                 <>
                                     <Button
                                         type="button"
@@ -356,7 +472,7 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
                                         type="button"
                                         variant="primary"
                                         size="sm"
-                                        onClick={timer.skipRest}
+                                        onClick={() => timer.skipRest(timer.focusedIndex)}
                                     >
                                         Saltar descanso
                                     </Button>
@@ -396,10 +512,15 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
                         key={exercise.key}
                         index={index}
                         exercise={exercise}
-                        isFocused={!isRestMode && timer.focusedIndex === index}
+                        isFocused={timer.focusedIndex === index}
                         isRunning={timer.exerciseRunning[index] ?? false}
+                        isResting={timer.resting[index] ?? false}
                         isCompleted={timer.completed[index] ?? false}
                         elapsedSeconds={timer.exerciseElapsed[index] ?? 0}
+                        restElapsedSeconds={timer.restElapsed[index] ?? 0}
+                        restTargetSeconds={
+                            timer.restTargetSeconds[index] ?? DEFAULT_REST_SECONDS
+                        }
                         onTogglePlay={() => timer.toggleExercise(index)}
                         onFocus={() => timer.focusExercise(index)}
                         onOpenPreview={() => {
@@ -409,6 +530,7 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
                         onReset={() => timer.resetExerciseTimer(index)}
                         onComplete={() => timer.completeExercise(index)}
                         onRepeat={() => timer.repeatExercise(index)}
+                        onSkipRest={() => timer.skipRest(index)}
                     />
                 ))}
             </ul>
@@ -487,17 +609,21 @@ export function ClassSessionRunner({ session, canManage, sports }: Props) {
 function ExerciseControls({
     isCompleted,
     isRunning,
+    isResting,
     onTogglePlay,
     onReset,
     onComplete,
     onRepeat,
+    onSkipRest,
 }: {
     isCompleted: boolean
     isRunning: boolean
+    isResting: boolean
     onTogglePlay: () => void
     onReset: () => void
     onComplete: () => void
     onRepeat: () => void
+    onSkipRest: () => void
 }) {
     if (isCompleted) {
         return (
@@ -507,6 +633,17 @@ function ExerciseControls({
                 className="cursor-pointer rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
                 Repetir
+            </button>
+        )
+    }
+    if (isResting) {
+        return (
+            <button
+                type="button"
+                onClick={onSkipRest}
+                className="cursor-pointer rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70"
+            >
+                Saltar descanso
             </button>
         )
     }
@@ -532,7 +669,7 @@ function ExerciseControls({
                 type="button"
                 onClick={onComplete}
                 className={`${iconBtn} border-emerald-500 text-emerald-700 dark:border-emerald-600 dark:text-emerald-400`}
-                aria-label="Marcar completado"
+                aria-label="Terminar y descansar"
             >
                 <IoCheckmark size={20} />
             </button>
@@ -542,9 +679,13 @@ function ExerciseControls({
 
 function exerciseCardStyles(
     isRunning: boolean,
+    isResting: boolean,
     isPaused: boolean,
     isCompleted: boolean,
 ): string {
+    if (isResting) {
+        return "border-sky-300 bg-sky-50/60 dark:border-sky-800 dark:bg-sky-950/25"
+    }
     if (isRunning) {
         return "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20"
     }
@@ -562,31 +703,40 @@ function ExerciseSessionCard({
     exercise,
     isFocused,
     isRunning,
+    isResting,
     isCompleted,
     elapsedSeconds,
+    restElapsedSeconds,
+    restTargetSeconds,
     onTogglePlay,
     onFocus,
     onReset,
     onComplete,
     onRepeat,
+    onSkipRest,
     onOpenPreview,
 }: {
     index: number
     exercise: ClassSessionExercise
     isFocused: boolean
     isRunning: boolean
+    isResting: boolean
     isCompleted: boolean
     elapsedSeconds: number
+    restElapsedSeconds: number
+    restTargetSeconds: number
     onTogglePlay: () => void
     onFocus: () => void
     onReset: () => void
     onComplete: () => void
     onRepeat: () => void
+    onSkipRest: () => void
     onOpenPreview: () => void
 }) {
     const hasTimer = exercise.durationSeconds != null
     const target = exercise.durationSeconds ?? 0
-    const isPaused = !isCompleted && !isRunning && elapsedSeconds > 0
+    const isPaused =
+        !isCompleted && !isRunning && !isResting && elapsedSeconds > 0
     const [previewSrc, setPreviewSrc] = useState(exercise.previewUrl)
 
     useEffect(() => {
@@ -607,17 +757,19 @@ function ExerciseSessionCard({
                     onFocus()
                 }
             }}
-            className={`cursor-pointer rounded-xl border px-4 py-4 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-emerald-500/60 ${exerciseCardStyles(isRunning, isPaused, isCompleted)} ${
+            className={`cursor-pointer rounded-xl border px-4 py-4 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-emerald-500/60 ${exerciseCardStyles(isRunning, isResting, isPaused, isCompleted)} ${
                 isFocused ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 " : ""
             }${
                 isFocused
-                    ? isRunning
-                        ? "ring-emerald-400"
-                        : isPaused
-                          ? "ring-amber-400"
-                          : isCompleted
-                            ? "ring-emerald-500/70"
-                            : "ring-zinc-300 dark:ring-zinc-600"
+                    ? isResting
+                        ? "ring-sky-400"
+                        : isRunning
+                          ? "ring-emerald-400"
+                          : isPaused
+                            ? "ring-amber-400"
+                            : isCompleted
+                              ? "ring-emerald-500/70"
+                              : "ring-zinc-300 dark:ring-zinc-600"
                     : ""
             }`}
         >
@@ -652,7 +804,11 @@ function ExerciseSessionCard({
                                 #{index + 1}{" "}
                             </span>
                             {exercise.title}
-                            {isRunning ? (
+                            {isResting ? (
+                                <span className="ml-2 inline-flex items-center rounded bg-sky-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                    Descanso
+                                </span>
+                            ) : isRunning ? (
                                 <span className="ml-2 inline-flex items-center rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                                     En curso
                                 </span>
@@ -666,18 +822,18 @@ function ExerciseSessionCard({
                                 </span>
                             ) : null}
                         </h2>
-                        {!isCompleted ? (
-                            <div onClick={stopCard}>
-                                <ExerciseControls
-                                    isCompleted={isCompleted}
-                                    isRunning={isRunning}
-                                    onTogglePlay={onTogglePlay}
-                                    onReset={onReset}
-                                    onComplete={onComplete}
-                                    onRepeat={onRepeat}
-                                />
-                            </div>
-                        ) : null}
+                        <div onClick={stopCard}>
+                            <ExerciseControls
+                                isCompleted={isCompleted}
+                                isRunning={isRunning}
+                                isResting={isResting}
+                                onTogglePlay={onTogglePlay}
+                                onReset={onReset}
+                                onComplete={onComplete}
+                                onRepeat={onRepeat}
+                                onSkipRest={onSkipRest}
+                            />
+                        </div>
                     </div>
 
                     <button
@@ -692,7 +848,12 @@ function ExerciseSessionCard({
                         Ver orden del ejercicio
                     </button>
 
-                    {isCompleted ? (
+                    {isResting ? (
+                        <p className="mt-2 font-mono text-xs tabular-nums text-sky-700 sm:text-sm dark:text-sky-300">
+                            Descanso {formatMmSs(restElapsedSeconds)} /{" "}
+                            {formatMmSs(restTargetSeconds)}
+                        </p>
+                    ) : isCompleted ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                             <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                                 ✔ Completado

@@ -1,7 +1,3 @@
-Urgente:
--Si estoy en una clase comenzada, salgo y vuelvo a entrar, debe continuar (mantener estados, usemos zustand)
--Permitir agregar ejercicios a una clase ya comenzada (crear o agregar desde ahi, solo si la clase es propia, sino advertir que primero debe crear una clase a partir de esa plantilla, -ver punto siguiente-)
-
 -Agregar opcion de imprimir clase (podrian seleccionrse si se quieren todos los ejercicios o solo algunos mendiante preview con checks)
 -Agregar opcion de imprimir ejercicio
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
