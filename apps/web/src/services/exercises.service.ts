@@ -54,8 +54,8 @@ function buildExerciseWhereFilters(
             OR: [{ minPlayers: null }, { minPlayers: { lte: filters.filterMaxPlayers } }],
         })
     }
-    if (filters.isPublic != null) {
-        and.push({ isPublic: filters.isPublic })
+    if (filters.visibility != null) {
+        and.push({ visibility: filters.visibility })
     }
     if (filters.creatorId) {
         and.push({ creatorId: filters.creatorId })
@@ -100,8 +100,8 @@ function exerciseListOrderBy(
             return { title: sortDir }
         case "difficulty":
             return { difficulty: sortDir }
-        case "isPublic":
-            return { isPublic: sortDir }
+        case "visibility":
+            return { visibility: sortDir }
         case "updatedAt":
         default:
             return { updatedAt: sortDir }
@@ -297,7 +297,7 @@ export async function exerciseCreate(
             minPlayers: data.minPlayers,
             maxPlayers: data.maxPlayers,
             difficulty: data.difficulty,
-            isPublic: data.isPublic,
+            visibility: data.visibility,
             videoLink: data.videoLink,
             canvas: data.canvas as unknown as Prisma.InputJsonValue,
         },
@@ -349,7 +349,7 @@ export async function exerciseCloneForUser(
             minPlayers: source.minPlayers,
             maxPlayers: source.maxPlayers,
             difficulty: source.difficulty,
-            isPublic: false,
+            visibility: "private",
             videoLink: source.videoLink,
             canvas: source.canvas as Prisma.InputJsonValue,
         },
@@ -373,7 +373,7 @@ export async function exerciseUpdate(
     if (patch.minPlayers !== undefined) data.minPlayers = patch.minPlayers
     if (patch.maxPlayers !== undefined) data.maxPlayers = patch.maxPlayers
     if (patch.difficulty !== undefined) data.difficulty = patch.difficulty
-    if (patch.isPublic !== undefined) data.isPublic = patch.isPublic
+    if (patch.visibility !== undefined) data.visibility = patch.visibility
     if (patch.videoLink !== undefined) data.videoLink = patch.videoLink
     if (patch.canvas !== undefined) {
         data.canvas = patch.canvas as unknown as Prisma.InputJsonValue

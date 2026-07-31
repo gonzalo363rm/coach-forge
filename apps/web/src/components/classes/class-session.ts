@@ -1,3 +1,5 @@
+import type { ContentVisibility } from "@prisma/client"
+
 /** Tipos y constantes seguros para cliente (sin imports de servidor). */
 
 export const DEFAULT_REST_SECONDS = 60
@@ -19,7 +21,7 @@ export type ClassSessionData = {
     sportId: string | null
     difficulty: number
     description: string | null
-    isPublic: boolean
+    visibility: ContentVisibility
     estimatedTotalSeconds: number
     exercises: ClassSessionExercise[]
 }

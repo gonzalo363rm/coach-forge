@@ -23,17 +23,20 @@ import {
     formatUserRole,
 } from "@/lib/user-permissions"
 import type { UserListSortBy } from "@/schemas/user.schema"
-import type { UserSafe } from "@/services/users.service"
+import type { ClubSelectOption } from "@/services/clubs.service"
+import type { UserListItem } from "@/services/users.service"
 import type { Role } from "@prisma/client"
 
 type Props = {
-    users: UserSafe[]
+    users: UserListItem[]
     totalPages: number
     actorRole: Role
     actorId: string
+    clubs: ClubSelectOption[]
     listState: {
         search: string
         role: string
+        clubId: string
         sortBy: UserListSortBy
         sortDir: "asc" | "desc"
     }
@@ -42,6 +45,7 @@ type Props = {
 interface FormData {
     search: string
     role: string
+    clubId: string
 }
 
 function defaultSortDir(column: UserListSortBy): "asc" | "desc" {
@@ -63,6 +67,7 @@ export function UsersPaginatedTable({
     totalPages,
     actorRole,
     actorId,
+    clubs,
     listState,
 }: Props) {
     const filterableRoles = filterableRolesForActor(actorRole)
@@ -72,6 +77,7 @@ export function UsersPaginatedTable({
         defaultValues: {
             search: listState.search,
             role: listState.role,
+            clubId: listState.clubId,
         },
     })
     const [optimisticUsers, removeUserOptimistic] = useOptimistic(
@@ -101,6 +107,7 @@ export function UsersPaginatedTable({
         const q = data.search?.trim()
         if (q) p.set("search", q)
         if (data.role) p.set("role", data.role)
+        if (data.clubId) p.set("clubId", data.clubId)
         p.set("sortBy", listState.sortBy)
         p.set("sortDir", listState.sortDir)
         router.push(`/admin/users?${p.toString()}`)
@@ -122,6 +129,14 @@ export function UsersPaginatedTable({
                     {filterableRoles.map((role) => (
                         <option key={role} value={role}>
                             {formatUserRole(role)}
+                        </option>
+                    ))}
+                </select>
+                <select {...register("clubId")} className={listFilterSelectClass}>
+                    <option value="">Todos los clubes</option>
+                    {clubs.map((club) => (
+                        <option key={club.id} value={club.id}>
+                            {club.name}
                         </option>
                     ))}
                 </select>
@@ -156,10 +171,10 @@ export function UsersPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("role")}
                                 />
-                                <th
-                                    scope="col"
-                                    className={tableHeaderThClass}
-                                >
+                                <th scope="col" className={tableHeaderThClass}>
+                                    Club
+                                </th>
+                                <th scope="col" className={tableHeaderThClass}>
                                     Verificado
                                 </th>
                                 <SortableTh
@@ -169,10 +184,7 @@ export function UsersPaginatedTable({
                                     currentSortDir={listState.sortDir}
                                     defaultDir={defaultSortDir("updatedAt")}
                                 />
-                                <th
-                                    scope="col"
-                                    className={tableHeaderThClass}
-                                >
+                                <th scope="col" className={tableHeaderThClass}>
                                     Acciones
                                 </th>
                             </tr>
@@ -181,7 +193,7 @@ export function UsersPaginatedTable({
                             {optimisticUsers.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         No hay usuarios con estos filtros.{" "}
@@ -208,6 +220,9 @@ export function UsersPaginatedTable({
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {formatUserRole(user.role)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                            {user.clubName ?? "—"}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                             {user.emailVerified ? "Sí" : "No"}

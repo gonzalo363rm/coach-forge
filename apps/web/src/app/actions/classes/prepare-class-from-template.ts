@@ -5,8 +5,9 @@ import { z } from "zod"
 import { revalidateExercisesViews } from "@/app/actions/exercises/revalidate-exercises"
 import type { ClassDraft } from "@/components/classes/class-draft-storage"
 import { auth } from "@/auth"
+import { getActorWithClub, getCreatorClubId } from "@/lib/content-access"
 import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
-import { canManageOwnedResource } from "@/lib/user-permissions"
+import { canUseContentAsTemplate } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
 import { exerciseCloneForUser } from "@/services/exercises.service"
 
@@ -34,10 +35,17 @@ export async function prepareClassFromTemplateAction(
     }
 
     const sourceClass = await trainingClassGetById(parsed.data.sourceClassId)
+    const actor = await getActorWithClub(session.user.id)
+    const creatorClubId = await getCreatorClubId(sourceClass?.creatorId ?? null)
+
     if (
         !sourceClass ||
-        (!sourceClass.isPublic &&
-            !canManageOwnedResource(session.user, sourceClass.creatorId))
+        !actor ||
+        !canUseContentAsTemplate(
+            actor,
+            { visibility: sourceClass.visibility, creatorId: sourceClass.creatorId },
+            creatorClubId,
+        )
     ) {
         return { ok: false, error: "Clase no encontrada o sin acceso" }
     }
@@ -88,7 +96,7 @@ export async function prepareClassFromTemplateAction(
                 description: sourceClass.description ?? "",
                 sportId: sourceClass.sportId,
                 difficulty: sourceClass.difficulty,
-                isPublic: false,
+                visibility: "private",
                 items,
             },
         }

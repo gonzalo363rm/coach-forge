@@ -10,6 +10,7 @@ import { ButtonLink } from "@/components/ui/button"
 import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { trainingClassGetById } from "@/services/classes.service"
+import { getUserClubContext } from "@/services/clubs.service"
 import { sportsListAll } from "@/services/sports.service"
 import { trainingClassToDraft } from "@/utils/training-class-to-draft"
 
@@ -42,6 +43,12 @@ export default async function EditClassPage({ params }: Props) {
     }
 
     const initialDraft = await trainingClassToDraft(trainingClass)
+    const clubContext = await getUserClubContext(session.user.id)
+    const viewer = {
+        id: session.user.id,
+        role: session.user.role,
+        clubId: clubContext?.clubId ?? null,
+    }
 
     return (
         <PageRoot>
@@ -80,7 +87,7 @@ export default async function EditClassPage({ params }: Props) {
                     mode="edit"
                     classId={id}
                     initialDraft={initialDraft}
-                    viewer={session.user}
+                    viewer={viewer}
                 />
             </Suspense>
         </PageRoot>

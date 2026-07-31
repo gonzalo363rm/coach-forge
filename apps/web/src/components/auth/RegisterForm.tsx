@@ -29,10 +29,14 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterFormInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      accountType: "coach",
+      clubName: "",
+      clubAddress: "",
       firstName: "",
       lastName: "",
       email: "",
@@ -40,6 +44,8 @@ export function RegisterForm() {
       confirmPassword: "",
     },
   })
+
+  const accountType = watch("accountType")
 
   function onSubmit(values: RegisterFormInput) {
     setServerError(null)
@@ -68,6 +74,42 @@ export function RegisterForm() {
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {serverError}
         </p>
+      ) : null}
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className={authLabelClass}>Tipo de cuenta</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600">
+            <input type="radio" value="coach" {...register("accountType")} />
+            Entrenador
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600">
+            <input type="radio" value="club" {...register("accountType")} />
+            Club
+          </label>
+        </div>
+      </fieldset>
+
+      {accountType === "club" ? (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="clubName" className={authLabelClass}>
+              Nombre del club
+            </label>
+            <input
+              id="clubName"
+              className={inputClass(!!errors.clubName)}
+              {...register("clubName")}
+            />
+            <AuthFieldError message={errors.clubName?.message} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="clubAddress" className={authLabelClass}>
+              Dirección (opcional)
+            </label>
+            <input id="clubAddress" className={inputClass(false)} {...register("clubAddress")} />
+          </div>
+        </>
       ) : null}
 
       <div className="grid grid-cols-2 gap-4">

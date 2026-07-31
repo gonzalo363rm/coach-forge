@@ -3,6 +3,7 @@ export const CLOUDINARY_ROOT = `coach-forge/${NODE_ENV}`
 
 export const CloudinaryFolder = {
   avatars: `${CLOUDINARY_ROOT}/avatars`,
+  clubs: `${CLOUDINARY_ROOT}/clubs`,
   exercises: `${CLOUDINARY_ROOT}/exercises`,
   elements: `${CLOUDINARY_ROOT}/elements`,
 } as const

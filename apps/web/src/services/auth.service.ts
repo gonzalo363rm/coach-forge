@@ -179,7 +179,15 @@ export async function registerUser(
     return { ok: false, error: "Datos de registro inválidos" }
   }
 
-  const { firstName, lastName, email, password } = parsed.data
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    accountType,
+    clubName,
+    clubAddress,
+  } = parsed.data
   const prisma = getPrisma()
 
   const existing = await prisma.user.findUnique({ where: { email } })
@@ -188,6 +196,34 @@ export async function registerUser(
       return { ok: false, error: "Ya existe una cuenta con ese email" }
     }
 
+    // Cuenta sin verificar: actualizar datos y, si es registro de club, asegurar Club.
+    const passwordHash = await bcryptjs.hash(password, 12)
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: existing.id },
+        data: {
+          firstName,
+          lastName,
+          passwordHash,
+          role: accountType === "club" ? "club_manager" : "coach",
+        },
+      })
+
+      if (accountType === "club") {
+        const club = await tx.club.findUnique({ where: { managerId: existing.id } })
+        if (!club) {
+          await tx.club.create({
+            data: {
+              name: clubName!.trim(),
+              address: clubAddress?.trim() ? clubAddress.trim() : null,
+              managerId: existing.id,
+              maxMembers: 20,
+            },
+          })
+        }
+      }
+    })
+
     const token = await createAuthToken(
       existing.id,
       "email_verification",
@@ -195,7 +231,7 @@ export async function registerUser(
     )
     const emailResult = await sendVerificationEmail({
       to: email,
-      firstName: existing.firstName,
+      firstName,
       token,
     })
 
@@ -209,14 +245,36 @@ export async function registerUser(
 
   const passwordHash = await bcryptjs.hash(password, 12)
 
-  const user = await prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      passwordHash,
-    },
-  })
+  const user =
+    accountType === "club"
+      ? await prisma.$transaction(async (tx) => {
+          const manager = await tx.user.create({
+            data: {
+              firstName,
+              lastName,
+              email,
+              passwordHash,
+              role: "club_manager",
+            },
+          })
+          await tx.club.create({
+            data: {
+              name: clubName!.trim(),
+              address: clubAddress?.trim() ? clubAddress.trim() : null,
+              managerId: manager.id,
+              maxMembers: 20,
+            },
+          })
+          return manager
+        })
+      : await prisma.user.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+            passwordHash,
+          },
+        })
 
   const token = await createAuthToken(
     user.id,

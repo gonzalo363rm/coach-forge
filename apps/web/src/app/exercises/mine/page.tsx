@@ -9,6 +9,7 @@ import { getMyExercisesPaginatedAction } from "@/app/actions/exercises"
 import { ExercisesPaginatedTable } from "@/components/exercises/ExercisesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
 import { createPageMetadata } from "@/lib/seo"
+import { parseVisibilityFilter } from "@/lib/content-access"
 import {
     exerciseListSortBySchema,
     type ExerciseListSortBy,
@@ -59,8 +60,7 @@ export default async function MyExercisesPage({ searchParams }: Props) {
               })()
 
     const visibilityRaw = firstQueryValue(params.visibility)
-    const isPublic =
-        visibilityRaw === "public" ? true : visibilityRaw === "private" ? false : null
+    const visibility = parseVisibilityFilter(visibilityRaw)
 
     const sortByParsed = exerciseListSortBySchema.safeParse(firstQueryValue(params.sortBy))
     const sortBy: ExerciseListSortBy = sortByParsed.success ? sortByParsed.data : "updatedAt"
@@ -93,7 +93,7 @@ export default async function MyExercisesPage({ searchParams }: Props) {
                 search,
                 sport,
                 difficulty: difficultyNum,
-                isPublic,
+                visibility,
             },
             sortBy,
             sortDir,

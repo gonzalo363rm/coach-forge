@@ -23,7 +23,7 @@ export async function trainingClassToDraft(
         description: trainingClass.description ?? "",
         sportId: trainingClass.sportId,
         difficulty: trainingClass.difficulty,
-        isPublic: trainingClass.isPublic,
+        visibility: trainingClass.visibility,
         items,
     }
 }

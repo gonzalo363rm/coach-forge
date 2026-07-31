@@ -21,6 +21,10 @@ export { formatUserDisplayName } from "@/lib/user-display"
 
 export type UserSafe = Omit<User, "passwordHash">
 
+export type UserListItem = UserSafe & {
+    clubName: string | null
+}
+
 export type UserMutationResult =
     | { ok: true; data: UserSafe }
     | { ok: false; error: string }
@@ -28,7 +32,7 @@ export type UserMutationResult =
 export type UsersPaginatedData = {
     currentPage: number
     totalPages: number
-    users: UserSafe[]
+    users: UserListItem[]
 }
 
 export type UsersPaginatedResult =
@@ -76,6 +80,13 @@ function buildUserWhereFilters(filters: UserListFilters): Prisma.UserWhereInput 
 
     if (filters.role != null) {
         and.push({ role: filters.role })
+    }
+
+    if (filters.clubId?.trim()) {
+        const clubId = filters.clubId.trim()
+        and.push({
+            OR: [{ clubId }, { managedClub: { id: clubId } }],
+        })
     }
 
     return mergeUserWhere(...and)
@@ -133,6 +144,10 @@ export async function usersListPaginated(
                 skip: (safePage - 1) * safeTake,
                 orderBy: userListOrderBy(sort.sortBy, sort.sortDir),
                 where,
+                include: {
+                    club: { select: { name: true } },
+                    managedClub: { select: { name: true } },
+                },
             }),
             getPrisma().user.count({ where }),
         ])
@@ -144,7 +159,13 @@ export async function usersListPaginated(
             data: {
                 currentPage: safePage,
                 totalPages,
-                users: users.map(toUserSafe),
+                users: users.map((user) => {
+                    const { club, managedClub, ...rest } = user
+                    const safe = toUserSafe(rest)
+                    const clubName =
+                        managedClub?.name ?? club?.name ?? null
+                    return { ...safe, clubName }
+                }),
             },
         }
     } catch (e) {
@@ -219,6 +240,14 @@ export async function userCreate(data: UserCreateInput): Promise<UserMutationRes
             },
         })
 
+        if (data.role === "club_manager") {
+            const { clubEnsureForManager } = await import("@/services/clubs.service")
+            await clubEnsureForManager({
+                id: user.id,
+                firstName: user.firstName,
+            })
+        }
+
         return { ok: true, data: toUserSafe(user) }
     } catch (e) {
         console.error("[userCreate]", e)
@@ -271,6 +300,15 @@ export async function userUpdate(data: UserUpdateInput): Promise<UserMutationRes
             where: { id: data.id },
             data: updateData,
         })
+
+        // Al promover a club_manager, asegurar que exista el Club (relación 1:1).
+        if (data.role === "club_manager") {
+            const { clubEnsureForManager } = await import("@/services/clubs.service")
+            await clubEnsureForManager({
+                id: user.id,
+                firstName: user.firstName,
+            })
+        }
 
         return { ok: true, data: toUserSafe(user) }
     } catch (e) {

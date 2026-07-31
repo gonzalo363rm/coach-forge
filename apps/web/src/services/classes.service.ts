@@ -65,8 +65,8 @@ function buildTrainingClassWhereFilters(
     if (filters.difficulty != null) {
         and.push({ difficulty: filters.difficulty })
     }
-    if (filters.isPublic != null) {
-        and.push({ isPublic: filters.isPublic })
+    if (filters.visibility != null) {
+        and.push({ visibility: filters.visibility })
     }
     if (filters.creatorId) {
         and.push({ creatorId: filters.creatorId })
@@ -92,8 +92,8 @@ function trainingClassListOrderBy(
             return { difficulty: sortDir }
         case "exerciseCount":
             return { items: { _count: sortDir } }
-        case "isPublic":
-            return { isPublic: sortDir }
+        case "visibility":
+            return { visibility: sortDir }
         case "createdAt":
             return { createdAt: sortDir }
         case "totalMinutes":
@@ -215,7 +215,7 @@ export async function trainingClassCreate(
             title: data.title,
             description: data.description ?? null,
             difficulty: data.difficulty,
-            isPublic: data.isPublic,
+            visibility: data.visibility,
             ...(creatorId ? { creator: { connect: { id: creatorId } } } : {}),
             ...(data.sportId ? { sport: { connect: { id: data.sportId } } } : {}),
             items: {
@@ -254,7 +254,7 @@ export async function trainingClassUpdate(
                     title: data.title,
                     description: data.description ?? null,
                     difficulty: data.difficulty,
-                    isPublic: data.isPublic,
+                    visibility: data.visibility,
                     sport: data.sportId
                         ? { connect: { id: data.sportId } }
                         : { disconnect: true },

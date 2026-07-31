@@ -11,6 +11,7 @@ type Props = {
     initialExercise?: ExerciseEditorInitialData | null
     sports?: SportListOption[]
     returnTo?: string | null
+    visibilityUser?: { role: string; clubId?: string | null }
 }
 
 const ExerciseEditor = dynamic(
@@ -36,6 +37,7 @@ export function ExerciseEditorDynamic({
     initialExercise = null,
     sports = [],
     returnTo = null,
+    visibilityUser,
 }: Props) {
     const isMobile = useIsMobileLayout()
     const [mounted, setMounted] = useState(false)
@@ -57,6 +59,7 @@ export function ExerciseEditorDynamic({
             initialExercise={initialExercise}
             sports={sports}
             returnTo={returnTo}
+            visibilityUser={visibilityUser}
         />
     )
 }

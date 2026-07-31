@@ -1,9 +1,13 @@
-import type { Prisma, Role } from "@prisma/client"
+import type { ContentVisibility, Prisma, Role } from "@prisma/client"
 
-type UserRef = { id: string; role: Role }
+type UserRef = { id: string; role: Role; clubId?: string | null }
 
 export function isStaffRole(role: Role): boolean {
     return role === "admin" || role === "superadmin"
+}
+
+export function isClubManagerRole(role: Role): boolean {
+    return role === "club_manager"
 }
 
 export function canManageOwnedResource(
@@ -59,8 +63,24 @@ export function canAdminDeleteUser(
     return false
 }
 
+export function canClubManagerViewMember(
+    managerClubId: string,
+    target: UserRef,
+): boolean {
+    return target.role === "coach" && target.clubId === managerClubId
+}
+
+export function canClubManagerManageMember(
+    managerClubId: string,
+    target: UserRef,
+): boolean {
+    return canClubManagerViewMember(managerClubId, target)
+}
+
 export function assignableRolesForActor(actorRole: Role): Role[] {
-    if (actorRole === "superadmin") return ["coach", "admin", "superadmin"]
+    if (actorRole === "superadmin") {
+        return ["coach", "admin", "superadmin", "club_manager"]
+    }
     return ["coach"]
 }
 
@@ -70,12 +90,47 @@ export function formatUserRole(role: Role): string {
             return "Superadministrador"
         case "admin":
             return "Administrador"
+        case "club_manager":
+            return "Manager de club"
         case "coach":
             return "Entrenador"
     }
 }
 
 export function filterableRolesForActor(actorRole: Role): Role[] {
-    if (actorRole === "superadmin") return ["coach", "admin", "superadmin"]
-    return ["coach", "admin"]
+    if (actorRole === "superadmin") {
+        return ["coach", "admin", "superadmin", "club_manager"]
+    }
+    return ["coach", "admin", "club_manager"]
+}
+
+export function canViewContent(
+    actor: { id: string; role: Role; clubId?: string | null; managedClubId?: string | null } | null,
+    content: { visibility: ContentVisibility; creatorId: string | null },
+    creatorClubId?: string | null,
+): boolean {
+    if (content.visibility === "public") return true
+    if (!actor) return false
+    if (isStaffRole(actor.role)) return true
+    if (content.creatorId === actor.id) return true
+    const actorClubId =
+        actor.role === "club_manager" ? (actor.managedClubId ?? null) : (actor.clubId ?? null)
+    if (
+        content.visibility === "club" &&
+        actorClubId &&
+        creatorClubId &&
+        actorClubId === creatorClubId
+    ) {
+        return true
+    }
+    return false
+}
+
+export function canUseContentAsTemplate(
+    actor: { id: string; role: Role; clubId?: string | null; managedClubId?: string | null },
+    content: { visibility: ContentVisibility; creatorId: string | null },
+    creatorClubId?: string | null,
+): boolean {
+    if (canManageOwnedResource(actor, content.creatorId)) return true
+    return canViewContent(actor, content, creatorClubId)
 }

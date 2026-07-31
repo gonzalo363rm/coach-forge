@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { contentVisibilitySchemaValues } from "@/lib/content-visibility"
+
 export const trainingClassItemSchema = z
     .object({
         exerciseId: z.string().min(1),
@@ -25,7 +27,7 @@ export const trainingClassCreateSchema = z.object({
         .optional(),
     sportId: z.union([z.string().min(1), z.null()]).optional(),
     difficulty: z.number().int().min(1).max(5),
-    isPublic: z.boolean().default(false),
+    visibility: z.enum(contentVisibilitySchemaValues).default("private"),
     items: z.array(trainingClassItemSchema).min(1, "Añade al menos un ejercicio"),
 })
 
@@ -51,7 +53,7 @@ export const trainingClassListSortBySchema = z.enum([
     "difficulty",
     "exerciseCount",
     "totalMinutes",
-    "isPublic",
+    "visibility",
     "updatedAt",
     "createdAt",
 ])
@@ -62,7 +64,7 @@ export const trainingClassListFiltersSchema = z.object({
     search: z.string().optional().nullable(),
     sport: z.string().optional().nullable(),
     difficulty: z.number().int().min(1).max(5).optional().nullable(),
-    isPublic: z.boolean().optional().nullable(),
+    visibility: z.enum(contentVisibilitySchemaValues).optional().nullable(),
     creatorId: z.string().min(1).optional().nullable(),
 })
 

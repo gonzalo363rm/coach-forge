@@ -1,22 +1,32 @@
-import Link from "next/link"
+"use client"
+
+import { useState } from "react"
+import clsx from "clsx"
 
 import type { PublicHomeCatalog } from "@/services/home-catalog.service"
 
-import { HomeClassBlock } from "./HomeClassBlock"
-import { HomeExerciseCard } from "./HomeExerciseCard"
-import { HorizontalScrollStrip } from "./HorizontalScrollStrip"
+import { HomeCatalogSections } from "./HomeCatalogSections"
+
+type Tab = "club" | "community"
 
 type Props = {
-    catalog: PublicHomeCatalog
+    communityCatalog: PublicHomeCatalog
+    clubCatalog: PublicHomeCatalog | null
+    clubName: string | null
     isLoggedIn: boolean
     firstName?: string
 }
 
-export function PublicHomeContent({ catalog, isLoggedIn, firstName }: Props) {
-    const { exerciseSections, classes, unavailable } = catalog
-    const hasExercises = exerciseSections.some((s) => s.exercises.length > 0)
-    const hasClasses = classes.length > 0
-    const isEmpty = !hasExercises && !hasClasses
+export function PublicHomeContent({
+    communityCatalog,
+    clubCatalog,
+    clubName,
+    isLoggedIn,
+    firstName,
+}: Props) {
+    const hasClubTab = Boolean(clubCatalog && clubName)
+    const [activeTab, setActiveTab] = useState<Tab>(hasClubTab ? "club" : "community")
+    const catalog = activeTab === "club" && clubCatalog ? clubCatalog : communityCatalog
 
     return (
         <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
@@ -27,78 +37,51 @@ export function PublicHomeContent({ catalog, isLoggedIn, firstName }: Props) {
                     </h1>
                     <p className="max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
                         {isLoggedIn
-                            ? "Explorá ejercicios y clases públicas. Usá una plantilla para crear tu versión o comenzá una sesión."
+                            ? hasClubTab
+                                ? "Explorá el contenido de tu club o el de la comunidad."
+                                : "Explorá ejercicios y clases públicas. Usá una plantilla para crear tu versión o comenzá una sesión."
                             : "Explorá ejercicios y clases de la comunidad. Iniciá sesión para usar plantillas."}
                     </p>
                 </header>
 
-                {unavailable ? (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-12 text-center dark:border-amber-900/50 dark:bg-amber-950/30">
-                        <p className="text-sm text-amber-900 dark:text-amber-200">
-                            No pudimos cargar el catálogo. Intentá de nuevo en unos segundos.
-                        </p>
+                {hasClubTab ? (
+                    <div
+                        role="tablist"
+                        aria-label="Catálogo"
+                        className="flex gap-1 rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-950"
+                    >
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === "club"}
+                            onClick={() => setActiveTab("club")}
+                            className={clsx(
+                                "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                                activeTab === "club"
+                                    ? "bg-emerald-600 text-white"
+                                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+                            )}
+                        >
+                            {clubName}
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === "community"}
+                            onClick={() => setActiveTab("community")}
+                            className={clsx(
+                                "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                                activeTab === "community"
+                                    ? "bg-emerald-600 text-white"
+                                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+                            )}
+                        >
+                            Comunidad
+                        </button>
                     </div>
-                ) : isEmpty ? (
-                    <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-100 px-6 py-16 text-center dark:border-zinc-700 dark:bg-zinc-900">
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Todavía no hay ejercicios ni clases públicas.
-                        </p>
-                    </div>
-                ) : (
-                    <>
-                        {hasExercises ? (
-                            <section className="space-y-8" aria-labelledby="home-exercises-heading">
-                                <h2
-                                    id="home-exercises-heading"
-                                    className="text-xl font-bold text-zinc-800 dark:text-white"
-                                >
-                                    Ejercicios por deporte
-                                </h2>
-                                {exerciseSections.map((section) =>
-                                    section.exercises.length > 0 ? (
-                                        <div key={section.sportId ?? "none"} className="space-y-3">
-                                            <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">
-                                                {section.sportName}
-                                            </h3>
-                                            <HorizontalScrollStrip
-                                                ariaLabel={`Ejercicios de ${section.sportName}`}
-                                                className="px-2"
-                                            >
-                                                {section.exercises.map((exercise) => (
-                                                    <HomeExerciseCard
-                                                        key={exercise.id}
-                                                        exercise={exercise}
-                                                        isLoggedIn={isLoggedIn}
-                                                    />
-                                                ))}
-                                            </HorizontalScrollStrip>
-                                        </div>
-                                    ) : null,
-                                )}
-                            </section>
-                        ) : null}
+                ) : null}
 
-                        {hasClasses ? (
-                            <section className="space-y-4" aria-labelledby="home-classes-heading">
-                                <h2
-                                    id="home-classes-heading"
-                                    className="text-xl font-bold text-zinc-800 dark:text-white"
-                                >
-                                    Clases recientes
-                                </h2>
-                                <div className="flex flex-col gap-6">
-                                    {classes.map((trainingClass) => (
-                                        <HomeClassBlock
-                                            key={trainingClass.id}
-                                            trainingClass={trainingClass}
-                                            isLoggedIn={isLoggedIn}
-                                        />
-                                    ))}
-                                </div>
-                            </section>
-                        ) : null}
-                    </>
-                )}
+                <HomeCatalogSections catalog={catalog} isLoggedIn={isLoggedIn} />
             </main>
         </div>
     )

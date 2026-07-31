@@ -8,6 +8,7 @@ import type { ExerciseCanvas as ExerciseCanvasData } from "@/interfaces"
 import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { exerciseGetById } from "@/services/exercises.service"
+import { getUserClubContext } from "@/services/clubs.service"
 import { sportsListAll } from "@/services/sports.service"
 import { notFound } from "next/navigation"
 
@@ -41,6 +42,11 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
         )
     }
     const sports = sportRows.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))
+    const clubContext = await getUserClubContext(session.user.id)
+    const visibilityUser = {
+        role: session.user.role,
+        clubId: clubContext?.clubId ?? null,
+    }
 
     const initialExercise = {
         id: row.id,
@@ -49,7 +55,7 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
         minPlayers: row.minPlayers,
         maxPlayers: row.maxPlayers,
         difficulty: row.difficulty,
-        isPublic: row.isPublic,
+        visibility: row.visibility,
         videoLink: row.videoLink,
         canvas: row.canvas as unknown as ExerciseCanvasData,
     }
@@ -76,6 +82,7 @@ export default async function EditExercisePage({ params, searchParams }: Props) 
                     initialExercise={initialExercise}
                     sports={sports}
                     returnTo={returnTo}
+                    visibilityUser={visibilityUser}
                 />
             </main>
         </div>

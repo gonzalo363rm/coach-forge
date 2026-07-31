@@ -3,5 +3,6 @@ export const ADMIN_NAV_LINKS = [
     { href: "/admin/exercises", label: "Ejercicios" },
     { href: "/admin/elements", label: "Elementos" },
     { href: "/admin/sports", label: "Deportes" },
+    { href: "/admin/clubs", label: "Clubes" },
     { href: "/admin/users", label: "Usuarios" },
 ] as const

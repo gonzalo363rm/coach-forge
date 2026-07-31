@@ -132,7 +132,7 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
         description,
         classId,
         sportId,
-        isPublic,
+        visibility,
     } = session
 
     const [timerInitial] = useState(() => {
@@ -347,7 +347,7 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
                 description,
                 sportId,
                 difficulty,
-                isPublic,
+                visibility,
                 items: nextExercises.map((item, idx) => ({
                     exerciseId: item.exerciseId,
                     sortOrder: idx,

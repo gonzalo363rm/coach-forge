@@ -1,5 +1,5 @@
 import { auth } from "@/auth"
-import { isStaffRole } from "@/lib/user-permissions"
+import { isClubManagerRole, isStaffRole } from "@/lib/user-permissions"
 import { userGetAvatarUrl } from "@/services/users.service"
 
 import { AppHeaderClient } from "./AppHeaderClient"
@@ -20,6 +20,7 @@ export async function AppHeader() {
             lastName={lastName}
             avatarUrl={avatarUrl}
             isAdmin={isStaffRole(role)}
+            isClubManager={isClubManagerRole(role)}
         />
     )
 }

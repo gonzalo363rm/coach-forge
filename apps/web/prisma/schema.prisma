@@ -9,7 +9,14 @@ datasource db {
 enum Role {
   superadmin
   admin
+  club_manager
   coach
+}
+
+enum ContentVisibility {
+  private
+  club
+  public
 }
 
 enum AuthTokenType {
@@ -17,10 +24,26 @@ enum AuthTokenType {
   password_reset
 }
 
-model Exercise {
+model Club {
   id         String   @id @default(uuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  name       String
+  address    String?
+  logoUrl    String?
+  maxMembers Int      @default(20)
+  managerId  String   @unique
+
+  manager User  @relation("ClubManager", fields: [managerId], references: [id], onDelete: Cascade)
+  members User[] @relation("ClubMembers")
+
+  @@index([managerId])
+}
+
+model Exercise {
+  id         String            @id @default(uuid())
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
   sportId    String?
   title      String
   minPlayers Int?
@@ -28,7 +51,7 @@ model Exercise {
   difficulty Int
   videoLink  String?
   canvas     Json
-  isPublic   Boolean  @default(false)
+  visibility ContentVisibility @default(private)
   creatorId  String?
 
   sport              Sport?                  @relation(fields: [sportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -37,18 +60,19 @@ model Exercise {
 
   @@index([sportId])
   @@index([creatorId])
+  @@index([visibility])
 }
 
 model TrainingClass {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String            @id @default(uuid())
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   title       String
   description String?
   sportId     String?
   difficulty  Int
-  isPublic   Boolean  @default(false)
-  creatorId  String?
+  visibility  ContentVisibility @default(private)
+  creatorId   String?
 
   sport   Sport?                  @relation(fields: [sportId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   creator User?                   @relation(fields: [creatorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -56,6 +80,7 @@ model TrainingClass {
 
   @@index([sportId])
   @@index([creatorId])
+  @@index([visibility])
 }
 
 model TrainingClassExercise {
@@ -80,13 +105,13 @@ model Sport {
   name      String
   slug      String
 
-  exercises      Exercise[]
-  elements       Element[]
+  exercises       Exercise[]
+  elements        Element[]
   trainingClasses TrainingClass[]
 }
 
 model Element {
-  id        String   @id
+  id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sportId   String?
@@ -111,12 +136,18 @@ model User {
   passwordHash  String
   role          Role      @default(coach)
   avatarUrl     String?
+  clubId        String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  authTokens       AuthToken[]
-  exercises        Exercise[]
-  trainingClasses  TrainingClass[]
+  club            Club?       @relation("ClubMembers", fields: [clubId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  managedClub     Club?       @relation("ClubManager")
+  authTokens      AuthToken[]
+  exercises       Exercise[]
+  trainingClasses TrainingClass[]
+
+  @@index([clubId])
+  @@index([role])
 }
 
 model AuthToken {

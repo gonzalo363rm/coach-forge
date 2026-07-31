@@ -1,8 +1,10 @@
 "use client"
 
+import type { ContentVisibility } from "@prisma/client"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { VisibilitySelect } from "@/components/content/VisibilitySelect"
 import type { Exercise, ExerciseCanvas, SportListOption } from "@/interfaces"
 import { EXERCISE_EMPTY_CANVAS_MESSAGE } from "@/schemas/exercise.schema"
 
@@ -11,7 +13,7 @@ export type SaveExerciseModalFieldDefaults = {
     minPlayers: number | null
     maxPlayers: number | null
     difficulty: number
-    isPublic: boolean
+    visibility: ContentVisibility
     videoLink: string | null
     sportId: string | null
 }
@@ -26,6 +28,7 @@ export type SaveExerciseModalProps = {
     fieldDefaults?: SaveExerciseModalFieldDefaults | null
     /** Deportes disponibles (ordenados por nombre en el servidor). */
     sports?: SportListOption[]
+    visibilityUser?: { role: string; clubId?: string | null }
 }
 
 const DIFFICULTY_ACTIVE_CLASS: Record<number, string> = {
@@ -43,6 +46,7 @@ export const SaveExerciseModal = ({
     onSave,
     fieldDefaults,
     sports = [],
+    visibilityUser = { role: "coach" },
 }: SaveExerciseModalProps) => {
     const [title, setTitle] = useState("")
     const [minPlayers, setMinPlayers] = useState("")
@@ -50,7 +54,7 @@ export const SaveExerciseModal = ({
     const [difficulty, setDifficulty] = useState(3)
     const [videoLink, setVideoLink] = useState("")
     const [sportId, setSportId] = useState<string | null>(null)
-    const [isPublic, setIsPublic] = useState(false)
+    const [visibility, setVisibility] = useState<ContentVisibility>("private")
     const [isSaving, setIsSaving] = useState(false)
 
     const sportIds = useMemo(() => new Set(sports.map((s) => s.id)), [sports])
@@ -63,7 +67,7 @@ export const SaveExerciseModal = ({
             setMinPlayers(fieldDefaults.minPlayers != null ? String(fieldDefaults.minPlayers) : "")
             setMaxPlayers(fieldDefaults.maxPlayers != null ? String(fieldDefaults.maxPlayers) : "")
             setDifficulty(fieldDefaults.difficulty)
-            setIsPublic(fieldDefaults.isPublic)
+            setVisibility(fieldDefaults.visibility)
             setVideoLink(fieldDefaults.videoLink ?? "")
             setSportId(fieldDefaults.sportId)
         } else {
@@ -71,7 +75,7 @@ export const SaveExerciseModal = ({
             setMinPlayers("")
             setMaxPlayers("")
             setDifficulty(3)
-            setIsPublic(false)
+            setVisibility("private")
             setVideoLink("")
             setSportId(null)
         }
@@ -86,11 +90,11 @@ export const SaveExerciseModal = ({
             minPlayers: Number.isFinite(minParsed) ? minParsed : null,
             maxPlayers: Number.isFinite(maxParsed) ? maxParsed : null,
             difficulty,
-            isPublic,
+            visibility,
             videoLink: videoLink.trim() === "" ? null : videoLink.trim(),
             canvas,
         }
-    }, [sportId, title, minPlayers, maxPlayers, difficulty, isPublic, videoLink, canvas])
+    }, [sportId, title, minPlayers, maxPlayers, difficulty, visibility, videoLink, canvas])
 
     const handleConfirm = useCallback(async () => {
         setIsSaving(true)
@@ -229,31 +233,14 @@ export const SaveExerciseModal = ({
                             className="cf-modal-input"
                         />
                     </label>
-                    <div className="flex items-center justify-between gap-3 sm:col-span-2">
-                        <span className="cf-modal-label text-sm">Ejercicio público</span>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={isPublic}
-                            onClick={() => setIsPublic((value) => !value)}
-                            className={`relative h-5 w-10 shrink-0 overflow-hidden rounded-full transition-colors ${
-                                isPublic
-                                    ? "bg-emerald-500"
-                                    : "bg-zinc-400 dark:bg-zinc-600"
-                            }`}
-                        >
-                            <span
-                                className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                                    isPublic ? "translate-x-5" : "translate-x-0"
-                                }`}
-                            />
-                        </button>
-                    </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">
-                        {isPublic
-                            ? "Visible para todos."
-                            : "Solo tú podrás verlo."}
-                    </p>
+                    <label className="cf-modal-label flex flex-col gap-1 sm:col-span-2">
+                        <span>Visibilidad</span>
+                        <VisibilitySelect
+                            value={visibility}
+                            onChange={setVisibility}
+                            user={visibilityUser}
+                        />
+                    </label>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-2">
                     <Button

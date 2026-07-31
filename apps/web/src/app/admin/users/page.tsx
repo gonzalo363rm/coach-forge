@@ -2,11 +2,11 @@
 export const revalidate = 60
 
 import type { Metadata } from "next"
-import Link from "next/link"
 import { ButtonLink } from "@/components/ui/button"
 import { redirect } from "next/navigation"
 import type { Role } from "@prisma/client"
 
+import { getClubsForSelectAction } from "@/app/actions/admin-clubs"
 import { getUsersPaginatedAction } from "@/app/actions/users"
 import { auth } from "@/auth"
 import { ListNewLink } from "@/components/ui/ListNewLink"
@@ -35,6 +35,7 @@ interface Props {
         page?: string | string[]
         search?: string | string[]
         role?: string | string[]
+        clubId?: string | string[]
         sortBy?: string | string[]
         sortDir?: string | string[]
     }>
@@ -53,6 +54,7 @@ export default async function UsersListPage({ searchParams }: Props) {
 
     const search = firstQueryValue(params.search) || null
     const roleRaw = firstQueryValue(params.role)
+    const clubIdRaw = firstQueryValue(params.clubId)
     const allowedRoles = filterableRolesForActor(session.user.role)
     const role: Role | null = allowedRoles.includes(roleRaw as Role)
         ? (roleRaw as Role)
@@ -63,20 +65,25 @@ export default async function UsersListPage({ searchParams }: Props) {
     const sortDirRaw = firstQueryValue(params.sortDir)
     const sortDir: "asc" | "desc" = sortDirRaw === "asc" ? "asc" : "desc"
 
-    const listQueryKey = [page, search ?? "", roleRaw, sortBy, sortDir].join("|")
-    const listState = {
-        search: search ?? "",
-        role: roleRaw,
-        sortBy,
-        sortDir,
-    }
+    const clubsResult = await getClubsForSelectAction()
+    const clubs = clubsResult.ok ? clubsResult.data : []
+    const clubId = clubs.some((c) => c.id === clubIdRaw) ? clubIdRaw : ""
 
     const result = await getUsersPaginatedAction({
         page,
-        filters: { search, role },
+        filters: { search, role, clubId: clubId || null },
         sortBy,
         sortDir,
     })
+
+    const listQueryKey = [page, search ?? "", roleRaw, clubId, sortBy, sortDir].join("|")
+    const listState = {
+        search: search ?? "",
+        role: roleRaw,
+        clubId,
+        sortBy,
+        sortDir,
+    }
 
     if (!result.ok) {
         return (
@@ -107,6 +114,7 @@ export default async function UsersListPage({ searchParams }: Props) {
                     totalPages={totalPages}
                     actorRole={session.user.role}
                     actorId={session.user.id}
+                    clubs={clubs}
                     listState={listState}
                 />
             </main>

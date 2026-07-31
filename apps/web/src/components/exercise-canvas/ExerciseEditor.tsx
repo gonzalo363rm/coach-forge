@@ -25,6 +25,7 @@ type EditorProps = {
     sports?: SportListOption[]
     /** Ruta a la que volver tras guardar (p. ej. creación de clase). */
     returnTo?: string | null
+    visibilityUser?: { role: string; clubId?: string | null }
 }
 
 async function saveExercisePreviewIfPresent(
@@ -46,6 +47,7 @@ export const ExerciseEditor = ({
     initialExercise = null,
     sports = [],
     returnTo = null,
+    visibilityUser,
 }: EditorProps) => {
     const router = useRouter()
     const [currentTool, setCurrentTool] = useState<ToolType>("select")
@@ -136,6 +138,7 @@ export const ExerciseEditor = ({
                     onExerciseSave={handleExerciseSave}
                     initialData={initialExercise ?? undefined}
                     sports={sports}
+                    visibilityUser={visibilityUser}
                 />
             </div>
         </div>

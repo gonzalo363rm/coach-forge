@@ -1,7 +1,15 @@
--Agregar opcion de imprimir clase (podrian seleccionrse si se quieren todos los ejercicios o solo algunos mendiante preview con checks)
+-Agregar un nuevo rol, que sea tipo club manager, el mismo debe poder crear y administrar sus propios usuarios. El numero de usuarios que puedra administrar lo debemos poder definir de alguna manera para cada user con este rol. Por default pordrian ser 20.
+Aunque habria que pensarlo porque esto sera en funcion del pago que haga, es decir de la subscripcion. Quizas habra que tener diferentes tipos de subscripciones, individuales y por club, un club solo tendra un manager (creo).
+Por otro lado los miembros de los clubes tendran la opcion de marcar los ejercicios y clases como publicos para mi club. Si existen ejercicios/clases publicas para un clubr, deberiamos agregaro en la home Y quizas tener dos tabs primero el de X club y luego la home comun. Por lo que un club debe poder nombrarse. Quizas un usuario con ron de club manager deba tener un panel de "Mi Club" para poder administrar los datos propios del club, como el nombre, la direccion, logo del club (quizas no porque puede ser el perfil, o esto podria ser el perfil del user directamente tambien hay que definir).
+Ademas, deberiamos pensar como se haran los pagos, el historial, subscripciones, descuentos, si habra codigos de descuentos personlizados o subscripciones custom con diferentes beneficios, como mas coachs para el club.
+Los pagos de momento se haran solo por mercado pago.
+
+-Agregar campo telefono para usuarios y clubs (campo opcional)
+
 -Agregar opcion de imprimir ejercicio
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
--En la vista de deportes, podriamos listar los elementos
+-Agregar opcion de imprimir clase (podrian seleccionrse si se quieren todos los ejercicios o solo algunos mendiante preview con checks)
 
-(opcional)-Permitir agrupar elementos
+(opcional)-En la vista de deportes, podriamos listar los elementos
+(opcional)-Al crear un coach desde un club, se podria mandar un email de bienvenida
 (opcional)-Ver de agregar TanStack Query para las listas al menos (quizas no)

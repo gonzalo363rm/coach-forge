@@ -42,6 +42,10 @@ export function avatarImagePublicId(userId: string): string {
   return `user-${userId}`
 }
 
+export function clubLogoPublicId(clubId: string): string {
+  return `club-${clubId}`
+}
+
 export function classImagePublicId(classId: string): string {
   return `class-${classId}`
 }

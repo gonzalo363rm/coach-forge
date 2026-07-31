@@ -9,8 +9,9 @@ import { deleteExerciseAction } from "@/app/actions/exercises"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
 import { CreatorSelect } from "@/components/users/CreatorSelect"
 import { formatUserDisplayName } from "@/lib/user-display"
-import { ExerciseRowActions } from "@/components/exercises/ExerciseRowActions"
+import { formatContentVisibility } from "@/lib/content-visibility"
 import { Pagination } from "@/components/ui/pagination/Pagination"
+import { ExerciseRowActions } from "@/components/exercises/ExerciseRowActions"
 import {
     listFilterButtonClass,
     listFilterFormClass,
@@ -55,7 +56,7 @@ function defaultSortDir(column: ExerciseListSortBy): "asc" | "desc" {
         case "sport":
             return "asc"
         case "difficulty":
-        case "isPublic":
+        case "visibility":
         case "updatedAt":
         default:
             return "desc"
@@ -158,6 +159,7 @@ export function ExercisesPaginatedTable({
                     className={listFilterSelectClass}
                 >
                     <option value="">Todas</option>
+                    <option value="club">Club</option>
                     <option value="public">Públicos</option>
                     <option value="private">Privados</option>
                 </select>
@@ -216,11 +218,11 @@ export function ExercisesPaginatedTable({
                                     </th>
                                 ) : null}
                                 <SortableTh
-                                    column="isPublic"
+                                    column="visibility"
                                     label="Visibilidad"
                                     currentSortBy={listState.sortBy}
                                     currentSortDir={listState.sortDir}
-                                    defaultDir={defaultSortDir("isPublic")}
+                                    defaultDir={defaultSortDir("visibility")}
                                 />
                                 <SortableTh
                                     column="updatedAt"
@@ -291,7 +293,7 @@ export function ExercisesPaginatedTable({
                                                 </td>
                                             ) : null}
                                             <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
-                                                {exercise.isPublic ? "Público" : "Privado"}
+                                                {formatContentVisibility(exercise.visibility)}
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                                 {new Intl.DateTimeFormat("es", {

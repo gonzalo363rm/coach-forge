@@ -5,9 +5,11 @@ import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { ExerciseEditorDynamic } from "@/components/exercise-canvas/ExerciseEditorDynamic"
 import { getExerciseCanvasAction } from "@/app/actions/exercises"
+import { getActorWithClub, getCreatorClubId } from "@/lib/content-access"
 import { createPageMetadata } from "@/lib/seo"
-import { canManageOwnedResource } from "@/lib/user-permissions"
+import { canUseContentAsTemplate } from "@/lib/user-permissions"
 import { exerciseGetById } from "@/services/exercises.service"
+import { getUserClubContext } from "@/services/clubs.service"
 import { sportsListAll } from "@/services/sports.service"
 
 export const metadata: Metadata = createPageMetadata({
@@ -29,15 +31,32 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
     const fromId = params.from?.trim() ? params.from.trim() : null
     const returnTo = params.returnTo?.trim() ? params.returnTo.trim() : null
 
+    const session = await auth()
+    const clubContext = session?.user
+        ? await getUserClubContext(session.user.id)
+        : null
+    const visibilityUser = session?.user
+        ? {
+              role: session.user.role,
+              clubId: clubContext?.clubId ?? null,
+          }
+        : undefined
+
     let initialExercise = null
     if (fromId) {
-        const session = await auth()
         if (!session?.user) notFound()
 
         const source = await exerciseGetById(fromId)
+        const actor = await getActorWithClub(session.user.id)
+        const creatorClubId = await getCreatorClubId(source?.creatorId ?? null)
         if (
             !source ||
-            (!source.isPublic && !canManageOwnedResource(session.user, source.creatorId))
+            !actor ||
+            !canUseContentAsTemplate(
+                actor,
+                { visibility: source.visibility, creatorId: source.creatorId },
+                creatorClubId,
+            )
         ) {
             notFound()
         }
@@ -51,7 +70,7 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                       minPlayers: null,
                       maxPlayers: null,
                       difficulty: 3,
-                      isPublic: false,
+                      visibility: "private" as const,
                       videoLink: null,
                       canvas: canvasResult.data,
                   }
@@ -80,6 +99,7 @@ export default async function ExerciseNewPage({ searchParams }: Props) {
                     sports={sports}
                     initialExercise={initialExercise}
                     returnTo={returnTo}
+                    visibilityUser={visibilityUser}
                 />
             </main>
         </div>

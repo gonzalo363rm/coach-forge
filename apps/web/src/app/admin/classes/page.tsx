@@ -9,6 +9,7 @@ import { getTrainingClassesPaginatedAction } from "@/app/actions/classes"
 import { ClassesPaginatedTable } from "@/components/classes/ClassesPaginatedTable"
 import { ListNewLink } from "@/components/ui/ListNewLink"
 import { createPageMetadata } from "@/lib/seo"
+import { parseVisibilityFilter } from "@/lib/content-access"
 import {
     trainingClassListSortBySchema,
     type TrainingClassListSortBy,
@@ -62,8 +63,7 @@ export default async function ClassesListPage({ searchParams }: Props) {
               })()
 
     const visibilityRaw = firstQueryValue(params.visibility)
-    const isPublic =
-        visibilityRaw === "public" ? true : visibilityRaw === "private" ? false : null
+    const visibility = parseVisibilityFilter(visibilityRaw)
 
     const sortByParsed = trainingClassListSortBySchema.safeParse(
         firstQueryValue(params.sortBy),
@@ -110,7 +110,7 @@ export default async function ClassesListPage({ searchParams }: Props) {
                 search,
                 sport,
                 difficulty: difficultyNum,
-                isPublic,
+                visibility,
                 creatorId,
             },
             sortBy,

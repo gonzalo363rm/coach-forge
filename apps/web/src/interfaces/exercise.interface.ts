@@ -1,3 +1,5 @@
+import type { ContentVisibility } from "@prisma/client"
+
 import type {
     ArrowElementInstance,
     CircleElementInstance,
@@ -42,7 +44,7 @@ export type ExerciseEditorInitialData = {
     minPlayers: number | null
     maxPlayers: number | null
     difficulty: number
-    isPublic: boolean
+    visibility: ContentVisibility
     videoLink: string | null
     canvas: ExerciseCanvas
 }
@@ -57,7 +59,7 @@ export interface Exercise {
     minPlayers: number | null
     maxPlayers: number | null
     difficulty: number
-    isPublic: boolean
+    visibility: ContentVisibility
     videoLink: string | null
     canvas: ExerciseCanvas
 }

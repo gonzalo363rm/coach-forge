@@ -7,8 +7,10 @@ import { auth } from "@/auth"
 import { ClassCreateForm } from "@/components/classes/ClassCreateForm"
 import type { ClassDraft } from "@/components/classes/class-draft-storage"
 import { ClassTemplatePrepareGate } from "@/components/classes/ClassTemplatePrepareGate"
+import { getActorWithClub, getCreatorClubId } from "@/lib/content-access"
 import { createPageMetadata } from "@/lib/seo"
-import { canManageOwnedResource } from "@/lib/user-permissions"
+import { canUseContentAsTemplate } from "@/lib/user-permissions"
+import { getUserClubContext } from "@/services/clubs.service"
 import { trainingClassGetById } from "@/services/classes.service"
 import { sportsListAll } from "@/services/sports.service"
 import { trainingClassToDraft } from "@/utils/training-class-to-draft"
@@ -42,10 +44,16 @@ export default async function NewClassPage({ searchParams }: Props) {
         if (!session?.user) notFound()
 
         const sourceClass = await trainingClassGetById(fromId)
+        const actor = await getActorWithClub(session.user.id)
+        const creatorClubId = await getCreatorClubId(sourceClass.creatorId)
         if (
             !sourceClass ||
-            (!sourceClass.isPublic &&
-                !canManageOwnedResource(session.user, sourceClass.creatorId))
+            !actor ||
+            !canUseContentAsTemplate(
+                actor,
+                { visibility: sourceClass.visibility, creatorId: sourceClass.creatorId },
+                creatorClubId,
+            )
         ) {
             notFound()
         }
@@ -60,7 +68,7 @@ export default async function NewClassPage({ searchParams }: Props) {
             readyDraft = {
                 ...draft,
                 title: "",
-                isPublic: false,
+                visibility: "private",
             }
         } else {
             templateMeta = {
@@ -72,8 +80,15 @@ export default async function NewClassPage({ searchParams }: Props) {
     }
 
     const isFromTemplate = Boolean(fromId)
+    const clubContext = session?.user
+        ? await getUserClubContext(session.user.id)
+        : null
     const viewer = session?.user
-        ? { id: session.user.id, role: session.user.role }
+        ? {
+              id: session.user.id,
+              role: session.user.role,
+              clubId: clubContext?.clubId ?? null,
+          }
         : null
 
     return (

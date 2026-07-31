@@ -11,8 +11,13 @@ export const signInSchema = z.object({
   password: passwordSchema,
 })
 
+export const registerAccountTypeSchema = z.enum(["coach", "club"])
+
 export const registerSchema = z
   .object({
+    accountType: registerAccountTypeSchema.default("coach"),
+    clubName: z.string().trim().max(120).optional(),
+    clubAddress: z.string().trim().max(300).optional(),
     firstName: z
       .string({ error: "El nombre es obligatorio" })
       .min(1, "El nombre es obligatorio")
@@ -28,6 +33,15 @@ export const registerSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.accountType === "club" && !data.clubName?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El nombre del club es obligatorio",
+        path: ["clubName"],
+      })
+    }
   })
 
 export const forgotPasswordSchema = z.object({

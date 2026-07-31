@@ -30,7 +30,7 @@ export async function getTrainingClassesPaginatedAction(
             search: filters?.search ?? null,
             sport: filters?.sport ?? null,
             difficulty: filters?.difficulty ?? null,
-            isPublic: filters?.isPublic ?? null,
+            visibility: filters?.visibility ?? null,
             creatorId: filters?.creatorId ?? null,
         },
         { sortBy, sortDir },

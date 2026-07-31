@@ -11,9 +11,11 @@ import { BrandLogo } from "@/components/brand/BrandLogo"
 import { useNavPending } from "@/hooks/use-nav-pending"
 import { useToast } from "@/hooks/use-toast"
 import { ADMIN_NAV_LINKS } from "@/lib/admin-nav-links"
+import { CLUB_NAV_LINKS, isClubNavLinkActive } from "@/lib/club-nav-links"
 import { isNavActive, type NavSection } from "@/lib/nav-active"
 
 import { AdminNavMenu } from "./AdminNavMenu"
+import { ClubNavMenu } from "./ClubNavMenu"
 import { HeaderAvatar } from "./HeaderAvatar"
 import { HeaderNavLink } from "./HeaderNavLink"
 import { NavDivider } from "./NavDivider"
@@ -30,6 +32,7 @@ type Props = {
     lastName: string
     avatarUrl: string | null
     isAdmin: boolean
+    isClubManager: boolean
 }
 
 const MOBILE_MENU_LINK =
@@ -105,6 +108,46 @@ function MobileNavLink({
     )
 }
 
+function MobileClubLinks({ onNavigate }: { onNavigate: () => void }) {
+    const pathname = usePathname()
+    const { pendingHref, startNavigation } = useNavPending()
+    const effectivePath = pendingHref ?? pathname
+
+    return (
+        <div className="space-y-0">
+            <p className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Mi Club
+            </p>
+            {CLUB_NAV_LINKS.map((link) => {
+                const active = isClubNavLinkActive(
+                    effectivePath,
+                    link.href,
+                    link.match,
+                )
+
+                return (
+                    <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => {
+                            startNavigation(link.href)
+                            onNavigate()
+                        }}
+                        className={clsx(
+                            MOBILE_MENU_LINK,
+                            active
+                                ? "font-medium text-emerald-700 dark:text-emerald-400"
+                                : "text-zinc-700 dark:text-zinc-300",
+                        )}
+                    >
+                        {link.label}
+                    </Link>
+                )
+            })}
+        </div>
+    )
+}
+
 function MobileAdminLinks({ onNavigate }: { onNavigate: () => void }) {
     const pathname = usePathname()
     const { pendingHref, startNavigation } = useNavPending()
@@ -148,6 +191,7 @@ export function AppHeaderClient({
     lastName,
     avatarUrl,
     isAdmin,
+    isClubManager,
 }: Props) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [morphActive, setMorphActive] = useState(false)
@@ -250,6 +294,12 @@ export function AppHeaderClient({
                         label="Mis ejercicios"
                         section="exercises-mine"
                     />
+                    {isClubManager ? (
+                        <>
+                            <NavDivider />
+                            <ClubNavMenu />
+                        </>
+                    ) : null}
                     {isAdmin ? (
                         <>
                             <NavDivider />
@@ -394,6 +444,9 @@ export function AppHeaderClient({
                                     section="exercises-mine"
                                     onNavigate={closeMenu}
                                 />
+                                {isClubManager ? (
+                                    <MobileClubLinks onNavigate={closeMenu} />
+                                ) : null}
                                 {isAdmin ? (
                                     <MobileAdminLinks onNavigate={closeMenu} />
                                 ) : null}

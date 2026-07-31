@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { passwordSchema } from "@/schemas/auth.schema"
 
-const roleSchema = z.enum(["superadmin", "admin", "coach"])
+const roleSchema = z.enum(["superadmin", "admin", "club_manager", "coach"])
 
 export const userCreateSchema = z
     .object({
@@ -102,6 +102,7 @@ export type UserListSortBy = z.infer<typeof userListSortBySchema>
 export const userListFiltersSchema = z.object({
     search: z.string().optional().nullable(),
     role: roleSchema.optional().nullable(),
+    clubId: z.string().optional().nullable(),
 })
 
 export type UserListFilters = z.infer<typeof userListFiltersSchema>

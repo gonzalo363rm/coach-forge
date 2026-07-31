@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma"
 import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
 
 export const HOME_CATALOG_CACHE_TAG = "home-public-catalog"
+export const HOME_CLUB_CATALOG_CACHE_TAG = "home-club-catalog"
 
 const HOME_EXERCISES_LIMIT = 80
 const HOME_CLASSES_LIMIT = 24
@@ -60,42 +61,9 @@ const EMPTY_CATALOG: PublicHomeCatalog = {
     classes: [],
 }
 
-async function loadPublicHomeCatalog(): Promise<PublicHomeCatalog> {
-    const prisma = getPrisma()
-
-    const [exerciseRows, classRows] = await Promise.all([
-        prisma.exercise.findMany({
-            where: { isPublic: true },
-            orderBy: { updatedAt: "desc" },
-            take: HOME_EXERCISES_LIMIT,
-            include: {
-                sport: { select: { id: true, name: true, slug: true } },
-            },
-        }),
-        prisma.trainingClass.findMany({
-            where: { isPublic: true },
-            orderBy: { createdAt: "desc" },
-            take: HOME_CLASSES_LIMIT,
-            include: {
-                sport: { select: { name: true, slug: true } },
-                creator: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        avatarUrl: true,
-                    },
-                },
-                items: {
-                    orderBy: { sortOrder: "asc" },
-                    include: {
-                        exercise: { select: { id: true, title: true } },
-                    },
-                },
-            },
-        }),
-    ])
-
+async function buildExerciseSections(
+    exerciseRows: Awaited<ReturnType<typeof loadPublicExerciseRows>>,
+): Promise<PublicExerciseSportSection[]> {
     const sectionMap = new Map<string, PublicExerciseSportSection>()
 
     for (const row of exerciseRows) {
@@ -121,13 +89,17 @@ async function loadPublicHomeCatalog(): Promise<PublicHomeCatalog> {
         })
     }
 
-    const exerciseSections = [...sectionMap.values()].sort((a, b) => {
+    return [...sectionMap.values()].sort((a, b) => {
         if (a.sportId === null) return 1
         if (b.sportId === null) return -1
         return a.sportName.localeCompare(b.sportName, "es")
     })
+}
 
-    const classes: PublicHomeClass[] = await Promise.all(
+async function buildClassRows(
+    classRows: Awaited<ReturnType<typeof loadPublicClassRows>>,
+): Promise<PublicHomeClass[]> {
+    return Promise.all(
         classRows.map(async (row) => ({
             id: row.id,
             title: row.title,
@@ -147,6 +119,100 @@ async function loadPublicHomeCatalog(): Promise<PublicHomeCatalog> {
             ),
         })),
     )
+}
+
+async function loadPublicExerciseRows() {
+    return getPrisma().exercise.findMany({
+        where: { visibility: "public" },
+        orderBy: { updatedAt: "desc" },
+        take: HOME_EXERCISES_LIMIT,
+        include: {
+            sport: { select: { id: true, name: true, slug: true } },
+        },
+    })
+}
+
+async function loadPublicClassRows() {
+    return getPrisma().trainingClass.findMany({
+        where: { visibility: "public" },
+        orderBy: { createdAt: "desc" },
+        take: HOME_CLASSES_LIMIT,
+        include: {
+            sport: { select: { name: true, slug: true } },
+            creator: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    avatarUrl: true,
+                },
+            },
+            items: {
+                orderBy: { sortOrder: "asc" },
+                include: {
+                    exercise: { select: { id: true, title: true } },
+                },
+            },
+        },
+    })
+}
+
+async function loadPublicHomeCatalog(): Promise<PublicHomeCatalog> {
+    const [exerciseRows, classRows] = await Promise.all([
+        loadPublicExerciseRows(),
+        loadPublicClassRows(),
+    ])
+
+    const exerciseSections = await buildExerciseSections(exerciseRows)
+    const classes = await buildClassRows(classRows)
+
+    return { exerciseSections, classes }
+}
+
+async function loadClubHomeCatalog(clubId: string): Promise<PublicHomeCatalog> {
+    // Managers keep User.clubId null and link via managedClub; coaches use clubId.
+    const clubFilter = {
+        visibility: "club" as const,
+        creator: {
+            OR: [{ clubId }, { managedClub: { id: clubId } }],
+        },
+    }
+
+    const [exerciseRows, classRows] = await Promise.all([
+        getPrisma().exercise.findMany({
+            where: clubFilter,
+            orderBy: { updatedAt: "desc" },
+            take: HOME_EXERCISES_LIMIT,
+            include: {
+                sport: { select: { id: true, name: true, slug: true } },
+            },
+        }),
+        getPrisma().trainingClass.findMany({
+            where: clubFilter,
+            orderBy: { createdAt: "desc" },
+            take: HOME_CLASSES_LIMIT,
+            include: {
+                sport: { select: { name: true, slug: true } },
+                creator: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        avatarUrl: true,
+                    },
+                },
+                items: {
+                    orderBy: { sortOrder: "asc" },
+                    include: {
+                        exercise: { select: { id: true, title: true } },
+                    },
+                },
+            },
+        }),
+    ])
+
+    const exerciseSections = await buildExerciseSections(exerciseRows)
+    const classes = await buildClassRows(classRows)
 
     return { exerciseSections, classes }
 }
@@ -157,11 +223,28 @@ export const getPublicHomeCatalog = unstable_cache(
     { revalidate: 300, tags: [HOME_CATALOG_CACHE_TAG] },
 )
 
+export function getClubHomeCatalog(clubId: string) {
+    return unstable_cache(
+        () => loadClubHomeCatalog(clubId),
+        [`home-club-catalog-${clubId}`],
+        { revalidate: 300, tags: [HOME_CATALOG_CACHE_TAG, HOME_CLUB_CATALOG_CACHE_TAG] },
+    )()
+}
+
 export async function getPublicHomeCatalogSafe(): Promise<PublicHomeCatalog> {
     try {
         return await getPublicHomeCatalog()
     } catch (error) {
         console.error("[getPublicHomeCatalog]", error)
+        return { ...EMPTY_CATALOG, unavailable: true }
+    }
+}
+
+export async function getClubHomeCatalogSafe(clubId: string): Promise<PublicHomeCatalog> {
+    try {
+        return await getClubHomeCatalog(clubId)
+    } catch (error) {
+        console.error("[getClubHomeCatalog]", error)
         return { ...EMPTY_CATALOG, unavailable: true }
     }
 }

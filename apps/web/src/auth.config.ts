@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth"
 
 import { toAuthUser } from "@/lib/auth-user"
-import { isStaffRole } from "@/lib/user-permissions"
+import { isClubManagerRole, isStaffRole } from "@/lib/user-permissions"
 import type { AuthUser } from "@/types/auth-user"
 
 export const publicRoutes = [
@@ -14,6 +14,10 @@ export const publicRoutes = [
 
 function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/")
+}
+
+function isClubRoute(pathname: string): boolean {
+  return pathname === "/club" || pathname.startsWith("/club/")
 }
 
 // Configuración ligera compartida (proxy + auth). Sin Prisma ni bcrypt.
@@ -81,6 +85,14 @@ export const authConfig = {
       if (
         isAdminRoute(nextUrl.pathname) &&
         (!auth?.user?.role || !isStaffRole(auth.user.role))
+      ) {
+        return Response.redirect(new URL("/forbidden", nextUrl))
+      }
+
+      if (
+        isClubRoute(nextUrl.pathname) &&
+        (!auth?.user?.role ||
+          (!isClubManagerRole(auth.user.role) && !isStaffRole(auth.user.role)))
       ) {
         return Response.redirect(new URL("/forbidden", nextUrl))
       }

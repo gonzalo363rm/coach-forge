@@ -81,6 +81,7 @@ interface Props {
     onExerciseSave?: ExerciseSaveHandler
     initialData?: ExerciseEditorInitialData | null
     sports?: SportListOption[]
+    visibilityUser?: { role: string; clubId?: string | null }
 }
 
 type DragTarget =
@@ -135,6 +136,7 @@ export const ExerciseCanvas = ({
     onExerciseSave,
     initialData = null,
     sports = [],
+    visibilityUser,
 }: Props) => {
     const canvasRef = useRef<SkiaCanvasHandle>(null)
     const didHydrateInitial = useRef(false)
@@ -285,7 +287,7 @@ export const ExerciseCanvas = ({
                       minPlayers: initialData.minPlayers,
                       maxPlayers: initialData.maxPlayers,
                       difficulty: initialData.difficulty,
-                      isPublic: initialData.isPublic,
+                      visibility: initialData.visibility,
                       videoLink: initialData.videoLink,
                       sportId: initialData.sportId,
                   }
@@ -1765,6 +1767,7 @@ export const ExerciseCanvas = ({
                 onSave={onExerciseSave ? handleSaveExerciseFromModal : undefined}
                 fieldDefaults={saveModalFieldDefaults}
                 sports={sports}
+                visibilityUser={visibilityUser}
             />
         </div>
     )

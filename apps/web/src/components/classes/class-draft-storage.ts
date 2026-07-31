@@ -1,3 +1,5 @@
+import type { ContentVisibility } from "@prisma/client"
+
 import type { ExerciseListItem } from "@/services/exercises.service"
 
 export type ClassDraftExerciseItem = {
@@ -17,7 +19,7 @@ export type ClassDraft = {
     description: string
     sportId: string | null
     difficulty: number
-    isPublic: boolean
+    visibility: ContentVisibility
     items: ClassDraftExerciseItem[]
 }
 
@@ -58,7 +60,7 @@ export function defaultClassDraft(): ClassDraft {
         description: "",
         sportId: null,
         difficulty: 3,
-        isPublic: false,
+        visibility: "private",
         items: [],
     }
 }

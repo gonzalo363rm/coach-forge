@@ -14,7 +14,7 @@ import {
     computeTotalMinutes,
 } from "@/schemas/training-class.schema"
 
-import { Button, ButtonLink } from "@/components/ui/button"
+import { VisibilitySelect } from "@/components/content/VisibilitySelect"
 import { FormActions } from "@/components/ui/FormActions"
 
 import { AddExerciseModal } from "./AddExerciseModal"
@@ -35,6 +35,7 @@ import type { ExerciseListItem } from "@/services/exercises.service"
 type Viewer = {
     id: string
     role: Role
+    clubId?: string | null
 }
 
 type Props = {
@@ -137,7 +138,7 @@ export function ClassCreateForm({
             description: description.length > 0 ? description : null,
             sportId: draft.sportId,
             difficulty: draft.difficulty,
-            isPublic: draft.isPublic,
+            visibility: draft.visibility,
             items: draft.items.map((item, idx) => ({
                 exerciseId: item.exerciseId,
                 sortOrder: idx,
@@ -244,35 +245,22 @@ export function ClassCreateForm({
                                     className="resize-y rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-800"
                                 />
                             </label>
-                            <div className="flex items-center justify-between gap-3 text-sm">
-                                <span className="text-zinc-700 dark:text-zinc-300">
-                                    Clase pública
+                            <label className="flex flex-col gap-1 text-sm">
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                    Visibilidad
                                 </span>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={draft.isPublic}
-                                    onClick={() =>
-                                        setDraft((p) => ({ ...p, isPublic: !p.isPublic }))
+                                <VisibilitySelect
+                                    value={draft.visibility}
+                                    onChange={(visibility) =>
+                                        setDraft((p) => ({ ...p, visibility }))
                                     }
-                                    className={`relative h-5 w-10 shrink-0 overflow-hidden rounded-full transition-colors ${
-                                        draft.isPublic
-                                            ? "bg-emerald-500"
-                                            : "bg-zinc-400 dark:bg-zinc-600"
-                                    }`}
-                                >
-                                    <span
-                                        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                                            draft.isPublic ? "translate-x-5" : "translate-x-0"
-                                        }`}
-                                    />
-                                </button>
-                            </div>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                {draft.isPublic
-                                    ? "Visible para todos."
-                                    : "Solo tú podrás verla."}
-                            </p>
+                                    user={{
+                                        role: viewer?.role ?? "coach",
+                                        clubId: viewer?.clubId ?? null,
+                                    }}
+                                    className="rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-800"
+                                />
+                            </label>
                         </div>
                     </section>
                     <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900/50">

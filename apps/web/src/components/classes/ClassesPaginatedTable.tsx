@@ -4,6 +4,7 @@ import { deleteTrainingClassAction } from "@/app/actions/classes"
 import { ClassRowActions } from "@/components/classes/ClassRowActions"
 import { CreatorSelect } from "@/components/users/CreatorSelect"
 import { formatUserDisplayName } from "@/lib/user-display"
+import { formatContentVisibility } from "@/lib/content-visibility"
 import { Pagination } from "@/components/ui/pagination/Pagination"
 import {
     listFilterButtonClass,
@@ -58,7 +59,7 @@ function defaultSortDir(column: TrainingClassListSortBy): "asc" | "desc" {
         case "difficulty":
         case "exerciseCount":
         case "totalMinutes":
-        case "isPublic":
+        case "visibility":
         case "updatedAt":
         case "createdAt":
         default:
@@ -160,6 +161,7 @@ export function ClassesPaginatedTable({
                 </select>
                 <select {...register("visibility")} className={listFilterSelectClass}>
                     <option value="">Todas</option>
+                    <option value="club">Club</option>
                     <option value="public">Públicas</option>
                     <option value="private">Privadas</option>
                 </select>
@@ -235,11 +237,11 @@ export function ClassesPaginatedTable({
                                     </>
                                 ) : null}
                                 <SortableTh
-                                    column="isPublic"
+                                    column="visibility"
                                     label="Visibilidad"
                                     currentSortBy={listState.sortBy}
                                     currentSortDir={listState.sortDir}
-                                    defaultDir={defaultSortDir("isPublic")}
+                                    defaultDir={defaultSortDir("visibility")}
                                 />
                                 <SortableTh
                                     column="updatedAt"
@@ -319,7 +321,7 @@ export function ClassesPaginatedTable({
                                             </>
                                         ) : null}
                                         <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
-                                            {trainingClass.isPublic ? "Pública" : "Privada"}
+                                            {formatContentVisibility(trainingClass.visibility)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             {new Intl.DateTimeFormat("es", {
