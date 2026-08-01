@@ -15,7 +15,7 @@ export const registerAccountTypeSchema = z.enum(["coach", "club"])
 
 export const registerSchema = z
   .object({
-    accountType: registerAccountTypeSchema.default("coach"),
+    accountType: registerAccountTypeSchema,
     clubName: z.string().trim().max(120).optional(),
     clubAddress: z.string().trim().max(300).optional(),
     firstName: z

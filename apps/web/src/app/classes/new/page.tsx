@@ -45,7 +45,7 @@ export default async function NewClassPage({ searchParams }: Props) {
 
         const sourceClass = await trainingClassGetById(fromId)
         const actor = await getActorWithClub(session.user.id)
-        const creatorClubId = await getCreatorClubId(sourceClass.creatorId)
+        const creatorClubId = await getCreatorClubId(sourceClass?.creatorId ?? null)
         if (
             !sourceClass ||
             !actor ||

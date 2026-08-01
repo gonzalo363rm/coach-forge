@@ -1,3 +1,4 @@
+import type { PublicHomeCatalog } from "@/services/home-catalog.service"
 
 import { HomeClassBlock } from "./HomeClassBlock"
 import { HomeExerciseCard } from "./HomeExerciseCard"

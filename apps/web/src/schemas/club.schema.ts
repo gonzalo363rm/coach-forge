@@ -18,7 +18,7 @@ const clubMemberBaseSchema = z.object({
     lastName: z.string().trim().min(1, "El apellido es obligatorio").max(80),
     email: z.email({ error: "Introduce un email válido" }),
     phoneNumber: z.string().trim().max(30).optional(),
-    emailVerified: z.boolean().default(true),
+    emailVerified: z.boolean(),
 })
 
 export const clubMemberCreateSchema = clubMemberBaseSchema

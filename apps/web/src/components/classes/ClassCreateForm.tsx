@@ -15,6 +15,7 @@ import {
 } from "@/schemas/training-class.schema"
 
 import { VisibilitySelect } from "@/components/content/VisibilitySelect"
+import { Button, ButtonLink } from "@/components/ui/button"
 import { FormActions } from "@/components/ui/FormActions"
 
 import { AddExerciseModal } from "./AddExerciseModal"

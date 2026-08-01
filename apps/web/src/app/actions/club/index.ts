@@ -19,6 +19,7 @@ import {
     clubSaveLogo,
     clubUpdate,
     clubUpdateMember,
+    type ClubMembersPaginatedData,
 } from "@/services/clubs.service"
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -91,16 +92,9 @@ export async function saveMyClubLogoAction(
     }
 }
 
-export async function getClubMembersPaginatedAction(input: unknown): Promise<
-    ActionResult<
-        Awaited<ReturnType<typeof clubMembersListPaginated>> extends {
-            ok: true
-            data: infer D
-        }
-            ? D
-            : never
-    >
-> {
+export async function getClubMembersPaginatedAction(
+    input: unknown,
+): Promise<ActionResult<ClubMembersPaginatedData>> {
     const check = await requireClubManager()
     if (!check.ok) return check
 
