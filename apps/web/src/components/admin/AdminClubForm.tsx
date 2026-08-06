@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import clsx from "clsx"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/admin-clubs"
 import { ClubLogoField } from "@/components/club/ClubLogoField"
 import { FormActions } from "@/components/ui/FormActions"
+import { useToast } from "@/hooks/use-toast"
 import { formatUserDisplayName } from "@/lib/user-display"
 import {
     clubAdminUpdateSchema,
@@ -33,7 +34,7 @@ type Props = {
 async function uploadClubLogo(
     clubId: string,
     file: File,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; logoUrl: string | null } | { ok: false; error: string }> {
     try {
         const image = await readElementImageFile(file)
         const result = await saveClubLogoAdminAction({
@@ -44,7 +45,7 @@ async function uploadClubLogo(
         if (!result.ok) {
             return { ok: false, error: result.error }
         }
-        return { ok: true }
+        return { ok: true, logoUrl: result.data.logoUrl }
     } catch (e) {
         const msg = e instanceof Error ? e.message : "Error al subir la imagen"
         return { ok: false, error: msg }
@@ -53,10 +54,12 @@ async function uploadClubLogo(
 
 export function AdminClubForm({ club }: Props) {
     const router = useRouter()
+    const { toast } = useToast()
     const [pending, startTransition] = useTransition()
     const [serverError, setServerError] = useState<string | null>(null)
     const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
     const [logoRemoved, setLogoRemoved] = useState(false)
+    const [knownLogoUrl, setKnownLogoUrl] = useState<string | null>(club.logoUrl ?? null)
     const ownerName = formatUserDisplayName(club.manager)
 
     const {
@@ -76,15 +79,21 @@ export function AdminClubForm({ club }: Props) {
         },
     })
 
+    useEffect(() => {
+        setKnownLogoUrl(club.logoUrl ?? null)
+        setValue("logoUrl", club.logoUrl ?? "")
+    }, [club.logoUrl, setValue])
+
     const clubName = watch("name")
-    const logoPreviewUrl = logoRemoved ? null : (club.logoUrl ?? null)
+    const logoPreviewUrl = logoRemoved ? null : knownLogoUrl
 
     function onSubmit(values: ClubAdminUpdateInput) {
         setServerError(null)
         startTransition(async () => {
+            const keepLogoUrl = values.logoUrl?.trim() || knownLogoUrl || ""
             const payload: ClubAdminUpdateInput = {
                 ...values,
-                logoUrl: logoRemoved && !pendingLogoFile ? "" : values.logoUrl,
+                logoUrl: logoRemoved && !pendingLogoFile ? "" : keepLogoUrl,
             }
 
             const result = await updateClubAdminAction(payload)
@@ -101,8 +110,15 @@ export function AdminClubForm({ club }: Props) {
                     )
                     return
                 }
+                setKnownLogoUrl(upload.logoUrl)
+                setValue("logoUrl", upload.logoUrl ?? "")
             }
 
+            toast({
+                type: "success",
+                title: "Club actualizado",
+                message: "Los cambios se guardaron correctamente.",
+            })
             router.push("/admin/clubs")
             router.refresh()
         })
@@ -145,6 +161,7 @@ export function AdminClubForm({ club }: Props) {
                     onRemove={() => {
                         setPendingLogoFile(null)
                         setLogoRemoved(true)
+                        setKnownLogoUrl(null)
                         setValue("logoUrl", "")
                     }}
                 />

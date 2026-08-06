@@ -96,7 +96,7 @@ function ScrollArrow({
             type="button"
             aria-label={isLeft ? "Ver anteriores" : "Ver siguientes"}
             onClick={onClick}
-            className={`absolute top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-zinc-700 shadow-md backdrop-blur transition-opacity hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-200 dark:hover:bg-zinc-900 ${
+            className={`absolute top-1/2 z-10 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-zinc-700 shadow-md backdrop-blur transition-opacity hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-200 dark:hover:bg-zinc-900 ${
                 isLeft ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
             } ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
         >

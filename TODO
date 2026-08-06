@@ -1,10 +1,7 @@
--Agregar un nuevo rol, que sea tipo club manager, el mismo debe poder crear y administrar sus propios usuarios. El numero de usuarios que puedra administrar lo debemos poder definir de alguna manera para cada user con este rol. Por default pordrian ser 20.
-Aunque habria que pensarlo porque esto sera en funcion del pago que haga, es decir de la subscripcion. Quizas habra que tener diferentes tipos de subscripciones, individuales y por club, un club solo tendra un manager (creo).
-Por otro lado los miembros de los clubes tendran la opcion de marcar los ejercicios y clases como publicos para mi club. Si existen ejercicios/clases publicas para un clubr, deberiamos agregaro en la home Y quizas tener dos tabs primero el de X club y luego la home comun. Por lo que un club debe poder nombrarse. Quizas un usuario con ron de club manager deba tener un panel de "Mi Club" para poder administrar los datos propios del club, como el nombre, la direccion, logo del club (quizas no porque puede ser el perfil, o esto podria ser el perfil del user directamente tambien hay que definir).
-Ademas, deberiamos pensar como se haran los pagos, el historial, subscripciones, descuentos, si habra codigos de descuentos personlizados o subscripciones custom con diferentes beneficios, como mas coachs para el club.
-Los pagos de momento se haran solo por mercado pago.
+Agregar CRUD de descuentos y codigos de descuento
+Agregar planes, estos deben ser configurables por el superadmin, por ejemplo debe poder poner: si es para club (en ese caso la cantidad de miembros), cantidad de clases mensuales, cantidad de ejercicios, edicion de clases, edicion de ejercicios, las cantidades pueden ser "ilimitadas" en dicho caso quizas ponemos 1000 para cada tipo. Quizas configurariamos mejor los planes como: precio, cantidad de meses y tipo (individual o club) y luego el superadmin le agrega los permisos al plan en si.
 
--Agregar campo telefono para usuarios y clubs (campo opcional)
+-Al eliminar un usuarios, deberia hacer un borrado logico.
 
 -Agregar opcion de imprimir ejercicio
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil

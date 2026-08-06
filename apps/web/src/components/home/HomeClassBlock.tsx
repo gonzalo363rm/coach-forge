@@ -23,7 +23,7 @@ export function HomeClassBlock({ trainingClass, isLoggedIn }: Props) {
         : "Entrenador"
 
     return (
-        <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <article className="cursor-pointer overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-100 p-4 dark:border-zinc-800">
                 <div className="flex min-w-0 flex-1 items-start gap-3">
                     {trainingClass.creator ? (

@@ -56,7 +56,7 @@ export function PublicHomeContent({
                             aria-selected={activeTab === "club"}
                             onClick={() => setActiveTab("club")}
                             className={clsx(
-                                "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                                "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
                                 activeTab === "club"
                                     ? "bg-emerald-600 text-white"
                                     : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
@@ -70,7 +70,7 @@ export function PublicHomeContent({
                             aria-selected={activeTab === "community"}
                             onClick={() => setActiveTab("community")}
                             className={clsx(
-                                "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                                "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
                                 activeTab === "community"
                                     ? "bg-emerald-600 text-white"
                                     : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",

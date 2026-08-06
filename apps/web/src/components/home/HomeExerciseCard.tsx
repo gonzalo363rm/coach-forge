@@ -13,7 +13,7 @@ export function HomeExerciseCard({ exercise, isLoggedIn }: Props) {
     const templateHref = `/exercises/new?from=${encodeURIComponent(exercise.id)}&returnTo=${encodeURIComponent("/")}`
 
     return (
-        <article className="flex w-44 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:w-52 dark:border-zinc-800 dark:bg-zinc-950">
+        <article className="flex w-44 shrink-0 cursor-pointer snap-start flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:w-52 dark:border-zinc-800 dark:bg-zinc-950">
             <ExercisePreviewThumb
                 previewUrl={exercise.previewUrl}
                 title={exercise.title}

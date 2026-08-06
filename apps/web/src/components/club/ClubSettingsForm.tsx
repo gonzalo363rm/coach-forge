@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import clsx from "clsx"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 
 import { saveMyClubLogoAction, updateMyClubAction } from "@/app/actions/club"
 import { ClubLogoField } from "@/components/club/ClubLogoField"
 import { FormActions } from "@/components/ui/FormActions"
+import { useToast } from "@/hooks/use-toast"
 import { clubUpdateSchema, type ClubUpdateInput } from "@/schemas/club.schema"
 import type { ClubWithMemberCount } from "@/services/clubs.service"
 import { readElementImageFile } from "@/utils/element-image-file"
@@ -24,7 +25,7 @@ type Props = {
 
 async function uploadClubLogo(
     file: File,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; logoUrl: string | null } | { ok: false; error: string }> {
     try {
         const image = await readElementImageFile(file)
         const result = await saveMyClubLogoAction({
@@ -34,7 +35,7 @@ async function uploadClubLogo(
         if (!result.ok) {
             return { ok: false, error: result.error }
         }
-        return { ok: true }
+        return { ok: true, logoUrl: result.data.logoUrl }
     } catch (e) {
         const msg = e instanceof Error ? e.message : "Error al subir la imagen"
         return { ok: false, error: msg }
@@ -43,11 +44,13 @@ async function uploadClubLogo(
 
 export function ClubSettingsForm({ club }: Props) {
     const router = useRouter()
+    const { toast } = useToast()
     const [pending, startTransition] = useTransition()
     const [serverError, setServerError] = useState<string | null>(null)
     const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
     const [logoRemoved, setLogoRemoved] = useState(false)
     const [logoFieldKey, setLogoFieldKey] = useState(0)
+    const [knownLogoUrl, setKnownLogoUrl] = useState<string | null>(club.logoUrl ?? null)
 
     const {
         register,
@@ -64,15 +67,21 @@ export function ClubSettingsForm({ club }: Props) {
         },
     })
 
+    useEffect(() => {
+        setKnownLogoUrl(club.logoUrl ?? null)
+        setValue("logoUrl", club.logoUrl ?? "")
+    }, [club.logoUrl, setValue])
+
     const clubName = watch("name")
-    const logoPreviewUrl = logoRemoved ? null : (club.logoUrl ?? null)
+    const logoPreviewUrl = logoRemoved ? null : knownLogoUrl
 
     function onSubmit(values: ClubUpdateInput) {
         setServerError(null)
         startTransition(async () => {
+            const keepLogoUrl = values.logoUrl?.trim() || knownLogoUrl || ""
             const payload: ClubUpdateInput = {
                 ...values,
-                logoUrl: logoRemoved && !pendingLogoFile ? "" : values.logoUrl,
+                logoUrl: logoRemoved && !pendingLogoFile ? "" : keepLogoUrl,
             }
 
             const result = await updateMyClubAction(payload)
@@ -89,11 +98,19 @@ export function ClubSettingsForm({ club }: Props) {
                     )
                     return
                 }
+                setKnownLogoUrl(upload.logoUrl)
+                setValue("logoUrl", upload.logoUrl ?? "")
             }
 
             setPendingLogoFile(null)
             setLogoRemoved(false)
             setLogoFieldKey((k) => k + 1)
+            toast({
+                type: "success",
+                title: "Club actualizado",
+                message: "Los cambios se guardaron correctamente.",
+            })
+            router.push("/club/members")
             router.refresh()
         })
     }
@@ -128,6 +145,7 @@ export function ClubSettingsForm({ club }: Props) {
                     onRemove={() => {
                         setPendingLogoFile(null)
                         setLogoRemoved(true)
+                        setKnownLogoUrl(null)
                         setValue("logoUrl", "")
                     }}
                 />
