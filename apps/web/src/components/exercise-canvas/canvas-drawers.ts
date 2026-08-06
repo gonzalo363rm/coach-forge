@@ -51,12 +51,23 @@ export const drawBackground = (canvas: any, ck: any, width: number, height: numb
 export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance, imagesCacheRef: MutableRefObject<Map<string, any>>, showLabels = true) => {
     if (!img.data.imageRef) return
 
-    let skiaImg = imagesCacheRef.current.get(img.data.imageRef)
-    if (skiaImg instanceof Uint8Array) {
-        skiaImg = ck.MakeImageFromEncoded(skiaImg)
+    const cached = imagesCacheRef.current.get(img.data.imageRef)
+    let skiaImg: any = null
+
+    if (cached instanceof Uint8Array) {
+        skiaImg = ck.MakeImageFromEncoded(cached)
         if (skiaImg) {
-            imagesCacheRef.current.set(img.data.imageRef, skiaImg)
+            // Conservar bytes + SkImage para poder re-decodificar en surfaces de software.
+            imagesCacheRef.current.set(img.data.imageRef, { bytes: cached, skia: skiaImg })
         }
+    } else if (cached && typeof cached === "object" && "skia" in cached) {
+        skiaImg = cached.skia
+        if (!skiaImg && cached.bytes instanceof Uint8Array) {
+            skiaImg = ck.MakeImageFromEncoded(cached.bytes)
+            cached.skia = skiaImg
+        }
+    } else {
+        skiaImg = cached
     }
 
     if (skiaImg && typeof skiaImg.width === "function") {

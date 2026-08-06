@@ -35,6 +35,7 @@ export async function uploadImageBuffer(
     folder: folderPath,
     public_id: publicId,
     overwrite: true,
+    invalidate: true,
     resource_type: "image",
   })
 

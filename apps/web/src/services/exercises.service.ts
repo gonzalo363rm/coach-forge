@@ -8,6 +8,7 @@ import { getPrisma } from "@/lib/prisma"
 import { exercisePreviewPublicId } from "@/lib/cloudinary-url"
 import {
   EXERCISE_PREVIEW_PLACEHOLDER,
+  removeLocalExercisePreview,
   resolveExercisePreviewUrl,
 } from "@/lib/exercise-preview-resolve"
 import type {
@@ -139,7 +140,7 @@ export async function exercisesListPaginated(
             exercises.map(async ({ creator, ...e }) => ({
                 ...e,
                 creator,
-                previewUrl: await resolveExercisePreviewUrl(e.id),
+                previewUrl: await resolveExercisePreviewUrl(e.id, e.updatedAt),
             })),
         )
 
@@ -233,7 +234,7 @@ export async function exerciseGetListItemById(id: string): Promise<ExerciseListI
     return {
         ...exercise,
         creator,
-        previewUrl: await resolveExercisePreviewUrl(exercise.id),
+        previewUrl: await resolveExercisePreviewUrl(exercise.id, exercise.updatedAt),
     }
 }
 
@@ -279,6 +280,15 @@ export async function exerciseSavePreview(
     "exercises",
     exercisePreviewPublicId(exerciseId),
   )
+
+  // Evitar que un .webp local legacy opaque la nueva URL de Cloudinary.
+  removeLocalExercisePreview(exerciseId)
+
+  // Invalidar caches de listados (?v=updatedAt) al regenerar la preview.
+  await getPrisma().exercise.update({
+    where: { id: exerciseId },
+    data: { updatedAt: new Date() },
+  })
 
   return { url }
 }

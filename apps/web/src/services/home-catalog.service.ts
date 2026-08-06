@@ -84,7 +84,7 @@ async function buildExerciseSections(
             id: row.id,
             title: row.title,
             difficulty: row.difficulty,
-            previewUrl: await resolveExercisePreviewUrl(row.id),
+            previewUrl: await resolveExercisePreviewUrl(row.id, row.updatedAt),
             updatedAt: row.updatedAt.toISOString(),
         })
     }
@@ -113,7 +113,10 @@ async function buildClassRows(
                 row.items.map(async (item) => ({
                     id: item.exercise.id,
                     title: item.exercise.title,
-                    previewUrl: await resolveExercisePreviewUrl(item.exercise.id),
+                    previewUrl: await resolveExercisePreviewUrl(
+                        item.exercise.id,
+                        item.exercise.updatedAt,
+                    ),
                     sortOrder: item.sortOrder,
                 })),
             ),
@@ -150,7 +153,7 @@ async function loadPublicClassRows() {
             items: {
                 orderBy: { sortOrder: "asc" },
                 include: {
-                    exercise: { select: { id: true, title: true } },
+                    exercise: { select: { id: true, title: true, updatedAt: true } },
                 },
             },
         },
@@ -204,7 +207,7 @@ async function loadClubHomeCatalog(clubId: string): Promise<PublicHomeCatalog> {
                 items: {
                     orderBy: { sortOrder: "asc" },
                     include: {
-                        exercise: { select: { id: true, title: true } },
+                        exercise: { select: { id: true, title: true, updatedAt: true } },
                     },
                 },
             },

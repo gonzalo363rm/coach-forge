@@ -19,7 +19,7 @@ import type {
     ToolType,
 } from "@/interfaces"
 import SkiaCanvas from "@/components/skia/SkiaCanvas"
-import { loadImageAsBytes } from "@/utils/image"
+import { loadImageAsBytes, EXERCISE_PREVIEW_CONTENT_MARGIN_RATIO } from "@/utils/image"
 import {
     buildOrderedItemsFromCanvas,
     playerOptionsFromCanvas,
@@ -63,6 +63,8 @@ import {
     clipboardFromPasted,
     clipboardHasContent,
     copySelectionToClipboard,
+    expandBoundsWithMargin,
+    getCanvasContentBounds,
     getSelectionUnionBounds,
     normalizeMarquee,
     pasteClipboard,
@@ -124,8 +126,11 @@ const DEFAULT_BACKGROUND_COLOR = "#27272a"
 const MAX_ROTATION = 360
 const MIN_CANVAS_WIDTH = 600
 const MIN_CANVAS_HEIGHT = 400
-const MIN_CANVAS_ZOOM = 0.5
+/** Permite ver elementos muy grandes (p. ej. 2000×4000 × escala) dentro del viewport. */
+const MIN_CANVAS_ZOOM = 0.05
 const MAX_CANVAS_ZOOM = 2.5
+/** Margen al encajar un elemento grande con zoom automático. */
+const FIT_ZOOM_PADDING = 0.92
 
 export const ExerciseCanvas = ({
     currentTool,
@@ -159,6 +164,9 @@ export const ExerciseCanvas = ({
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 })
     const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
     const [canvasZoom, setCanvasZoom] = useState(1)
+    /** Desplazamiento de vista (px pantalla) para zoom hacia el cursor. */
+    const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 })
+    const viewRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } })
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection | null>(null)
     const [images, setImages] = useState<ImageElementInstance[]>([])
     const [circles, setCircles] = useState<CircleElementInstance[]>([])
@@ -206,6 +214,7 @@ export const ExerciseCanvas = ({
         setCanvasSize({ width: c.width, height: c.height })
         setCanvasBackgroundColor(c.backgroundColor)
         setCanvasZoom(Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))))
+        setCanvasPan({ x: 0, y: 0 })
         setShowTitleOverlay(c.showTitleOverlay)
         setShowOrderOverlay(c.showOrderOverlay)
         setImages(c.images)
@@ -274,10 +283,20 @@ export const ExerciseCanvas = ({
     const selectionMenuPosition = useMemo(() => {
         if (!selectionBounds) return { x: 16, y: 16 }
         return {
-            x: Math.max(8, Math.min(canvasSize.width - 220, selectionBounds.left * canvasZoom)),
-            y: Math.max(8, selectionBounds.top * canvasZoom - 44),
+            x: Math.max(
+                8,
+                Math.min(
+                    canvasSize.width - 220,
+                    selectionBounds.left * canvasZoom + canvasPan.x,
+                ),
+            ),
+            y: Math.max(8, selectionBounds.top * canvasZoom + canvasPan.y - 44),
         }
-    }, [canvasSize.width, canvasZoom, selectionBounds])
+    }, [canvasPan.x, canvasPan.y, canvasSize.width, canvasZoom, selectionBounds])
+
+    useEffect(() => {
+        viewRef.current = { zoom: canvasZoom, pan: canvasPan }
+    }, [canvasPan, canvasZoom])
 
     const saveModalFieldDefaults = useMemo(
         () =>
@@ -301,9 +320,48 @@ export const ExerciseCanvas = ({
         return Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(value.toFixed(2))))
     }, [])
 
-    const nudgeZoom = useCallback((delta: number) => {
-        setCanvasZoom((prev) => clampZoom(prev + delta))
-    }, [clampZoom])
+    const fitZoomForContent = useCallback(
+        (contentWidth: number, contentHeight: number, currentZoom: number) => {
+            if (contentWidth <= 0 || contentHeight <= 0) return currentZoom
+            const fit =
+                Math.min(canvasSize.width / contentWidth, canvasSize.height / contentHeight) *
+                FIT_ZOOM_PADDING
+            return Math.min(currentZoom, clampZoom(fit))
+        },
+        [canvasSize.height, canvasSize.width, clampZoom],
+    )
+
+    /** Zoom manteniendo fijo el punto del mundo bajo (screenX, screenY). */
+    const zoomAtScreenPoint = useCallback(
+        (screenX: number, screenY: number, nextZoomRaw: number) => {
+            const { zoom: oldZoom, pan } = viewRef.current
+            const nextZoom = clampZoom(nextZoomRaw)
+            if (nextZoom === oldZoom) return
+
+            const worldX = (screenX - pan.x) / oldZoom
+            const worldY = (screenY - pan.y) / oldZoom
+            setCanvasZoom(nextZoom)
+            setCanvasPan({
+                x: screenX - worldX * nextZoom,
+                y: screenY - worldY * nextZoom,
+            })
+        },
+        [clampZoom],
+    )
+
+    const nudgeZoom = useCallback(
+        (delta: number, screenX?: number, screenY?: number) => {
+            const sx = screenX ?? canvasSize.width / 2
+            const sy = screenY ?? canvasSize.height / 2
+            zoomAtScreenPoint(sx, sy, viewRef.current.zoom + delta)
+        },
+        [canvasSize.height, canvasSize.width, zoomAtScreenPoint],
+    )
+
+    const resetZoom = useCallback(() => {
+        setCanvasZoom(1)
+        setCanvasPan({ x: 0, y: 0 })
+    }, [])
 
     const withInitializedControls = (arrow: ArrowElementInstance): ArrowElementInstance => {
         const start = arrow.data.points[0]
@@ -445,6 +503,7 @@ export const ExerciseCanvas = ({
         canvasSize,
         canvasBackgroundColor,
         canvasZoom,
+        canvasPan,
         showTitleOverlay,
         showOrderOverlay,
         orderOverlayItems,
@@ -507,8 +566,21 @@ export const ExerciseCanvas = ({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawBackground = useCallback((canvas: any, ck: any) => {
-        drawBackgroundHelper(canvas, ck, canvasSize.width / canvasZoom, canvasSize.height / canvasZoom, hexToColor(canvasBackgroundColor))
-    }, [canvasBackgroundColor, canvasSize, canvasZoom])
+        const viewLeft = -canvasPan.x / canvasZoom
+        const viewTop = -canvasPan.y / canvasZoom
+        const viewWidth = canvasSize.width / canvasZoom
+        const viewHeight = canvasSize.height / canvasZoom
+        canvas.save()
+        canvas.translate(viewLeft, viewTop)
+        drawBackgroundHelper(
+            canvas,
+            ck,
+            viewWidth,
+            viewHeight,
+            hexToColor(canvasBackgroundColor),
+        )
+        canvas.restore()
+    }, [canvasBackgroundColor, canvasPan.x, canvasPan.y, canvasSize.height, canvasSize.width, canvasZoom])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawImageElement = useCallback((canvas: any, ck: any, img: ImageElementInstance) => {
@@ -538,6 +610,7 @@ export const ExerciseCanvas = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleDraw = useCallback((canvas: any, ck: any) => {
         canvas.save()
+        canvas.translate(canvasPan.x, canvasPan.y)
         canvas.scale(canvasZoom, canvasZoom)
         drawBackground(canvas, ck)
         const renderQueue: Array<{ type: "image" | "arrow" | "circle" | "rect" | "line"; index: number; zIndex: number; sequence: number }> = [
@@ -595,6 +668,8 @@ export const ExerciseCanvas = ({
         canvas.restore()
     }, [
         arrows,
+        canvasPan.x,
+        canvasPan.y,
         canvasZoom,
         circles,
         drawArrow,
@@ -614,17 +689,75 @@ export const ExerciseCanvas = ({
         tempShape,
     ])
 
-    /** Vista previa: zoom 1×, sin marquee/selección/overlays de edición. */
+    /** Vista previa: encuadra todo el contenido + margen dentro del tamaño de export. */
+    const previewFrame = useMemo(() => {
+        const contentBounds = getCanvasContentBounds(canvasElementsSnapshot)
+        if (!contentBounds) {
+            return {
+                width: canvasSize.width,
+                height: canvasSize.height,
+                originX: 0,
+                originY: 0,
+                contentScale: 1,
+            }
+        }
+
+        const framed = expandBoundsWithMargin(
+            contentBounds,
+            EXERCISE_PREVIEW_CONTENT_MARGIN_RATIO,
+        )
+        const contentWidth = Math.max(1, framed.right - framed.left)
+        const contentHeight = Math.max(1, framed.bottom - framed.top)
+
+        // Conservar aspect del contenido; limitar el lado mayor para un WebP manejable.
+        const maxSide = 1600
+        const fit = Math.min(maxSide / contentWidth, maxSide / contentHeight)
+        const width = Math.max(1, Math.round(contentWidth * fit))
+        const height = Math.max(1, Math.round(contentHeight * fit))
+
+        return {
+            width,
+            height,
+            originX: framed.left,
+            originY: framed.top,
+            contentScale: fit,
+        }
+    }, [canvasElementsSnapshot, canvasSize.height, canvasSize.width])
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawForPreviewSnapshot = useCallback((canvas: any, ck: any) => {
+        // Re-decodificar desde bytes: el SkImage cacheado en WebGL puede no pintar bien en MakeSurface.
+        for (const [key, cached] of imagesCacheRef.current.entries()) {
+            if (cached instanceof Uint8Array) {
+                const skia = ck.MakeImageFromEncoded(cached)
+                if (skia) {
+                    imagesCacheRef.current.set(key, { bytes: cached, skia })
+                }
+            } else if (cached && typeof cached === "object" && cached.bytes instanceof Uint8Array) {
+                if (cached.skia && typeof cached.skia.delete === "function") {
+                    try {
+                        cached.skia.delete()
+                    } catch {
+                        /* ignore */
+                    }
+                }
+                cached.skia = ck.MakeImageFromEncoded(cached.bytes)
+            }
+        }
+
         canvas.save()
         drawBackgroundHelper(
             canvas,
             ck,
-            canvasSize.width,
-            canvasSize.height,
+            previewFrame.width,
+            previewFrame.height,
             hexToColor(canvasBackgroundColor),
         )
+
+        // Escala el mundo del contenido al tamaño de la imagen de preview.
+        canvas.scale(previewFrame.contentScale, previewFrame.contentScale)
+        canvas.translate(-previewFrame.originX, -previewFrame.originY)
+
         const renderQueue: Array<{ type: "image" | "arrow" | "circle" | "rect" | "line"; index: number; zIndex: number; sequence: number }> = [
             ...images.map((_, index) => ({ type: "image" as const, index, zIndex: getElementZ(images[index]), sequence: index })),
             ...circles.map((_, index) => ({ type: "circle" as const, index, zIndex: getElementZ(circles[index]), sequence: images.length + index })),
@@ -637,15 +770,24 @@ export const ExerciseCanvas = ({
             .sort((a, b) => a.zIndex - b.zIndex || a.sequence - b.sequence)
             .forEach((item) => {
                 if (item.type === "image") {
-                    drawImageElement(canvas, ck, images[item.index])
+                    drawImageElementHelper(canvas, ck, images[item.index], imagesCacheRef, false)
                 } else if (item.type === "circle") {
-                    drawCircleElement(canvas, ck, circles[item.index])
+                    drawCircleElementHelper(canvas, ck, circles[item.index], false)
                 } else if (item.type === "rect") {
-                    drawRectElement(canvas, ck, rects[item.index])
+                    drawRectElementHelper(canvas, ck, rects[item.index], false)
                 } else if (item.type === "line") {
-                    drawLineElement(canvas, ck, lines[item.index])
+                    drawLineElementHelper(canvas, ck, lines[item.index], false)
                 } else {
-                    drawArrow(canvas, ck, arrows[item.index])
+                    drawArrowHelper(
+                        canvas,
+                        ck,
+                        arrows[item.index],
+                        null,
+                        DEFAULT_ARROW_STROKE,
+                        DEFAULT_ARROW_COLOR,
+                        false,
+                        false,
+                    )
                 }
             })
 
@@ -653,16 +795,14 @@ export const ExerciseCanvas = ({
     }, [
         arrows,
         canvasBackgroundColor,
-        canvasSize.height,
-        canvasSize.width,
         circles,
-        drawArrow,
-        drawCircleElement,
-        drawImageElement,
-        drawLineElement,
-        drawRectElement,
         images,
         lines,
+        previewFrame.contentScale,
+        previewFrame.height,
+        previewFrame.originX,
+        previewFrame.originY,
+        previewFrame.width,
         rects,
     ])
 
@@ -877,24 +1017,65 @@ export const ExerciseCanvas = ({
     )
 
     // Drop de elemento del menú (de momento solo imagenes)
-    const createImageInstanceFromDefinition = useCallback((x: number, y: number, elementDefinition: ElementDefinition): ImageElementInstance | null => {
+    const createImageInstanceFromDefinition = useCallback((
+        x: number,
+        y: number,
+        elementDefinition: ElementDefinition,
+        zoom: number,
+        options?: { centerInView?: boolean; pan?: { x: number; y: number } },
+    ): ImageElementInstance | null => {
         if (elementDefinition.type !== "image" && elementDefinition.type !== "player") {
             return null
         }
 
         const { id, type, ...rest } = elementDefinition
+        const placedWidth = elementDefinition.width * DEFAULT_SCALE
+        const placedHeight = elementDefinition.height * DEFAULT_SCALE
+        const worldWidth = canvasSize.width / zoom
+        const worldHeight = canvasSize.height / zoom
+        const pan = options?.pan ?? canvasPan
+
+        let left: number
+        let top: number
+
+        if (options?.centerInView) {
+            const viewOriginX = -pan.x / zoom
+            const viewOriginY = -pan.y / zoom
+            left = viewOriginX + (worldWidth - placedWidth) / 2
+            top = viewOriginY + (worldHeight - placedHeight) / 2
+        } else {
+            left = x - placedWidth / 2
+            top = y - placedHeight / 2
+
+            const viewLeft = -pan.x / zoom
+            const viewTop = -pan.y / zoom
+            const viewRight = viewLeft + worldWidth
+            const viewBottom = viewTop + worldHeight
+
+            if (placedWidth >= worldWidth) {
+                left = viewLeft + (worldWidth - placedWidth) / 2
+            } else {
+                left = Math.max(viewLeft, Math.min(viewRight - placedWidth, left))
+            }
+
+            if (placedHeight >= worldHeight) {
+                top = viewTop + (worldHeight - placedHeight) / 2
+            } else {
+                top = Math.max(viewTop, Math.min(viewBottom - placedHeight, top))
+            }
+        }
 
         return {
             ...rest,
             id: generateId(),
             definitionId: id,
             type,
-            x: x - elementDefinition.width / 2,
-            y: y - elementDefinition.height / 2,
+            x: left,
+            y: top,
             zIndex: 0,
             data: {
-                width: elementDefinition.width * DEFAULT_SCALE,
-                height: elementDefinition.height * DEFAULT_SCALE,
+                width: placedWidth,
+                height: placedHeight,
                 imageRef: elementDefinition.image,
                 maintainAspectRatio: true,
             },
@@ -902,11 +1083,32 @@ export const ExerciseCanvas = ({
                 strokeColor: DEFAULT_ELEMENT_COLOR,
             },
         }
-    }, [])
+    }, [canvasPan.x, canvasPan.y, canvasSize.height, canvasSize.width])
 
-    const handleDrop = useCallback((x: number, y: number, data: string) => {
-        const elementDefinition: ElementDefinition = JSON.parse(data)
-        const newImageElementInstance = createImageInstanceFromDefinition(x, y, elementDefinition)
+    const placePaletteImage = useCallback((
+        x: number,
+        y: number,
+        elementDefinition: ElementDefinition,
+    ) => {
+        const placedWidth = elementDefinition.width * DEFAULT_SCALE
+        const placedHeight = elementDefinition.height * DEFAULT_SCALE
+        const nextZoom = fitZoomForContent(placedWidth, placedHeight, canvasZoom)
+        const didAutoZoomOut = nextZoom < canvasZoom - 0.001
+        if (didAutoZoomOut) {
+            setCanvasZoom(nextZoom)
+            setCanvasPan({ x: 0, y: 0 })
+        }
+
+        const newImageElementInstance = createImageInstanceFromDefinition(
+            x,
+            y,
+            elementDefinition,
+            nextZoom,
+            {
+                centerInView: didAutoZoomOut,
+                pan: didAutoZoomOut ? { x: 0, y: 0 } : canvasPan,
+            },
+        )
         if (!newImageElementInstance) return
 
         pushHistoryCheckpoint()
@@ -917,7 +1119,20 @@ export const ExerciseCanvas = ({
             setSelection([{ type: "image", id: newImageElementInstance.id }])
             setShowSelectionMenu(true)
         }
-    }, [createImageInstanceFromDefinition, pushHistoryCheckpoint, setCurrentTool, setSelectedPaletteElement])
+    }, [
+        canvasZoom,
+        canvasPan,
+        createImageInstanceFromDefinition,
+        fitZoomForContent,
+        pushHistoryCheckpoint,
+        setCurrentTool,
+        setSelectedPaletteElement,
+    ])
+
+    const handleDrop = useCallback((x: number, y: number, data: string) => {
+        const elementDefinition: ElementDefinition = JSON.parse(data)
+        placePaletteImage(x, y, elementDefinition)
+    }, [placePaletteImage])
 
     const handleRotateArrow = useCallback((nextRotation: number) => {
         updateContextElement((element) => {
@@ -1137,10 +1352,10 @@ export const ExerciseCanvas = ({
         if (!canvasEl) return null
         const rect = canvasEl.getBoundingClientRect()
         return {
-            x: (clientX - rect.left) / canvasZoom,
-            y: (clientY - rect.top) / canvasZoom,
+            x: (clientX - rect.left - canvasPan.x) / canvasZoom,
+            y: (clientY - rect.top - canvasPan.y) / canvasZoom,
         }
-    }, [canvasZoom])
+    }, [canvasPan.x, canvasPan.y, canvasZoom])
 
     const handleSelectionMovePointerDown = useCallback(
         (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1305,13 +1520,13 @@ export const ExerciseCanvas = ({
 
             if (event.key === "0") {
                 event.preventDefault()
-                setCanvasZoom(1)
+                resetZoom()
             }
         }
 
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [handleCopySelection, handleDeleteSelection, handlePasteClipboard, handleRedo, handleUndo, nudgeZoom, selection.length])
+    }, [handleCopySelection, handleDeleteSelection, handlePasteClipboard, handleRedo, handleUndo, nudgeZoom, resetZoom, selection.length])
 
     const pointer = useCanvasPointerInteractions({
         currentTool,
@@ -1364,9 +1579,9 @@ export const ExerciseCanvas = ({
     })
 
     const toWorldCoords = useCallback((x: number, y: number) => ({
-        x: x / canvasZoom,
-        y: y / canvasZoom,
-    }), [canvasZoom])
+        x: (x - canvasPan.x) / canvasZoom,
+        y: (y - canvasPan.y) / canvasZoom,
+    }), [canvasPan.x, canvasPan.y, canvasZoom])
 
     const handleCanvasPointerDown = useCallback((x: number, y: number) => {
         const world = toWorldCoords(x, y)
@@ -1375,30 +1590,15 @@ export const ExerciseCanvas = ({
             if (!imagesCacheRef.current.has(imageRef)) {
                 return
             }
-            const newImageElementInstance = createImageInstanceFromDefinition(
-                world.x,
-                world.y,
-                selectedPaletteElement,
-            )
-            if (newImageElementInstance) {
-                pushHistoryCheckpoint()
-                setImages((prev) => [...prev, newImageElementInstance])
-                setSelectedPaletteElement(null)
-                if (newImageElementInstance.id) {
-                    setSelection([{ type: "image", id: newImageElementInstance.id }])
-                    setShowSelectionMenu(true)
-                }
-                return
-            }
+            placePaletteImage(world.x, world.y, selectedPaletteElement)
+            return
         }
         pointer.handlePointerDown(world.x, world.y)
     }, [
-        createImageInstanceFromDefinition,
         currentTool,
+        placePaletteImage,
         pointer,
-        pushHistoryCheckpoint,
         selectedPaletteElement,
-        setSelectedPaletteElement,
         toWorldCoords,
     ])
     const handleCanvasPointerMove = useCallback((x: number, y: number) => {
@@ -1436,8 +1636,14 @@ export const ExerciseCanvas = ({
     const handleCanvasWheel = useCallback((event: WheelEvent) => {
         if (!event.ctrlKey) return
         event.preventDefault()
+        const container = canvasContainerRef.current
+        const canvasEl = container?.querySelector("canvas")
+        if (!canvasEl) return
+        const rect = canvasEl.getBoundingClientRect()
+        const screenX = event.clientX - rect.left
+        const screenY = event.clientY - rect.top
         const direction = event.deltaY > 0 ? -0.1 : 0.1
-        nudgeZoom(direction)
+        nudgeZoom(direction, screenX, screenY)
     }, [nudgeZoom])
 
     useEffect(() => {
@@ -1525,11 +1731,19 @@ export const ExerciseCanvas = ({
                 previewWebp =
                     (await canvasRef.current?.getWebpSnapshot({
                         draw: drawForPreviewSnapshot,
+                        width: previewFrame.width,
+                        height: previewFrame.height,
                     })) ?? null
             }
             await onExerciseSave(exercise, previewWebp)
         },
-        [drawForPreviewSnapshot, hasPreviewableCanvasContent, onExerciseSave],
+        [
+            drawForPreviewSnapshot,
+            hasPreviewableCanvasContent,
+            onExerciseSave,
+            previewFrame.height,
+            previewFrame.width,
+        ],
     )
 
     return (
@@ -1608,21 +1822,21 @@ export const ExerciseCanvas = ({
                                     <div className="flex items-center gap-1">
                                         <button
                                             type="button"
-                                            onClick={() => setCanvasZoom((prev) => Math.max(MIN_CANVAS_ZOOM, Number((prev - 0.1).toFixed(2))))}
+                                            onClick={() => nudgeZoom(-0.1)}
                                             className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
                                         >
                                             -
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setCanvasZoom(1)}
+                                            onClick={resetZoom}
                                             className="min-w-12 rounded bg-zinc-100 px-1 py-0.5 text-[11px] text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
                                         >
                                             {Math.round(canvasZoom * 100)}%
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setCanvasZoom((prev) => Math.min(MAX_CANVAS_ZOOM, Number((prev + 0.1).toFixed(2))))}
+                                            onClick={() => nudgeZoom(0.1)}
                                             className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
                                         >
                                             +

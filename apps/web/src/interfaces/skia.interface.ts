@@ -5,6 +5,10 @@ export type SkiaWebpSnapshotOptions = {
     scale?: number
     /** Draw custom; si no se pasa, usa el `onDraw` del canvas. */
     draw?: SkiaSnapshotDraw
+    /** Ancho lógico del snapshot (default: ancho del canvas visible). */
+    width?: number
+    /** Alto lógico del snapshot (default: alto del canvas visible). */
+    height?: number
 }
 
 export interface SkiaCanvasHandle {

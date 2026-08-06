@@ -81,7 +81,9 @@ export const ExerciseEditor = ({
                 router.refresh()
                 return
             }
-            router.back()
+            // Evitar router.back(): restaura la lista cacheada con la preview vieja.
+            router.push("/exercises/mine")
+            router.refresh()
         },
         [returnTo, router],
     )

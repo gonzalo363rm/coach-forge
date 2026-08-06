@@ -121,6 +121,40 @@ export function getArrowBounds(el: ArrowElementInstance): Bounds {
     }
 }
 
+/** Unión de todos los elementos del canvas (el más lejano en cada dirección). */
+export function getCanvasContentBounds(canvas: CanvasElementsSnapshot): Bounds | null {
+    const boundsList: Bounds[] = [
+        ...canvas.images.map(getImageBounds),
+        ...canvas.circles.map(getCircleBounds),
+        ...canvas.rects.map(getRectBounds),
+        ...canvas.lines.map(getLineBounds),
+        ...canvas.arrows.map(getArrowBounds),
+    ]
+
+    if (boundsList.length === 0) return null
+
+    return {
+        left: Math.min(...boundsList.map((b) => b.left)),
+        top: Math.min(...boundsList.map((b) => b.top)),
+        right: Math.max(...boundsList.map((b) => b.right)),
+        bottom: Math.max(...boundsList.map((b) => b.bottom)),
+    }
+}
+
+/** Expande un bounds con un % de margen en cada lado (respecto al ancho/alto del contenido). */
+export function expandBoundsWithMargin(bounds: Bounds, marginRatio: number): Bounds {
+    const width = Math.max(1, bounds.right - bounds.left)
+    const height = Math.max(1, bounds.bottom - bounds.top)
+    const padX = width * marginRatio
+    const padY = height * marginRatio
+    return {
+        left: bounds.left - padX,
+        top: bounds.top - padY,
+        right: bounds.right + padX,
+        bottom: bounds.bottom + padY,
+    }
+}
+
 export function getSelectionUnionBounds(
     selection: SelectionItem[],
     canvas: CanvasElementsSnapshot,

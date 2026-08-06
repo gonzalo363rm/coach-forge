@@ -14,6 +14,12 @@ export const EXERCISE_PREVIEW_WEBP_QUALITY_PERCENT = 92
 /** Escala de rasterización al exportar la vista previa (2 = retina). */
 export const EXERCISE_PREVIEW_PIXEL_RATIO = 2
 
+/** Lado máximo del surface de preview (evita OOMs con elementos enormes). */
+export const EXERCISE_PREVIEW_MAX_OUTPUT_SIDE = 4096
+
+/** Margen relativo (por lado) alrededor del bounding box del contenido en la preview. */
+export const EXERCISE_PREVIEW_CONTENT_MARGIN_RATIO = 0.1
+
 export function htmlCanvasToEncodedBytes(
     canvas: HTMLCanvasElement,
     mime: string,

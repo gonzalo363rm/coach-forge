@@ -20,14 +20,17 @@ export function buildCloudinaryImageUrl(
   folder: string,
   publicId: string,
   format?: string,
+  version?: string | number | null,
 ): string | null {
   const cloudName = getCloudName()
   if (!cloudName) return null
 
   const fullPublicId = `${folder}/${publicId}`
   const suffix = format ? `.${format}` : ""
+  const versionSegment =
+    version != null && `${version}`.trim() !== "" ? `v${version}/` : ""
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${fullPublicId}${suffix}`
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${versionSegment}${fullPublicId}${suffix}`
 }
 
 export function elementImagePublicId(elementId: string): string {
@@ -58,10 +61,14 @@ export function elementCloudinaryUrl(elementId: string, format?: string): string
   )
 }
 
-export function exercisePreviewCloudinaryUrl(exerciseId: string): string | null {
+export function exercisePreviewCloudinaryUrl(
+  exerciseId: string,
+  version?: string | number | null,
+): string | null {
   return buildCloudinaryImageUrl(
     CloudinaryFolder.exercises,
     exercisePreviewPublicId(exerciseId),
     "webp",
+    version,
   )
 }

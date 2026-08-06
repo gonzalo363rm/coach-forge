@@ -66,13 +66,14 @@ export function ExercisePreviewThumb({
             >
                 <span className={imageClassName}>
                     <Image
+                        key={thumbSrc}
                         src={thumbSrc}
                         alt={`Vista previa de ${title}`}
                         fill
                         sizes={sizes}
                         quality={90}
-                        unoptimized={thumbSrc.endsWith(".svg")}
-                        className="object-cover"
+                        unoptimized
+                        className="object-contain"
                         onError={() => setThumbSrc(PREVIEW_PLACEHOLDER)}
                     />
                 </span>

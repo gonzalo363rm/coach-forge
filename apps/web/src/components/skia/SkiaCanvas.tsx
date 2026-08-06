@@ -5,6 +5,7 @@ import CanvasKitInit from "canvaskit-wasm/bin/full/canvaskit";
 
 import { SkiaCanvasHandle, SkiaCanvasProps, SkiaWebpSnapshotOptions } from "@/interfaces";
 import {
+  EXERCISE_PREVIEW_MAX_OUTPUT_SIDE,
   EXERCISE_PREVIEW_PIXEL_RATIO,
   EXERCISE_PREVIEW_WEBP_QUALITY_PERCENT,
   webglCanvasToWebpBytes,
@@ -75,12 +76,18 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
           onDrawRef.current(canvas, ckArg);
         });
 
-      const w = el.width;
-      const h = el.height;
+      const w = Math.max(1, Math.round(options?.width ?? el.width));
+      const h = Math.max(1, Math.round(options?.height ?? el.height));
       if (w < 1 || h < 1) return null;
 
-      const outW = Math.round(w * scale);
-      const outH = Math.round(h * scale);
+      let outScale = scale;
+      const maxSide = Math.max(w, h);
+      if (maxSide * outScale > EXERCISE_PREVIEW_MAX_OUTPUT_SIDE) {
+        outScale = EXERCISE_PREVIEW_MAX_OUTPUT_SIDE / maxSide;
+      }
+
+      const outW = Math.max(1, Math.round(w * outScale));
+      const outH = Math.max(1, Math.round(h * outScale));
 
       // Surface de software a mayor resolución: nítido y sin depender del buffer WebGL.
       const surface = typeof ck.MakeSurface === "function" ? ck.MakeSurface(outW, outH) : null;
@@ -89,7 +96,7 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
           const canvas = surface.getCanvas();
           canvas.clear(ck.TRANSPARENT);
           canvas.save();
-          canvas.scale(scale, scale);
+          canvas.scale(outScale, outScale);
           draw(canvas, ck);
           canvas.restore();
           surface.flush();
