@@ -95,6 +95,13 @@ type DragTarget =
     | { type: "arrow-end"; index: number }
     | { type: "arrow-control"; index: number; controlIndex: number }
     | { type: "selection-group" }
+    | {
+          type: "order-badge"
+          elementType: "image" | "circle" | "rect" | "line" | "arrow"
+          index: number
+          anchorX: number
+          anchorY: number
+      }
     | null
 
 type ContextTarget =
@@ -791,10 +798,26 @@ export const ExerciseCanvas = ({
                 }
             })
 
+        // Incluir números de orden en la imagen guardada (independiente del overlay del editor).
+        const previewOrderBadges = buildOrderOverlayBadges({
+            images,
+            arrows,
+            circles,
+            rects,
+            lines,
+            canvasWidth: canvasSize.width,
+            canvasHeight: canvasSize.height,
+        })
+        if (previewOrderBadges.length > 0) {
+            drawOrderBadgesHelper(canvas, ck, previewOrderBadges)
+        }
+
         canvas.restore()
     }, [
         arrows,
         canvasBackgroundColor,
+        canvasSize.height,
+        canvasSize.width,
         circles,
         images,
         lines,
@@ -1532,6 +1555,8 @@ export const ExerciseCanvas = ({
         currentTool,
         hasPaletteStamp: Boolean(selectedPaletteElement),
         contextMenuIsOpen: contextMenu.isOpen,
+        showOrderOverlay,
+        orderOverlayItems,
         images,
         arrows,
         circles,

@@ -4,6 +4,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from "react"
 import type {
     ArrowElementInstance,
     CircleElementInstance,
+    ElementInstance,
     ImageElementInstance,
     LineElementInstance,
     Point,
@@ -22,6 +23,14 @@ import {
     type MarqueeRect,
     type SelectionItem,
 } from "../canvas-selection"
+import {
+    clampPointToBounds,
+    findOrderBadgeAt,
+    getDefaultOrderBadgeAnchor,
+    getOrderBadgeMoveBounds,
+    type OrderBadgeElementType,
+    type OrderOverlayBadge,
+} from "@/utils/order-overlay-badges"
 
 export type DragTarget =
     | { type: "image"; index: number }
@@ -32,6 +41,13 @@ export type DragTarget =
     | { type: "arrow-end"; index: number }
     | { type: "arrow-control"; index: number; controlIndex: number }
     | { type: "selection-group" }
+    | {
+          type: "order-badge"
+          elementType: OrderBadgeElementType
+          index: number
+          anchorX: number
+          anchorY: number
+      }
     | null
 
 export type ContextTarget =
@@ -46,6 +62,8 @@ interface Args {
     currentTool: ToolType
     hasPaletteStamp: boolean
     contextMenuIsOpen: boolean
+    showOrderOverlay: boolean
+    orderOverlayItems: OrderOverlayBadge[]
     images: ImageElementInstance[]
     arrows: ArrowElementInstance[]
     circles: CircleElementInstance[]
@@ -96,6 +114,8 @@ export const useCanvasPointerInteractions = ({
     currentTool,
     hasPaletteStamp,
     contextMenuIsOpen,
+    showOrderOverlay,
+    orderOverlayItems,
     images,
     arrows,
     circles,
@@ -142,6 +162,67 @@ export const useCanvasPointerInteractions = ({
     onHistoryCheckpoint,
 }: Args) => {
     const canvasSnapshot = () => ({ images, arrows, circles, rects, lines })
+
+    const getElementByBadgeTarget = (
+        elementType: OrderBadgeElementType,
+        index: number,
+    ): ElementInstance | null => {
+        if (elementType === "image") return images[index] ?? null
+        if (elementType === "circle") return circles[index] ?? null
+        if (elementType === "rect") return rects[index] ?? null
+        if (elementType === "line") return lines[index] ?? null
+        return arrows[index] ?? null
+    }
+
+    const applyOrderOffset = (
+        elementType: OrderBadgeElementType,
+        index: number,
+        orderOffset: Point,
+    ) => {
+        const patch = (el: ElementInstance) => ({ ...el, orderOffset })
+        if (elementType === "image") {
+            setImages((prev) => {
+                const updated = [...prev]
+                if (!updated[index]) return prev
+                updated[index] = patch(updated[index]) as ImageElementInstance
+                return updated
+            })
+            return
+        }
+        if (elementType === "circle") {
+            setCircles((prev) => {
+                const updated = [...prev]
+                if (!updated[index]) return prev
+                updated[index] = patch(updated[index]) as CircleElementInstance
+                return updated
+            })
+            return
+        }
+        if (elementType === "rect") {
+            setRects((prev) => {
+                const updated = [...prev]
+                if (!updated[index]) return prev
+                updated[index] = patch(updated[index]) as RectElementInstance
+                return updated
+            })
+            return
+        }
+        if (elementType === "line") {
+            setLines((prev) => {
+                const updated = [...prev]
+                if (!updated[index]) return prev
+                updated[index] = patch(updated[index]) as LineElementInstance
+                return updated
+            })
+            return
+        }
+        setArrows((prev) => {
+            const updated = [...prev]
+            if (!updated[index]) return prev
+            updated[index] = patch(updated[index]) as ArrowElementInstance
+            return updated
+        })
+    }
 
     const handlePointerDown = useCallback((x: number, y: number) => {
         if (contextMenuIsOpen) {
@@ -192,8 +273,42 @@ export const useCanvasPointerInteractions = ({
             return
         }
 
+        if (showOrderOverlay && orderOverlayItems.length > 0) {
+            const badge = findOrderBadgeAt(x, y, orderOverlayItems)
+            if (badge) {
+                const element = getElementByBadgeTarget(badge.elementType, badge.index)
+                if (element) {
+                    const item = { type: badge.elementType, id: element.id! } as SelectionItem
+                    if (element.id) {
+                        const alreadySelected = isSelected(selection, badge.elementType, element.id)
+                        if (!alreadySelected) {
+                            const nextSelection = [item]
+                            setSelection(nextSelection)
+                            selectionRef.current = nextSelection
+                        }
+                    }
+                    setSelectedElement({ type: badge.elementType, index: badge.index })
+                    setSelectedArrowId(badge.elementType === "arrow" ? element.id : null)
+
+                    const [anchorX, anchorY] = getDefaultOrderBadgeAnchor(badge.elementType, element)
+                    onHistoryCheckpoint()
+                    draggingRef.current = {
+                        type: "order-badge",
+                        elementType: badge.elementType,
+                        index: badge.index,
+                        anchorX,
+                        anchorY,
+                    }
+                    offsetRef.current = { x: x - badge.x, y: y - badge.y }
+                    setShowSelectionMenu(false)
+                    setMarquee(null)
+                    return
+                }
+            }
+        }
+
         const arrowHandle = findArrowHandleAt(x, y)
-        if (arrowHandle && arrowHandle.type !== "selection-group") {
+        if (arrowHandle && arrowHandle.type !== "selection-group" && arrowHandle.type !== "order-badge") {
             const handleIndex =
                 arrowHandle.type === "arrow-start" ||
                 arrowHandle.type === "arrow-end" ||
@@ -271,6 +386,7 @@ export const useCanvasPointerInteractions = ({
         isDrawingShapeRef,
         lines,
         onHistoryCheckpoint,
+        orderOverlayItems,
         rects,
         selection,
         setContextMenu,
@@ -283,6 +399,7 @@ export const useCanvasPointerInteractions = ({
         setShowSelectionMenu,
         setTempArrow,
         setTempShape,
+        showOrderOverlay,
     ])
 
     const handlePointerMove = useCallback((x: number, y: number) => {
@@ -308,6 +425,33 @@ export const useCanvasPointerInteractions = ({
 
         if (!draggingRef.current) return
         const dragTarget = draggingRef.current
+
+        if (dragTarget.type === "order-badge") {
+            const element = getElementByBadgeTarget(dragTarget.elementType, dragTarget.index)
+            if (!element) return
+
+            const desiredX = x - offsetRef.current.x
+            const desiredY = y - offsetRef.current.y
+            const nextSelection =
+                element.id && isSelected(selectionRef.current, dragTarget.elementType, element.id)
+                    ? selectionRef.current
+                    : element.id
+                      ? [{ type: dragTarget.elementType, id: element.id }]
+                      : selectionRef.current
+            const moveBounds = getOrderBadgeMoveBounds(
+                dragTarget.elementType,
+                element,
+                nextSelection,
+                canvasSnapshot(),
+            )
+            const [clampedX, clampedY] = clampPointToBounds(desiredX, desiredY, moveBounds)
+            const orderOffset: Point = [
+                clampedX - dragTarget.anchorX,
+                clampedY - dragTarget.anchorY,
+            ]
+            applyOrderOffset(dragTarget.elementType, dragTarget.index, orderOffset)
+            return
+        }
 
         if (dragTarget.type === "selection-group") {
             const dx = x - offsetRef.current.x
@@ -440,11 +584,16 @@ export const useCanvasPointerInteractions = ({
             return updated
         })
     }, [
+        arrows,
+        circles,
         draggingRef,
+        images,
         isDrawingArrow,
         isDrawingMarqueeRef,
         isDrawingShapeRef,
+        lines,
         offsetRef,
+        rects,
         selectionRef,
         setArrows,
         setCircles,

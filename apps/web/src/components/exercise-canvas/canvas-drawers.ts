@@ -1,7 +1,7 @@
 import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance, LineElementInstance, RectElementInstance } from "@/interfaces"
 import type { MutableRefObject } from "react"
 
-import type { OrderOverlayBadge } from "@/utils/order-overlay-badges"
+import { ORDER_BADGE_RADIUS, type OrderOverlayBadge } from "@/utils/order-overlay-badges"
 
 import type { TempShape } from "./canvas-helpers"
 import { getArrowCenter, getShapeBounds, getReadableTextColor, hexToColor } from "./canvas-helpers"
@@ -355,7 +355,6 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
     previewPaint.delete()
 }
 
-const ORDER_BADGE_RADIUS = 12
 const ORDER_BADGE_FONT_SIZE = 11
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -49,6 +49,8 @@ export interface BaseElementInstance {
   label?: string;
   description?: string;
   order?: number;
+  /** Desplazamiento del badge de orden respecto al ancla por defecto. */
+  orderOffset?: Point;
   assignedPlayers?: string[];
 
   // Estilo visual

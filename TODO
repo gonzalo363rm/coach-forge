@@ -1,11 +1,13 @@
 Agregar CRUD de descuentos y codigos de descuento
 Agregar planes, estos deben ser configurables por el superadmin, por ejemplo debe poder poner: si es para club (en ese caso la cantidad de miembros), cantidad de clases mensuales, cantidad de ejercicios, edicion de clases, edicion de ejercicios, las cantidades pueden ser "ilimitadas" en dicho caso quizas ponemos 1000 para cada tipo. Quizas configurariamos mejor los planes como: precio, cantidad de meses y tipo (individual o club) y luego el superadmin le agrega los permisos al plan en si.
 
+-Backup de la base de datos
 -Al eliminar un usuarios, deberia hacer un borrado logico.
 
 -Agregar opcion de imprimir ejercicio
 -Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
 -Agregar opcion de imprimir clase (podrian seleccionrse si se quieren todos los ejercicios o solo algunos mendiante preview con checks)
+-Agregar tracker
 
 (opcional)-En la vista de deportes, podriamos listar los elementos
 (opcional)-Al crear un coach desde un club, se podria mandar un email de bienvenida
