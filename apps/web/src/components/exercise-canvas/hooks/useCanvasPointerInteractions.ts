@@ -31,6 +31,12 @@ import {
     type OrderBadgeElementType,
     type OrderOverlayBadge,
 } from "@/utils/order-overlay-badges"
+import {
+    clampLabelPosition,
+    findLabelAt,
+    getDefaultLabelAnchor,
+    type LabelOverlayItem,
+} from "@/utils/label-overlay"
 
 export type DragTarget =
     | { type: "image"; index: number }
@@ -43,6 +49,13 @@ export type DragTarget =
     | { type: "selection-group" }
     | {
           type: "order-badge"
+          elementType: OrderBadgeElementType
+          index: number
+          anchorX: number
+          anchorY: number
+      }
+    | {
+          type: "label"
           elementType: OrderBadgeElementType
           index: number
           anchorX: number
@@ -64,6 +77,8 @@ interface Args {
     contextMenuIsOpen: boolean
     showOrderOverlay: boolean
     orderOverlayItems: OrderOverlayBadge[]
+    showTitleOverlay: boolean
+    labelOverlayItems: LabelOverlayItem[]
     images: ImageElementInstance[]
     arrows: ArrowElementInstance[]
     circles: CircleElementInstance[]
@@ -116,6 +131,8 @@ export const useCanvasPointerInteractions = ({
     contextMenuIsOpen,
     showOrderOverlay,
     orderOverlayItems,
+    showTitleOverlay,
+    labelOverlayItems,
     images,
     arrows,
     circles,
@@ -174,12 +191,12 @@ export const useCanvasPointerInteractions = ({
         return arrows[index] ?? null
     }
 
-    const applyOrderOffset = (
+    const applyElementOffset = (
         elementType: OrderBadgeElementType,
         index: number,
-        orderOffset: Point,
+        patchFields: Partial<ElementInstance>,
     ) => {
-        const patch = (el: ElementInstance) => ({ ...el, orderOffset })
+        const patch = (el: ElementInstance) => ({ ...el, ...patchFields })
         if (elementType === "image") {
             setImages((prev) => {
                 const updated = [...prev]
@@ -222,6 +239,22 @@ export const useCanvasPointerInteractions = ({
             updated[index] = patch(updated[index]) as ArrowElementInstance
             return updated
         })
+    }
+
+    const applyOrderOffset = (
+        elementType: OrderBadgeElementType,
+        index: number,
+        orderOffset: Point,
+    ) => {
+        applyElementOffset(elementType, index, { orderOffset })
+    }
+
+    const applyLabelOffset = (
+        elementType: OrderBadgeElementType,
+        index: number,
+        labelOffset: Point,
+    ) => {
+        applyElementOffset(elementType, index, { labelOffset })
     }
 
     const handlePointerDown = useCallback((x: number, y: number) => {
@@ -307,8 +340,47 @@ export const useCanvasPointerInteractions = ({
             }
         }
 
+        if (showTitleOverlay && labelOverlayItems.length > 0) {
+            const labelHit = findLabelAt(x, y, labelOverlayItems)
+            if (labelHit) {
+                const element = getElementByBadgeTarget(labelHit.elementType, labelHit.index)
+                if (element) {
+                    const item = { type: labelHit.elementType, id: element.id! } as SelectionItem
+                    if (element.id) {
+                        const alreadySelected = isSelected(selection, labelHit.elementType, element.id)
+                        if (!alreadySelected) {
+                            const nextSelection = [item]
+                            setSelection(nextSelection)
+                            selectionRef.current = nextSelection
+                        }
+                    }
+                    setSelectedElement({ type: labelHit.elementType, index: labelHit.index })
+                    setSelectedArrowId(labelHit.elementType === "arrow" ? element.id : null)
+
+                    const [anchorX, anchorY] = getDefaultLabelAnchor(labelHit.elementType, element)
+                    onHistoryCheckpoint()
+                    draggingRef.current = {
+                        type: "label",
+                        elementType: labelHit.elementType,
+                        index: labelHit.index,
+                        anchorX,
+                        anchorY,
+                    }
+                    offsetRef.current = { x: x - labelHit.x, y: y - labelHit.y }
+                    setShowSelectionMenu(false)
+                    setMarquee(null)
+                    return
+                }
+            }
+        }
+
         const arrowHandle = findArrowHandleAt(x, y)
-        if (arrowHandle && arrowHandle.type !== "selection-group" && arrowHandle.type !== "order-badge") {
+        if (
+            arrowHandle &&
+            arrowHandle.type !== "selection-group" &&
+            arrowHandle.type !== "order-badge" &&
+            arrowHandle.type !== "label"
+        ) {
             const handleIndex =
                 arrowHandle.type === "arrow-start" ||
                 arrowHandle.type === "arrow-end" ||
@@ -400,6 +472,8 @@ export const useCanvasPointerInteractions = ({
         setTempArrow,
         setTempShape,
         showOrderOverlay,
+        showTitleOverlay,
+        labelOverlayItems,
     ])
 
     const handlePointerMove = useCallback((x: number, y: number) => {
@@ -450,6 +524,34 @@ export const useCanvasPointerInteractions = ({
                 clampedY - dragTarget.anchorY,
             ]
             applyOrderOffset(dragTarget.elementType, dragTarget.index, orderOffset)
+            return
+        }
+
+        if (dragTarget.type === "label") {
+            const element = getElementByBadgeTarget(dragTarget.elementType, dragTarget.index)
+            if (!element) return
+
+            const desiredX = x - offsetRef.current.x
+            const desiredY = y - offsetRef.current.y
+            const nextSelection =
+                element.id && isSelected(selectionRef.current, dragTarget.elementType, element.id)
+                    ? selectionRef.current
+                    : element.id
+                      ? [{ type: dragTarget.elementType, id: element.id }]
+                      : selectionRef.current
+            const [clampedX, clampedY] = clampLabelPosition(
+                desiredX,
+                desiredY,
+                dragTarget.elementType,
+                element,
+                nextSelection,
+                canvasSnapshot(),
+            )
+            const labelOffset: Point = [
+                clampedX - dragTarget.anchorX,
+                clampedY - dragTarget.anchorY,
+            ]
+            applyLabelOffset(dragTarget.elementType, dragTarget.index, labelOffset)
             return
         }
 

@@ -2,9 +2,10 @@ import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance,
 import type { MutableRefObject } from "react"
 
 import { ORDER_BADGE_RADIUS, type OrderOverlayBadge } from "@/utils/order-overlay-badges"
+import { getDefaultLabelAnchor, LABEL_FONT_SIZE } from "@/utils/label-overlay"
 
 import type { TempShape } from "./canvas-helpers"
-import { getArrowCenter, getShapeBounds, getReadableTextColor, hexToColor } from "./canvas-helpers"
+import { getShapeBounds, getReadableTextColor, hexToColor } from "./canvas-helpers"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createSafeFont = (ck: any, size: number) => {
@@ -108,12 +109,15 @@ export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, 14)
+        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        canvas.drawText(img.label, img.x, img.y - 8, labelPaint, labelFont)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("image", img)
+        const ox = img.labelOffset?.[0] ?? 0
+        const oy = img.labelOffset?.[1] ?? 0
+        canvas.drawText(img.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
         labelFont.delete()
         labelPaint.delete()
     }
@@ -207,14 +211,16 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, 14)
+        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
         if (!labelFont) {
             labelPaint.delete()
             paint.delete()
             return
         }
-        const center = getArrowCenter(points)
-        canvas.drawText(arrow.label, center[0], center[1] - 8, labelPaint, labelFont)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("arrow", arrow)
+        const ox = arrow.labelOffset?.[0] ?? 0
+        const oy = arrow.labelOffset?.[1] ?? 0
+        canvas.drawText(arrow.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
         labelFont.delete()
         labelPaint.delete()
     }
@@ -236,12 +242,15 @@ export const drawCircleElement = (canvas: any, ck: any, circle: CircleElementIns
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, 14)
+        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        canvas.drawText(circle.label, circle.x - circle.data.radius, circle.y - circle.data.radius - 8, labelPaint, labelFont)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("circle", circle)
+        const ox = circle.labelOffset?.[0] ?? 0
+        const oy = circle.labelOffset?.[1] ?? 0
+        canvas.drawText(circle.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
         labelFont.delete()
         labelPaint.delete()
     }
@@ -267,12 +276,15 @@ export const drawRectElement = (canvas: any, ck: any, rect: RectElementInstance,
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, 14)
+        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        canvas.drawText(rect.label, rect.x, rect.y - 8, labelPaint, labelFont)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("rect", rect)
+        const ox = rect.labelOffset?.[0] ?? 0
+        const oy = rect.labelOffset?.[1] ?? 0
+        canvas.drawText(rect.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
         labelFont.delete()
         labelPaint.delete()
     }
@@ -305,14 +317,15 @@ export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance,
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, 14)
+        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        const centerX = (line.data.start[0] + line.data.end[0]) / 2
-        const centerY = (line.data.start[1] + line.data.end[1]) / 2
-        canvas.drawText(line.label, centerX, centerY - 8, labelPaint, labelFont)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("line", line)
+        const ox = line.labelOffset?.[0] ?? 0
+        const oy = line.labelOffset?.[1] ?? 0
+        canvas.drawText(line.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
         labelFont.delete()
         labelPaint.delete()
     }

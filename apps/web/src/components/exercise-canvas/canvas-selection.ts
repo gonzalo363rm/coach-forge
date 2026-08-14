@@ -131,6 +131,11 @@ export function getCanvasContentBounds(canvas: CanvasElementsSnapshot): Bounds |
         ...canvas.arrows.map(getArrowBounds),
     ]
 
+    return unionBounds(boundsList)
+}
+
+/** Une varios bounds en el AABB mínimo que los contiene a todos. */
+export function unionBounds(boundsList: Bounds[]): Bounds | null {
     if (boundsList.length === 0) return null
 
     return {

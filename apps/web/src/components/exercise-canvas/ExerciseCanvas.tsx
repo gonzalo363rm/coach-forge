@@ -24,7 +24,8 @@ import {
     buildOrderedItemsFromCanvas,
     playerOptionsFromCanvas,
 } from "@/utils/exercise-ordered-items"
-import { buildOrderOverlayBadges } from "@/utils/order-overlay-badges"
+import { buildOrderOverlayBadges, ORDER_BADGE_RADIUS } from "@/utils/order-overlay-badges"
+import { buildLabelOverlayItems } from "@/utils/label-overlay"
 import { ExerciseOrderPanel, type OrderedItemSummary } from "./ExerciseOrderPanel"
 import { ElementContextMenu } from "./ElementContextMenu"
 import { ResetConfirmModal } from "./ResetConfirmModal"
@@ -69,6 +70,8 @@ import {
     normalizeMarquee,
     pasteClipboard,
     removeSelectionFromCanvas,
+    unionBounds,
+    type Bounds,
     type CanvasElementsSnapshot,
     type MarqueeRect,
     type SelectionItem,
@@ -97,6 +100,13 @@ type DragTarget =
     | { type: "selection-group" }
     | {
           type: "order-badge"
+          elementType: "image" | "circle" | "rect" | "line" | "arrow"
+          index: number
+          anchorX: number
+          anchorY: number
+      }
+    | {
+          type: "label"
           elementType: "image" | "circle" | "rect" | "line" | "arrow"
           index: number
           anchorX: number
@@ -491,6 +501,31 @@ export const ExerciseCanvas = ({
         ],
     )
 
+    const labelOverlayItems = useMemo(
+        () =>
+            showTitleOverlay
+                ? buildLabelOverlayItems({
+                      images,
+                      arrows,
+                      circles,
+                      rects,
+                      lines,
+                      canvasWidth: canvasSize.width,
+                      canvasHeight: canvasSize.height,
+                  })
+                : [],
+        [
+            arrows,
+            canvasSize.height,
+            canvasSize.width,
+            circles,
+            images,
+            lines,
+            rects,
+            showTitleOverlay,
+        ],
+    )
+
     useEffect(() => {
         const raf = requestAnimationFrame(() => {
             canvasRef.current?.redraw()
@@ -514,6 +549,7 @@ export const ExerciseCanvas = ({
         showTitleOverlay,
         showOrderOverlay,
         orderOverlayItems,
+        labelOverlayItems,
     ])
 
     useEffect(() => {
@@ -696,9 +732,57 @@ export const ExerciseCanvas = ({
         tempShape,
     ])
 
-    /** Vista previa: encuadra todo el contenido + margen dentro del tamaño de export. */
+    /** Vista previa: encuadra contenido + labels/order visibles + margen. */
     const previewFrame = useMemo(() => {
-        const contentBounds = getCanvasContentBounds(canvasElementsSnapshot)
+        const elementBounds = getCanvasContentBounds(canvasElementsSnapshot)
+        const overlayBounds: Bounds[] = []
+
+        if (showOrderOverlay) {
+            const badges = buildOrderOverlayBadges({
+                images,
+                arrows,
+                circles,
+                rects,
+                lines,
+                canvasWidth: canvasSize.width,
+                canvasHeight: canvasSize.height,
+            })
+            for (const badge of badges) {
+                overlayBounds.push({
+                    left: badge.x - ORDER_BADGE_RADIUS,
+                    top: badge.y - ORDER_BADGE_RADIUS,
+                    right: badge.x + ORDER_BADGE_RADIUS,
+                    bottom: badge.y + ORDER_BADGE_RADIUS,
+                })
+            }
+        }
+
+        if (showTitleOverlay) {
+            const labels = buildLabelOverlayItems({
+                images,
+                arrows,
+                circles,
+                rects,
+                lines,
+                canvasWidth: canvasSize.width,
+                canvasHeight: canvasSize.height,
+            })
+            for (const label of labels) {
+                // drawText usa baseline en y; el glifo queda mayormente por encima.
+                overlayBounds.push({
+                    left: label.x,
+                    top: label.y - label.height,
+                    right: label.x + label.width,
+                    bottom: label.y,
+                })
+            }
+        }
+
+        const contentBounds = unionBounds([
+            ...(elementBounds ? [elementBounds] : []),
+            ...overlayBounds,
+        ])
+
         if (!contentBounds) {
             return {
                 width: canvasSize.width,
@@ -729,7 +813,18 @@ export const ExerciseCanvas = ({
             originY: framed.top,
             contentScale: fit,
         }
-    }, [canvasElementsSnapshot, canvasSize.height, canvasSize.width])
+    }, [
+        arrows,
+        canvasElementsSnapshot,
+        canvasSize.height,
+        canvasSize.width,
+        circles,
+        images,
+        lines,
+        rects,
+        showOrderOverlay,
+        showTitleOverlay,
+    ])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawForPreviewSnapshot = useCallback((canvas: any, ck: any) => {
@@ -777,13 +872,13 @@ export const ExerciseCanvas = ({
             .sort((a, b) => a.zIndex - b.zIndex || a.sequence - b.sequence)
             .forEach((item) => {
                 if (item.type === "image") {
-                    drawImageElementHelper(canvas, ck, images[item.index], imagesCacheRef, false)
+                    drawImageElementHelper(canvas, ck, images[item.index], imagesCacheRef, showTitleOverlay)
                 } else if (item.type === "circle") {
-                    drawCircleElementHelper(canvas, ck, circles[item.index], false)
+                    drawCircleElementHelper(canvas, ck, circles[item.index], showTitleOverlay)
                 } else if (item.type === "rect") {
-                    drawRectElementHelper(canvas, ck, rects[item.index], false)
+                    drawRectElementHelper(canvas, ck, rects[item.index], showTitleOverlay)
                 } else if (item.type === "line") {
-                    drawLineElementHelper(canvas, ck, lines[item.index], false)
+                    drawLineElementHelper(canvas, ck, lines[item.index], showTitleOverlay)
                 } else {
                     drawArrowHelper(
                         canvas,
@@ -793,23 +888,24 @@ export const ExerciseCanvas = ({
                         DEFAULT_ARROW_STROKE,
                         DEFAULT_ARROW_COLOR,
                         false,
-                        false,
+                        showTitleOverlay,
                     )
                 }
             })
 
-        // Incluir números de orden en la imagen guardada (independiente del overlay del editor).
-        const previewOrderBadges = buildOrderOverlayBadges({
-            images,
-            arrows,
-            circles,
-            rects,
-            lines,
-            canvasWidth: canvasSize.width,
-            canvasHeight: canvasSize.height,
-        })
-        if (previewOrderBadges.length > 0) {
-            drawOrderBadgesHelper(canvas, ck, previewOrderBadges)
+        if (showOrderOverlay) {
+            const previewOrderBadges = buildOrderOverlayBadges({
+                images,
+                arrows,
+                circles,
+                rects,
+                lines,
+                canvasWidth: canvasSize.width,
+                canvasHeight: canvasSize.height,
+            })
+            if (previewOrderBadges.length > 0) {
+                drawOrderBadgesHelper(canvas, ck, previewOrderBadges)
+            }
         }
 
         canvas.restore()
@@ -827,6 +923,8 @@ export const ExerciseCanvas = ({
         previewFrame.originY,
         previewFrame.width,
         rects,
+        showOrderOverlay,
+        showTitleOverlay,
     ])
 
     const findArrowHandleAt = (x: number, y: number): DragTarget => {
@@ -1557,6 +1655,8 @@ export const ExerciseCanvas = ({
         contextMenuIsOpen: contextMenu.isOpen,
         showOrderOverlay,
         orderOverlayItems,
+        showTitleOverlay,
+        labelOverlayItems,
         images,
         arrows,
         circles,
