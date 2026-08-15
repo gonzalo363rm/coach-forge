@@ -6,6 +6,10 @@ import { contentVisibilitySchemaValues } from "@/lib/content-visibility"
 export const EXERCISE_EMPTY_CANVAS_MESSAGE =
     "No se puede guardar un ejercicio vacío."
 
+/** Mensaje unificado para ejercicio sin título. */
+export const EXERCISE_EMPTY_TITLE_MESSAGE =
+    "El título es obligatorio."
+
 /** Tamaño máximo del cuerpo HTTP (bytes UTF-8) antes de parsear JSON. */
 export const MAX_REQUEST_BODY_BYTES = 1_048_576
 
@@ -137,7 +141,7 @@ export const exerciseCreateSchema = z
             undefinedToNull,
             z.union([z.string().min(1), z.null()]),
         ),
-        title: z.string().max(500),
+        title: z.string().trim().min(1, EXERCISE_EMPTY_TITLE_MESSAGE).max(500),
         minPlayers: z.preprocess(
             undefinedToNull,
             z.union([z.number().int().positive(), z.null()]),
@@ -193,7 +197,7 @@ export const exerciseCreateSchema = z
 export const exerciseUpdateSchema = z
     .object({
         sportId: z.union([z.string().min(1), z.null()]).optional(),
-        title: z.string().max(500).optional(),
+        title: z.string().trim().min(1, EXERCISE_EMPTY_TITLE_MESSAGE).max(500).optional(),
         minPlayers: z.union([z.number().int().positive(), z.null()]).optional(),
         maxPlayers: z.union([z.number().int().positive(), z.null()]).optional(),
         difficulty: z.number().int().min(1).max(5).optional(),

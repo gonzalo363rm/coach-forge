@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { VisibilitySelect } from "@/components/content/VisibilitySelect"
 import type { Exercise, ExerciseCanvas, SportListOption } from "@/interfaces"
-import { EXERCISE_EMPTY_CANVAS_MESSAGE } from "@/schemas/exercise.schema"
+import { EXERCISE_EMPTY_CANVAS_MESSAGE, EXERCISE_EMPTY_TITLE_MESSAGE } from "@/schemas/exercise.schema"
 
 export type SaveExerciseModalFieldDefaults = {
     title: string
@@ -100,6 +100,10 @@ export const SaveExerciseModal = ({
         setIsSaving(true)
         try {
             const exercise = buildExercise()
+            if (!exercise.title) {
+                window.alert(EXERCISE_EMPTY_TITLE_MESSAGE)
+                return
+            }
             const c = exercise.canvas
             const elementCount =
                 c.images.length +
@@ -173,6 +177,8 @@ export const SaveExerciseModal = ({
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
+                            required
+                            aria-required="true"
                             className="cf-modal-input"
                         />
                     </label>
@@ -256,7 +262,7 @@ export const SaveExerciseModal = ({
                         type="button"
                         variant="primary"
                         size="sm"
-                        disabled={isSaving}
+                        disabled={isSaving || title.trim() === ""}
                         onClick={handleConfirm}
                     >
                         {isSaving ? "Guardando..." : "Aceptar"}
