@@ -9,6 +9,7 @@ import type {
 
 import { permissionAppliesToPlanType } from "@/lib/billing-labels"
 import { getPrisma } from "@/lib/prisma"
+import { applyDiscounts, getOfferFinalPrice } from "@/lib/plan-pricing"
 import type {
     PlanCreateInput,
     PlanListSortBy,
@@ -235,6 +236,45 @@ export type PlanSelectOption = {
     catalogRole: PlanCatalogRole
 }
 
+type PlanOfferForSort = {
+    price: string | Prisma.Decimal
+    discounts: Array<{
+        type: "percentage" | "fixed"
+        value: string | Prisma.Decimal
+        status?: string
+    }>
+}
+
+function getPlanLowestFinalPrice(
+    plan: { catalogRole: PlanCatalogRole; offers: PlanOfferForSort[] },
+): number {
+    if (plan.catalogRole === "free" || plan.offers.length === 0) return 0
+
+    let lowest = Number.POSITIVE_INFINITY
+    for (const offer of plan.offers) {
+        const discounts = offer.discounts
+            .filter((row) => row.status !== "inactive")
+            .map((row) => ({
+                type: row.type,
+                value: Number(row.value),
+            }))
+        const { finalPrice } = applyDiscounts(Number(offer.price), discounts)
+        lowest = Math.min(lowest, finalPrice)
+    }
+
+    return Number.isFinite(lowest) ? lowest : 0
+}
+
+function sortPlansByPrice<T extends { name: string; catalogRole: PlanCatalogRole; offers: PlanOfferForSort[] }>(
+    plans: T[],
+): T[] {
+    return [...plans].sort((a, b) => {
+        const priceDiff = getPlanLowestFinalPrice(a) - getPlanLowestFinalPrice(b)
+        if (priceDiff !== 0) return priceDiff
+        return a.name.localeCompare(b.name, "es")
+    })
+}
+
 export async function plansListOptionsByType(type: PlanType): Promise<PlanSelectOption[]> {
     return getPrisma().plan.findMany({
         where: { type, status: "active" },
@@ -315,7 +355,7 @@ export async function plansListPublicByType(type: PlanType): Promise<
 > {
     const plans = await getPrisma().plan.findMany({
         where: { type, status: "active" },
-        orderBy: [{ catalogRole: "desc" }, { name: "asc" }],
+        orderBy: { name: "asc" },
         include: {
             permissions: {
                 include: { permission: true },
@@ -333,33 +373,93 @@ export async function plansListPublicByType(type: PlanType): Promise<
         },
     })
 
-    return plans.map((plan) => ({
-        ...plan,
-        permissions: plan.permissions
-            .filter((row) => row.permission.status === "active")
-            .map((row) => ({
-                code: row.permission.code,
-                name: row.permission.name,
-                valueKind: row.permission.valueKind,
-                value: row.value,
-            })),
-        offers: plan.offers.map((offer) => ({
-            id: offer.id,
-            name: offer.name,
-            durationValue: offer.durationValue,
-            durationUnit: offer.durationUnit,
-            price: offer.price.toString(),
-            currency: offer.currency,
-            discounts: offer.discounts
-                .filter((row) => row.discount.status === "active")
+    return sortPlansByPrice(
+        plans.map((plan) => ({
+            ...plan,
+            permissions: plan.permissions
+                .filter((row) => row.permission.status === "active")
                 .map((row) => ({
-                    name: row.discount.name,
-                    type: row.discount.type,
-                    value: row.discount.value.toString(),
-                    code: row.discount.code,
+                    code: row.permission.code,
+                    name: row.permission.name,
+                    valueKind: row.permission.valueKind,
+                    value: row.value,
                 })),
+            offers: plan.offers.map((offer) => ({
+                id: offer.id,
+                name: offer.name,
+                durationValue: offer.durationValue,
+                durationUnit: offer.durationUnit,
+                price: offer.price.toString(),
+                currency: offer.currency,
+                discounts: offer.discounts
+                    .filter((row) => row.discount.status === "active")
+                    .map((row) => ({
+                        name: row.discount.name,
+                        type: row.discount.type,
+                        value: row.discount.value.toString(),
+                        code: row.discount.code,
+                    })),
+            })),
         })),
-    }))
+    )
+}
+
+function mapDbOfferDiscounts(
+    rows: Array<{
+        discount: {
+            status: string
+            type: "percentage" | "fixed"
+            value: Prisma.Decimal
+        }
+    }>,
+) {
+    return rows
+        .filter((row) => row.discount.status === "active")
+        .map((row) => ({
+            type: row.discount.type,
+            value: Number(row.discount.value),
+        }))
+}
+
+export async function isPlanOfferCheaperThanCurrentPlan(
+    currentPlanId: string,
+    targetPlanOfferId: string,
+): Promise<boolean> {
+    const targetOffer = await getPrisma().planOffer.findUnique({
+        where: { id: targetPlanOfferId },
+        include: {
+            discounts: { include: { discount: true } },
+        },
+    })
+    if (!targetOffer || targetOffer.status !== "active") return false
+
+    const currentOffers = await getPrisma().planOffer.findMany({
+        where: {
+            planId: currentPlanId,
+            status: "active",
+            durationValue: targetOffer.durationValue,
+            durationUnit: targetOffer.durationUnit,
+        },
+        include: {
+            discounts: { include: { discount: true } },
+        },
+    })
+    if (currentOffers.length === 0) return false
+
+    const targetPrice = getOfferFinalPrice({
+        price: Number(targetOffer.price),
+        discounts: mapDbOfferDiscounts(targetOffer.discounts),
+    })
+    const currentPrice = Math.min(
+        ...currentOffers.map((offer) =>
+            getOfferFinalPrice({
+                price: Number(offer.price),
+                discounts: mapDbOfferDiscounts(offer.discounts),
+            }),
+        ),
+    )
+
+    return targetPrice < currentPrice
 }
 
 export async function planCreate(input: PlanCreateInput): Promise<CatalogMutationResult<Plan>> {

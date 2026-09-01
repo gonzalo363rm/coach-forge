@@ -6,6 +6,7 @@ import type {
     Subscription,
 } from "@prisma/client"
 
+import { getGraceCutoffDate, getGraceEndsAt, isInGracePeriod } from "@/lib/billing-config"
 import { getPrisma } from "@/lib/prisma"
 import { applyDiscounts, isCatalogWindowValid } from "@/lib/plan-pricing"
 
@@ -91,12 +92,13 @@ export async function getActiveSubscription(
     userId: string,
 ): Promise<(Subscription & { plan: Plan }) | null> {
     const now = new Date()
+    const graceCutoff = getGraceCutoffDate(now)
     return getPrisma().subscription.findFirst({
         where: {
             userId,
             status: "active",
             startDate: { lte: now },
-            endDate: { gt: now },
+            endDate: { gt: graceCutoff },
         },
         include: { plan: true },
         orderBy: { endDate: "desc" },
@@ -104,12 +106,12 @@ export async function getActiveSubscription(
 }
 
 export async function expireOverdueSubscriptionsForUser(userId: string): Promise<number> {
-    const now = new Date()
+    const graceCutoff = getGraceCutoffDate()
     const result = await getPrisma().subscription.updateMany({
         where: {
             userId,
             status: "active",
-            endDate: { lte: now },
+            endDate: { lte: graceCutoff },
         },
         data: { status: "expired" },
     })
@@ -117,11 +119,11 @@ export async function expireOverdueSubscriptionsForUser(userId: string): Promise
 }
 
 export async function expireOverdueSubscriptions(): Promise<number> {
-    const now = new Date()
+    const graceCutoff = getGraceCutoffDate()
     const result = await getPrisma().subscription.updateMany({
         where: {
             status: "active",
-            endDate: { lte: now },
+            endDate: { lte: graceCutoff },
         },
         data: { status: "expired" },
     })
@@ -493,6 +495,7 @@ export type UserBillingAdminSummary = {
     currentPlanName: string | null
     catalogRole: "none" | "free" | "full" | null
     endDate: Date | null
+    graceEndsAt: Date | null
     subscriptionStatus: Subscription["status"] | null
 }
 
@@ -518,6 +521,7 @@ export async function getUserBillingAdminSummary(
             currentPlanName: null,
             catalogRole: null,
             endDate: null,
+            graceEndsAt: null,
             subscriptionStatus: null,
         }
     }
@@ -531,6 +535,7 @@ export async function getUserBillingAdminSummary(
             currentPlanName: null,
             catalogRole: null,
             endDate: null,
+            graceEndsAt: null,
             subscriptionStatus: null,
         }
     }
@@ -544,6 +549,7 @@ export async function getUserBillingAdminSummary(
             currentPlanName: null,
             catalogRole: null,
             endDate: null,
+            graceEndsAt: null,
             subscriptionStatus: null,
         }
     }
@@ -553,6 +559,7 @@ export async function getUserBillingAdminSummary(
     const active = await getActiveSubscription(user.id)
 
     if (active) {
+        const inGrace = isInGracePeriod(active.endDate)
         return {
             canEdit: true,
             planType,
@@ -560,6 +567,7 @@ export async function getUserBillingAdminSummary(
             currentPlanName: active.planName,
             catalogRole: active.plan.catalogRole,
             endDate: active.endDate,
+            graceEndsAt: inGrace ? getGraceEndsAt(active.endDate) : null,
             subscriptionStatus: active.status,
         }
     }
@@ -576,6 +584,7 @@ export async function getUserBillingAdminSummary(
         currentPlanName: freePlan?.name ?? "Free (catálogo)",
         catalogRole: freePlan?.catalogRole ?? "free",
         endDate: null,
+        graceEndsAt: null,
         subscriptionStatus: null,
     }
 }

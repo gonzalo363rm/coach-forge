@@ -19,7 +19,9 @@ export default async function PlansPage() {
         redirect("/login?callbackUrl=/plans")
     }
 
-    const { subject, planId } = await getEffectiveEntitlements(session.user.id)
+    const { subject, planId, inGracePeriod, catalogRole } = await getEffectiveEntitlements(
+        session.user.id,
+    )
     if (!subject) {
         redirect("/")
     }
@@ -50,6 +52,8 @@ export default async function PlansPage() {
                     plans={plans}
                     showCheckout={canCheckout}
                     currentPlanId={planId}
+                    inGracePeriod={inGracePeriod}
+                    blockCheaperPlans={catalogRole === "full" && !inGracePeriod}
                 />
             </main>
         </div>

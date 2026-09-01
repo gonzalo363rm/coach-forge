@@ -66,3 +66,33 @@ export function formatMoneyArs(amount: number): string {
         currency: "ARS",
     }).format(amount)
 }
+
+export type OfferForDurationPricing = {
+    price: string | number
+    durationValue: number
+    durationUnit: "month" | "year"
+    discounts: DiscountForPrice[]
+}
+
+export function getOfferFinalPrice(offer: {
+    price: string | number
+    discounts: DiscountForPrice[]
+}): number {
+    return applyDiscounts(Number(offer.price), offer.discounts).finalPrice
+}
+
+export function getPlanFinalPriceForDuration(
+    offers: OfferForDurationPricing[],
+    duration: Pick<OfferForDurationPricing, "durationValue" | "durationUnit"> | null,
+): number | null {
+    if (!duration) return null
+
+    const matches = offers.filter(
+        (offer) =>
+            offer.durationValue === duration.durationValue &&
+            offer.durationUnit === duration.durationUnit,
+    )
+    if (matches.length === 0) return null
+
+    return Math.min(...matches.map((offer) => getOfferFinalPrice(offer)))
+}

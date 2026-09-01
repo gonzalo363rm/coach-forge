@@ -111,6 +111,12 @@ export function UserPlanAdminSection({ userId, billing, plans }: Props) {
                 <p className="mt-1 text-zinc-500 dark:text-zinc-400">
                     Vence:{" "}
                     {billing.endDate ? formatBillingDateTime(billing.endDate) : "Sin vencimiento"}
+                    {billing.graceEndsAt ? (
+                        <>
+                            {" "}
+                            (en gracia hasta {formatBillingDateTime(billing.graceEndsAt)})
+                        </>
+                    ) : null}
                 </p>
             </div>
 
@@ -171,7 +177,8 @@ export function UserPlanAdminSection({ userId, billing, plans }: Props) {
                             {...register("endDate")}
                         />
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            Al vencer, el usuario pasa al plan Free automáticamente.
+                            Al vencer, el usuario conserva el plan durante 7 días de gracia;
+                            después pasa a Free.
                         </p>
                         {errors.endDate ? (
                             <p className="text-xs text-red-600 dark:text-red-400">

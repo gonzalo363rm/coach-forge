@@ -1,12 +1,6 @@
 # Crítico
 
-- (parcial) Integración Mercado Pago Checkout Pro: Preference + webhook + activar suscripción (falta probar en sandbox con `MP_ACCESS_TOKEN`)
-
-- Para los pagos ver lo de Suscripciones que ofrece MP
-
 - Agregar notificaciones push para mobile con sonido y/o evitar que se bloquee el telefono
-
-- Autenticación por google
 
 - Poner un tiempo de gracia desde que se vence hasta que se paga otro mes, para no interrumpir el uso
 

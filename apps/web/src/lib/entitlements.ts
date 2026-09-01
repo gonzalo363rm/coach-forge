@@ -1,5 +1,6 @@
 import type { PlanType, Role } from "@prisma/client"
 
+import { getGraceEndsAt, isInGracePeriod } from "@/lib/billing-config"
 import { isStaffRole } from "@/lib/user-permissions"
 import { getPrisma } from "@/lib/prisma"
 import {
@@ -84,7 +85,16 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
     planName: string | null
     catalogRole: "none" | "free" | "full" | null
     bypass: boolean
+    inGracePeriod: boolean
+    subscriptionEndDate: Date | null
+    graceEndsAt: Date | null
 }> {
+    const emptyGrace = {
+        inGracePeriod: false,
+        subscriptionEndDate: null as Date | null,
+        graceEndsAt: null as Date | null,
+    }
+
     const subject = await resolveBillingSubject(userId)
     if (!subject) {
         return {
@@ -94,6 +104,7 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
             planName: null,
             catalogRole: null,
             bypass: false,
+            ...emptyGrace,
         }
     }
 
@@ -105,6 +116,7 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
             planName: null,
             catalogRole: null,
             bypass: true,
+            ...emptyGrace,
         }
     }
 
@@ -115,6 +127,7 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
         const ents = buildEntitlementsFromSnapshot(
             active.permissionsSnapshot as PermissionSnapshotItem[],
         )
+        const inGrace = isInGracePeriod(active.endDate)
         return {
             entitlements: ents,
             subject,
@@ -122,6 +135,9 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
             planName: active.planName,
             catalogRole: active.plan.catalogRole,
             bypass: false,
+            inGracePeriod: inGrace,
+            subscriptionEndDate: active.endDate,
+            graceEndsAt: inGrace ? getGraceEndsAt(active.endDate) : null,
         }
     }
 
@@ -144,6 +160,7 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
             planName: null,
             catalogRole: null,
             bypass: false,
+            ...emptyGrace,
         }
     }
 
@@ -154,6 +171,7 @@ export async function getEffectiveEntitlements(userId: string): Promise<{
         planName: freePlan.name,
         catalogRole: "free",
         bypass: false,
+        ...emptyGrace,
     }
 }
 

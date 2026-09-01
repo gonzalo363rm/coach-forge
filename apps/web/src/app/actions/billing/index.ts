@@ -10,6 +10,7 @@ import {
 import { getPrisma } from "@/lib/prisma"
 import { requireAuthenticatedUser } from "@/lib/resource-access"
 import { checkoutPreferenceSchema } from "@/schemas/billing.schema"
+import { isPlanOfferCheaperThanCurrentPlan } from "@/services/plans.service"
 import { createPendingSubscription } from "@/services/subscriptions.service"
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -35,6 +36,21 @@ export async function createCheckoutPreferenceAction(
     const entitlements = await getEffectiveEntitlements(authResult.user.id)
     if (!entitlements.subject?.canManageBilling) {
         return { ok: false, error: "No podés gestionar la suscripción de este plan" }
+    }
+
+    if (
+        entitlements.catalogRole === "full" &&
+        !entitlements.inGracePeriod &&
+        entitlements.planId &&
+        (await isPlanOfferCheaperThanCurrentPlan(
+            entitlements.planId,
+            parsed.data.planOfferId,
+        ))
+    ) {
+        return {
+            ok: false,
+            error: "No podés cambiar a un plan inferior mientras tu suscripción está activa",
+        }
     }
 
     const pending = await createPendingSubscription({

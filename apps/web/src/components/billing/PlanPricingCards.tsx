@@ -12,7 +12,7 @@ import {
     formatPlanCatalogRole,
     formatPlanFeature,
 } from "@/lib/billing-labels"
-import { applyDiscounts, formatMoneyArs } from "@/lib/plan-pricing"
+import { applyDiscounts, formatMoneyArs, getPlanFinalPriceForDuration } from "@/lib/plan-pricing"
 import type { plansListPublicByType } from "@/services/plans.service"
 
 type PlanCard = Awaited<ReturnType<typeof plansListPublicByType>>[number]
@@ -30,6 +30,8 @@ type Props = {
     plans: PlanCard[]
     showCheckout: boolean
     currentPlanId?: string | null
+    inGracePeriod?: boolean
+    blockCheaperPlans?: boolean
 }
 
 function offerDurationKey(offer: Pick<PlanOffer, "durationValue" | "durationUnit">): string {
@@ -97,7 +99,13 @@ function formatDiscountLabel(
     return `-${pct}%`
 }
 
-export function PlanPricingCards({ plans, showCheckout, currentPlanId = null }: Props) {
+export function PlanPricingCards({
+    plans,
+    showCheckout,
+    currentPlanId = null,
+    inGracePeriod = false,
+    blockCheaperPlans = false,
+}: Props) {
     const { toast } = useToast()
     const [pendingOfferId, setPendingOfferId] = useState<string | null>(null)
     const [pending, startTransition] = useTransition()
@@ -110,6 +118,25 @@ export function PlanPricingCards({ plans, showCheckout, currentPlanId = null }: 
         durationOptions.find((item) => item.key === durationKey) ??
         durationOptions.find((item) => item.key === longestDurationKey) ??
         null
+
+    const currentPlanFinalPrice = useMemo(() => {
+        if (!blockCheaperPlans || !currentPlanId) return null
+        const currentPlan = plans.find((plan) => plan.id === currentPlanId)
+        if (!currentPlan) return null
+
+        return getPlanFinalPriceForDuration(
+            currentPlan.offers.map((offer) => ({
+                price: offer.price,
+                durationValue: offer.durationValue,
+                durationUnit: offer.durationUnit,
+                discounts: offer.discounts.map((discount) => ({
+                    type: discount.type,
+                    value: Number(discount.value),
+                })),
+            })),
+            selectedDuration,
+        )
+    }, [blockCheaperPlans, currentPlanId, plans, selectedDuration])
 
     function checkout(planOfferId: string) {
         setPendingOfferId(planOfferId)
@@ -172,6 +199,7 @@ export function PlanPricingCards({ plans, showCheckout, currentPlanId = null }: 
                         plan.offers.length === 0 ||
                         plan.offers.every((item) => Number(item.price) === 0)
                     const isCurrent = Boolean(currentPlanId && plan.id === currentPlanId)
+                    const canSubscribe = showCheckout && (!isCurrent || inGracePeriod)
                     const roleLabel = formatPlanCatalogRole(
                         isFree && plan.catalogRole === "none" ? "free" : plan.catalogRole,
                     )
@@ -187,6 +215,12 @@ export function PlanPricingCards({ plans, showCheckout, currentPlanId = null }: 
                               })),
                           )
                         : null
+                    const isCheaperPlan =
+                        blockCheaperPlans &&
+                        !isCurrent &&
+                        currentPlanFinalPrice != null &&
+                        breakdown != null &&
+                        breakdown.finalPrice < currentPlanFinalPrice
                     const discountLabel =
                         offer && breakdown
                             ? formatDiscountLabel(
@@ -273,17 +307,29 @@ export function PlanPricingCards({ plans, showCheckout, currentPlanId = null }: 
                                             offer.durationUnit,
                                         )}
                                     </p>
-                                    {showCheckout && !isCurrent ? (
+                                    {showCheckout && canSubscribe ? (
                                         <Button
                                             type="button"
                                             className="mt-3 w-full"
                                             size="sm"
-                                            disabled={pending && pendingOfferId === offer.id}
+                                            disabled={
+                                                isCheaperPlan ||
+                                                (pending && pendingOfferId === offer.id)
+                                            }
+                                            title={
+                                                isCheaperPlan
+                                                    ? "No podés cambiar a un plan inferior mientras tu suscripción está activa"
+                                                    : undefined
+                                            }
                                             onClick={() => checkout(offer.id)}
                                         >
                                             {pending && pendingOfferId === offer.id
                                                 ? "Redirigiendo…"
-                                                : "Suscribirme"}
+                                                : isCurrent && inGracePeriod
+                                                  ? "Renovar"
+                                                  : isCheaperPlan
+                                                    ? "Plan inferior"
+                                                    : "Suscribirme"}
                                         </Button>
                                     ) : null}
                                 </div>
