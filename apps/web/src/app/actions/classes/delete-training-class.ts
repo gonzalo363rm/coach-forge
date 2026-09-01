@@ -3,6 +3,7 @@
 import { z } from "zod"
 
 import { requireTrainingClassManageAccess } from "@/lib/resource-access"
+import { enforceDeleteClass } from "@/lib/plan-enforce"
 import { trainingClassDeleteSchema } from "@/schemas/training-class.schema"
 import { trainingClassDelete } from "@/services/classes.service"
 
@@ -24,6 +25,9 @@ export async function deleteTrainingClassAction(
 
     const access = await requireTrainingClassManageAccess(parsed.data.id)
     if (!access.ok) return access
+
+    const deleteCheck = await enforceDeleteClass(access.user.id)
+    if (!deleteCheck.ok) return deleteCheck
 
     const result = await trainingClassDelete(parsed.data.id)
     if (!result.ok) return result

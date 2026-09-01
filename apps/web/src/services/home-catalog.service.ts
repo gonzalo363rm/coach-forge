@@ -1,5 +1,7 @@
 import { unstable_cache } from "next/cache"
 
+import type { Prisma } from "@prisma/client"
+
 import { getPrisma } from "@/lib/prisma"
 import { resolveExercisePreviewUrl } from "@/lib/exercise-preview-resolve"
 
@@ -15,6 +17,7 @@ export type PublicHomeExercise = {
     difficulty: number
     previewUrl: string
     updatedAt: string
+    creatorId: string | null
 }
 
 export type PublicExerciseSportSection = {
@@ -61,6 +64,20 @@ const EMPTY_CATALOG: PublicHomeCatalog = {
     classes: [],
 }
 
+function clubMemberCreatorFilter(clubId: string): Prisma.UserWhereInput {
+    return {
+        OR: [{ clubId }, { managedClub: { id: clubId } }],
+    }
+}
+
+/** Club + public content created by club members (public community items stay visible in the club tab). */
+function clubHomeCatalogFilter(clubId: string) {
+    return {
+        creator: clubMemberCreatorFilter(clubId),
+        visibility: { in: ["club", "public"] as Array<"club" | "public"> },
+    }
+}
+
 async function buildExerciseSections(
     exerciseRows: Awaited<ReturnType<typeof loadPublicExerciseRows>>,
 ): Promise<PublicExerciseSportSection[]> {
@@ -86,6 +103,7 @@ async function buildExerciseSections(
             difficulty: row.difficulty,
             previewUrl: await resolveExercisePreviewUrl(row.id, row.updatedAt),
             updatedAt: row.updatedAt.toISOString(),
+            creatorId: row.creatorId,
         })
     }
 
@@ -173,13 +191,7 @@ async function loadPublicHomeCatalog(): Promise<PublicHomeCatalog> {
 }
 
 async function loadClubHomeCatalog(clubId: string): Promise<PublicHomeCatalog> {
-    // Managers keep User.clubId null and link via managedClub; coaches use clubId.
-    const clubFilter = {
-        visibility: "club" as const,
-        creator: {
-            OR: [{ clubId }, { managedClub: { id: clubId } }],
-        },
-    }
+    const clubFilter = clubHomeCatalogFilter(clubId)
 
     const [exerciseRows, classRows] = await Promise.all([
         getPrisma().exercise.findMany({

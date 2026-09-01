@@ -6,8 +6,17 @@ export function isStaffRole(role: Role): boolean {
     return role === "admin" || role === "superadmin"
 }
 
+export function isSuperadminRole(role: Role): boolean {
+    return role === "superadmin"
+}
+
 export function isClubManagerRole(role: Role): boolean {
     return role === "club_manager"
+}
+
+/** Coaches (incl. miembros de club), managers y staff pueden ver /plans. */
+export function canViewPlansNav(role: Role): boolean {
+    return role === "coach" || role === "club_manager" || isStaffRole(role)
 }
 
 export function canManageOwnedResource(

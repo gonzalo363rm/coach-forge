@@ -15,12 +15,18 @@ type Props = {
     firstName: string
     lastName: string
     avatarUrl: string | null
+    showMyPaymentsLink?: boolean
 }
 
 const menuLinkClass =
     "block px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-emerald-700 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-emerald-400"
 
-export function UserNavMenu({ firstName, lastName, avatarUrl }: Props) {
+export function UserNavMenu({
+    firstName,
+    lastName,
+    avatarUrl,
+    showMyPaymentsLink = false,
+}: Props) {
     const [open, setOpen] = useState(false)
     const [pending, startTransition] = useTransition()
     const containerRef = useRef<HTMLDivElement>(null)
@@ -87,6 +93,23 @@ export function UserNavMenu({ firstName, lastName, avatarUrl }: Props) {
                     role="menu"
                     className="absolute right-0 top-full z-50 mt-1.5 min-w-44 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                 >
+                    {showMyPaymentsLink ? (
+                        <Link
+                            href="/payments/mine"
+                            role="menuitem"
+                            onClick={() => {
+                                startNavigation("/payments/mine")
+                                setOpen(false)
+                            }}
+                            className={`${menuLinkClass} ${
+                                effectivePath === "/payments/mine"
+                                    ? "bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                    : ""
+                            }`}
+                        >
+                            Mis pagos
+                        </Link>
+                    ) : null}
                     <Link
                         href="/profile"
                         role="menuitem"

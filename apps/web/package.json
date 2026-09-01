@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0",
+    "dev:local": "next dev --localhost",
     "build": "prisma generate && node scripts/copy-canvaskit.mjs && next build --webpack",
     "postinstall": "node scripts/copy-canvaskit.mjs",
     "start": "next start",

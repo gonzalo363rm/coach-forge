@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 
 import { auth } from "@/auth"
 import { ClassSessionRunner } from "@/components/classes/ClassSessionRunner"
+import { enforceStartClass } from "@/lib/plan-enforce"
 import { createPageMetadata } from "@/lib/seo"
 import { canManageOwnedResource } from "@/lib/user-permissions"
 import { buildClassSessionData } from "@/utils/build-class-session-data"
@@ -30,6 +31,23 @@ export default async function StartClassPage({ params }: Props) {
 
     if (!trainingClass) {
         notFound()
+    }
+
+    if (session?.user) {
+        const startCheck = await enforceStartClass(session.user.id)
+        if (!startCheck.ok) {
+            return (
+                <PageRoot>
+                    <Link
+                        href="/classes/mine"
+                        className="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
+                    >
+                        ← Clases
+                    </Link>
+                    <p className="mt-6 text-zinc-600 dark:text-zinc-400">{startCheck.error}</p>
+                </PageRoot>
+            )
+        }
     }
 
     if (trainingClass.items.length === 0) {

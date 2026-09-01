@@ -4,6 +4,10 @@ import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
 import { getAuthenticatedUserId } from "@/lib/get-authenticated-user-id"
+import {
+    enforceContentVisibility,
+    enforceCreateExercise,
+} from "@/lib/plan-enforce"
 import { exerciseCreateSchema } from "@/schemas/exercise.schema"
 import { exerciseCreate } from "@/services/exercises.service"
 
@@ -26,6 +30,17 @@ export async function createExerciseAction(
 
     try {
         const creatorId = await getAuthenticatedUserId()
+        if (!creatorId) return { ok: false, error: "No autenticado" }
+
+        const createCheck = await enforceCreateExercise(creatorId)
+        if (!createCheck.ok) return createCheck
+
+        const visibilityCheck = await enforceContentVisibility(
+            creatorId,
+            parsed.data.visibility,
+        )
+        if (!visibilityCheck.ok) return visibilityCheck
+
         const data = await exerciseCreate(parsed.data, creatorId)
         revalidateExercisesViews()
         return { ok: true, data }

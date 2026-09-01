@@ -1,23 +1,35 @@
 "use client"
 
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 
+import { updateClubMemberAccessAction } from "@/app/actions/club"
 import { Button, ButtonLink } from "@/components/ui/button"
 import { FormActions } from "@/components/ui/FormActions"
+import { useToast } from "@/hooks/use-toast"
 
 type DeleteResult = { ok: true } | { ok: false; error: string }
 
 type Props = {
     id: string
     displayName: string
+    clubAccessEnabled: boolean
     deleteMember: (id: string) => Promise<DeleteResult>
 }
 
-export function ClubMemberRowActions({ id, displayName, deleteMember }: Props) {
+export function ClubMemberRowActions({
+    id,
+    displayName,
+    clubAccessEnabled,
+    deleteMember,
+}: Props) {
+    const router = useRouter()
+    const { toast } = useToast()
     const titleId = useId()
     const [deleting, setDeleting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [confirmOpen, setConfirmOpen] = useState(false)
+    const [pendingAccess, startAccessTransition] = useTransition()
 
     useEffect(() => {
         if (!confirmOpen) return
@@ -54,9 +66,27 @@ export function ClubMemberRowActions({ id, displayName, deleteMember }: Props) {
         }
     }
 
+    function toggleAccess() {
+        startAccessTransition(async () => {
+            const result = await updateClubMemberAccessAction({
+                memberId: id,
+                clubAccessEnabled: !clubAccessEnabled,
+            })
+            if (!result.ok) {
+                toast({
+                    type: "error",
+                    title: "No se pudo cambiar el acceso",
+                    message: result.error,
+                })
+                return
+            }
+            router.refresh()
+        })
+    }
+
     return (
         <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <ButtonLink
                     href={`/club/members/${id}/edit`}
                     variant="secondary"
@@ -64,6 +94,19 @@ export function ClubMemberRowActions({ id, displayName, deleteMember }: Props) {
                 >
                     Editar
                 </ButtonLink>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={pendingAccess}
+                    onClick={toggleAccess}
+                >
+                    {pendingAccess
+                        ? "…"
+                        : clubAccessEnabled
+                          ? "Deshabilitar"
+                          : "Habilitar"}
+                </Button>
                 <Button
                     type="button"
                     variant="danger"

@@ -1,6 +1,7 @@
 export { createUserAction } from "./create-user"
 export { deleteUserAction } from "./delete-user"
 export { getUsersPaginatedAction } from "./get-users"
+export { assignUserPlanAction } from "./assign-user-plan"
 export { saveMyAvatarAction } from "./save-my-avatar"
 export { saveUserAvatarAction } from "./save-user-avatar"
 export { searchUsersForSelectAction } from "./search-users-for-select"

@@ -1,23 +1,27 @@
 import { HeaderAvatar } from "@/components/auth/HeaderAvatar"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
-import { ButtonLink } from "@/components/ui/button"
 import { formatUserDisplayName } from "@/lib/user-display"
 import type { PublicHomeClass } from "@/services/home-catalog.service"
 
+import { HomeClassBlockActions } from "./HomeClassBlockActions"
 import { HorizontalScrollStrip } from "./HorizontalScrollStrip"
 
 type Props = {
     trainingClass: PublicHomeClass
     isLoggedIn: boolean
+    currentUserId?: string | null
 }
 
 function formatClassDate(iso: string): string {
     return new Intl.DateTimeFormat("es", { dateStyle: "medium" }).format(new Date(iso))
 }
 
-export function HomeClassBlock({ trainingClass, isLoggedIn }: Props) {
+export function HomeClassBlock({ trainingClass, isLoggedIn, currentUserId = null }: Props) {
     const templateHref = `/classes/new?from=${encodeURIComponent(trainingClass.id)}&returnTo=${encodeURIComponent("/")}`
     const startHref = `/classes/${trainingClass.id}/start`
+    const isOwn = Boolean(
+        currentUserId && trainingClass.creator && trainingClass.creator.id === currentUserId,
+    )
     const creatorName = trainingClass.creator
         ? formatUserDisplayName(trainingClass.creator)
         : "Entrenador"
@@ -59,14 +63,13 @@ export function HomeClassBlock({ trainingClass, isLoggedIn }: Props) {
                 </div>
 
                 {isLoggedIn ? (
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                        <ButtonLink href={startHref} variant="primary" size="sm">
-                            Comenzar
-                        </ButtonLink>
-                        <ButtonLink href={templateHref} variant="soft" size="sm">
-                            Usar plantilla
-                        </ButtonLink>
-                    </div>
+                    <HomeClassBlockActions
+                        classId={trainingClass.id}
+                        title={trainingClass.title}
+                        startHref={startHref}
+                        templateHref={templateHref}
+                        isOwn={isOwn}
+                    />
                 ) : null}
             </div>
 

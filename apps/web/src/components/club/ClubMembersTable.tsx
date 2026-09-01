@@ -143,6 +143,9 @@ export function ClubMembersTable({
                                     defaultDir={defaultSortDir("phoneNumber")}
                                 />
                                 <th scope="col" className={tableHeaderThClass}>
+                                    Acceso
+                                </th>
+                                <th scope="col" className={tableHeaderThClass}>
                                     Acciones
                                 </th>
                             </tr>
@@ -151,7 +154,7 @@ export function ClubMembersTable({
                             {optimisticUsers.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={4}
+                                        colSpan={5}
                                         className="px-4 py-10 text-center text-sm text-zinc-600 dark:text-zinc-400"
                                     >
                                         {listState.search.trim()
@@ -183,10 +186,14 @@ export function ClubMembersTable({
                                             <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
                                                 {user.phoneNumber?.trim() || "—"}
                                             </td>
+                                            <td className="whitespace-nowrap px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                                {user.clubAccessEnabled ? "Habilitado" : "Deshabilitado"}
+                                            </td>
                                             <td className="px-4 py-2 align-middle">
                                                 <ClubMemberRowActions
                                                     id={user.id}
                                                     displayName={name}
+                                                    clubAccessEnabled={user.clubAccessEnabled}
                                                     deleteMember={deleteMember}
                                                 />
                                             </td>

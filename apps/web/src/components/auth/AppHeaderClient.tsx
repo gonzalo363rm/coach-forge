@@ -10,9 +10,10 @@ import { logoutAction } from "@/app/actions/auth"
 import { BrandLogo } from "@/components/brand/BrandLogo"
 import { useNavPending } from "@/hooks/use-nav-pending"
 import { useToast } from "@/hooks/use-toast"
-import { ADMIN_NAV_LINKS } from "@/lib/admin-nav-links"
+import { adminNavLinksForRole } from "@/lib/admin-nav-links"
 import { CLUB_NAV_LINKS, isClubNavLinkActive } from "@/lib/club-nav-links"
 import { isNavActive, type NavSection } from "@/lib/nav-active"
+import type { Role } from "@prisma/client"
 
 import { AdminNavMenu } from "./AdminNavMenu"
 import { ClubNavMenu } from "./ClubNavMenu"
@@ -33,6 +34,9 @@ type Props = {
     avatarUrl: string | null
     isAdmin: boolean
     isClubManager: boolean
+    role: Role
+    showPlansLink: boolean
+    showMyPaymentsLink: boolean
 }
 
 const MOBILE_MENU_LINK =
@@ -148,7 +152,13 @@ function MobileClubLinks({ onNavigate }: { onNavigate: () => void }) {
     )
 }
 
-function MobileAdminLinks({ onNavigate }: { onNavigate: () => void }) {
+function MobileAdminLinks({
+    onNavigate,
+    role,
+}: {
+    onNavigate: () => void
+    role: Role
+}) {
     const pathname = usePathname()
     const { pendingHref, startNavigation } = useNavPending()
     const effectivePath = pendingHref ?? pathname
@@ -158,7 +168,7 @@ function MobileAdminLinks({ onNavigate }: { onNavigate: () => void }) {
             <p className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Administración
             </p>
-            {ADMIN_NAV_LINKS.map((link) => {
+            {adminNavLinksForRole(role).map((link) => {
                 const active =
                     effectivePath === link.href ||
                     effectivePath.startsWith(`${link.href}/`)
@@ -192,6 +202,9 @@ export function AppHeaderClient({
     avatarUrl,
     isAdmin,
     isClubManager,
+    role,
+    showPlansLink,
+    showMyPaymentsLink,
 }: Props) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [morphActive, setMorphActive] = useState(false)
@@ -294,6 +307,12 @@ export function AppHeaderClient({
                         label="Mis ejercicios"
                         section="exercises-mine"
                     />
+                    {showPlansLink ? (
+                        <>
+                            <NavDivider />
+                            <HeaderNavLink href="/plans" label="Planes" />
+                        </>
+                    ) : null}
                     {isClubManager ? (
                         <>
                             <NavDivider />
@@ -303,7 +322,7 @@ export function AppHeaderClient({
                     {isAdmin ? (
                         <>
                             <NavDivider />
-                            <AdminNavMenu />
+                            <AdminNavMenu role={role} />
                         </>
                     ) : null}
                 </nav>
@@ -313,6 +332,7 @@ export function AppHeaderClient({
                         firstName={firstName}
                         lastName={lastName}
                         avatarUrl={avatarUrl}
+                        showMyPaymentsLink={showMyPaymentsLink}
                     />
                 </div>
             </div>
@@ -414,7 +434,7 @@ export function AppHeaderClient({
 
                             <div
                                 className={clsx(
-                                    "pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-px bg-linear-to-r from-transparent via-zinc-500/70 to-transparent motion-reduce:transition-none",
+                                    "pointer-events-none absolute inset-x-0 bottom-0 z-5 h-px bg-linear-to-r from-transparent via-zinc-500/70 to-transparent motion-reduce:transition-none",
                                     menuOpen ? "opacity-100" : "opacity-0",
                                 )}
                                 style={{ transition: `opacity ${MOBILE_ANIM_MS}ms ease-out` }}
@@ -444,15 +464,39 @@ export function AppHeaderClient({
                                     section="exercises-mine"
                                     onNavigate={closeMenu}
                                 />
+                                {showPlansLink ? (
+                                    <MobileNavLink
+                                        href="/plans"
+                                        label="Planes"
+                                        onNavigate={closeMenu}
+                                    />
+                                ) : null}
                                 {isClubManager ? (
                                     <MobileClubLinks onNavigate={closeMenu} />
                                 ) : null}
                                 {isAdmin ? (
-                                    <MobileAdminLinks onNavigate={closeMenu} />
+                                    <MobileAdminLinks onNavigate={closeMenu} role={role} />
                                 ) : null}
                             </nav>
 
                             <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                                {showMyPaymentsLink ? (
+                                    <Link
+                                        href="/payments/mine"
+                                        onClick={() => {
+                                            startNavigation("/payments/mine")
+                                            closeMenu()
+                                        }}
+                                        className={clsx(
+                                            MOBILE_MENU_LINK,
+                                            effectivePath === "/payments/mine"
+                                                ? "font-medium text-emerald-700 dark:text-emerald-400"
+                                                : "text-zinc-700 dark:text-zinc-300",
+                                        )}
+                                    >
+                                        Mis pagos
+                                    </Link>
+                                ) : null}
                                 <Link
                                     href="/profile"
                                     onClick={() => {

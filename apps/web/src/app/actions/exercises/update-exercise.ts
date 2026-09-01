@@ -4,6 +4,10 @@ import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
 import { requireExerciseManageAccess } from "@/lib/resource-access"
+import {
+    enforceContentVisibility,
+    enforceEditExercise,
+} from "@/lib/plan-enforce"
 import { exerciseReplaceSchema } from "@/schemas/exercise.schema"
 import { exerciseUpdate } from "@/services/exercises.service"
 
@@ -28,6 +32,12 @@ export async function updateExerciseAction(
 
     const access = await requireExerciseManageAccess(id)
     if (!access.ok) return access
+
+    const editCheck = await enforceEditExercise(access.user.id)
+    if (!editCheck.ok) return editCheck
+
+    const visibilityCheck = await enforceContentVisibility(access.user.id, rest.visibility)
+    if (!visibilityCheck.ok) return visibilityCheck
 
     try {
         const data = await exerciseUpdate(id, rest)

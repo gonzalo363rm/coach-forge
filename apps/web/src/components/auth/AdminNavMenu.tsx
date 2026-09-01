@@ -5,22 +5,22 @@ import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { IoChevronDownOutline } from "react-icons/io5"
 
-import { ADMIN_NAV_LINKS } from "@/lib/admin-nav-links"
+import { adminNavLinksForRole } from "@/lib/admin-nav-links"
 
 import { useNavPending } from "@/hooks/use-nav-pending"
-
-const adminLinks = ADMIN_NAV_LINKS
+import type { Role } from "@prisma/client"
 
 const menuLinkClass =
     "block px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-emerald-700 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-emerald-400"
 
-export function AdminNavMenu() {
+export function AdminNavMenu({ role }: { role: Role }) {
     const [open, setOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const pathname = usePathname()
     const { pendingHref, startNavigation } = useNavPending()
     const effectivePath = pendingHref ?? pathname
     const isAdminSection = effectivePath.startsWith("/admin")
+    const adminLinks = adminNavLinksForRole(role)
 
     useEffect(() => {
         setOpen(false)

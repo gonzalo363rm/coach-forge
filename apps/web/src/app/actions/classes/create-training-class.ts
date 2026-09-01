@@ -3,6 +3,10 @@
 import { z } from "zod"
 
 import { getAuthenticatedUserId } from "@/lib/get-authenticated-user-id"
+import {
+    enforceClassVisibility,
+    enforceCreateClass,
+} from "@/lib/plan-enforce"
 import { trainingClassCreateSchema } from "@/schemas/training-class.schema"
 import { trainingClassCreate } from "@/services/classes.service"
 
@@ -26,6 +30,17 @@ export async function createTrainingClassAction(
 
     try {
         const creatorId = await getAuthenticatedUserId()
+        if (!creatorId) return { ok: false, error: "No autenticado" }
+
+        const createCheck = await enforceCreateClass(creatorId)
+        if (!createCheck.ok) return createCheck
+
+        const visibilityCheck = await enforceClassVisibility(
+            creatorId,
+            parsed.data.visibility,
+        )
+        if (!visibilityCheck.ok) return visibilityCheck
+
         const created = await trainingClassCreate(parsed.data, creatorId)
         revalidateClassesViews()
         return { ok: true, data: { id: created.id } }

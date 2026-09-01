@@ -8,7 +8,7 @@ import type { AuthActionResult } from "./types"
 
 export async function logoutAction(): Promise<AuthActionResult> {
   try {
-    await signOut({ redirectTo: "/login" })
+    await signOut({ redirectTo: "/" })
   } catch (error) {
     if (isRedirectError(error)) throw error
 

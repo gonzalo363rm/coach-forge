@@ -185,3 +185,26 @@ export async function deleteClubMemberAction(input: { id: string }) {
     revalidatePath("/club/members")
     return result
 }
+
+export async function updateClubMemberAccessAction(input: unknown) {
+    const check = await requireClubManager()
+    if (!check.ok) return check
+
+    const { clubMemberAccessUpdateSchema } = await import("@/schemas/billing.schema")
+    const parsed = clubMemberAccessUpdateSchema.safeParse(input)
+    if (!parsed.success) {
+        return { ok: false as const, error: "Datos inválidos" }
+    }
+
+    const { setClubMemberAccess } = await import("@/services/club-billing.service")
+    const result = await setClubMemberAccess({
+        clubId: check.clubId,
+        managerId: check.user.id,
+        memberId: parsed.data.memberId,
+        clubAccessEnabled: parsed.data.clubAccessEnabled,
+    })
+    if (!result.ok) return result
+
+    revalidatePath("/club/members")
+    return { ok: true as const }
+}

@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
-import { isClubManagerRole, isStaffRole } from "@/lib/user-permissions"
+import { resolveBillingSubject } from "@/lib/entitlements"
+import { canViewPlansNav, isClubManagerRole, isStaffRole } from "@/lib/user-permissions"
 import { userGetAvatarUrl } from "@/services/users.service"
 
 import { AppHeaderClient } from "./AppHeaderClient"
@@ -13,6 +14,9 @@ export async function AppHeader() {
 
     const { id, firstName, lastName, avatarUrl: sessionAvatarUrl, role } = session.user
     const avatarUrl = (await userGetAvatarUrl(id)) ?? sessionAvatarUrl
+    const showPlansLink = canViewPlansNav(role)
+    const subject = await resolveBillingSubject(id)
+    const showMyPaymentsLink = subject?.canManageBilling ?? false
 
     return (
         <AppHeaderClient
@@ -21,6 +25,9 @@ export async function AppHeader() {
             avatarUrl={avatarUrl}
             isAdmin={isStaffRole(role)}
             isClubManager={isClubManagerRole(role)}
+            role={role}
+            showPlansLink={showPlansLink}
+            showMyPaymentsLink={showMyPaymentsLink}
         />
     )
 }

@@ -4,6 +4,7 @@ import type { Exercise } from "@prisma/client"
 import { z } from "zod"
 
 import { requireExerciseManageAccess } from "@/lib/resource-access"
+import { enforceDeleteExercise } from "@/lib/plan-enforce"
 import { exerciseDeleteParamsSchema } from "@/schemas/exercise.schema"
 import { exerciseDelete } from "@/services/exercises.service"
 
@@ -23,6 +24,9 @@ export async function deleteExerciseAction(input: unknown): Promise<ExerciseActi
 
     const access = await requireExerciseManageAccess(parsed.data.id)
     if (!access.ok) return access
+
+    const deleteCheck = await enforceDeleteExercise(access.user.id)
+    if (!deleteCheck.ok) return deleteCheck
 
     const result = await exerciseDelete(parsed.data.id)
     if (!result.ok) return result

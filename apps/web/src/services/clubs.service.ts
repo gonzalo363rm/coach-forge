@@ -88,6 +88,7 @@ function toUserSafe(user: {
     role: UserSafe["role"]
     avatarUrl: string | null
     clubId: string | null
+    clubAccessEnabled: boolean
     createdAt: Date
     updatedAt: Date
 }): UserSafe {
@@ -397,14 +398,24 @@ async function assertMemberQuota(clubId: string): Promise<{ ok: true } | { ok: f
         return { ok: false, error: "Club no encontrado" }
     }
 
+    const { syncClubMaxMembersFromEntitlements } = await import(
+        "@/services/club-billing.service"
+    )
+    await syncClubMaxMembersFromEntitlements(club.managerId)
+
+    const refreshed = await prisma.club.findUnique({ where: { id: clubId } })
+    if (!refreshed) {
+        return { ok: false, error: "Club no encontrado" }
+    }
+
     const memberCount = await prisma.user.count({
         where: { clubId, role: "coach" },
     })
 
-    if (memberCount >= club.maxMembers) {
+    if (memberCount >= refreshed.maxMembers) {
         return {
             ok: false,
-            error: `Cupo alcanzado (${club.maxMembers} coaches). Contactá al administrador para ampliarlo.`,
+            error: `Cupo alcanzado (${refreshed.maxMembers} coaches). Mejorá el plan o deshabilitá coaches.`,
         }
     }
 
@@ -426,6 +437,12 @@ export async function clubCreateMember(
         }
 
         const passwordHash = await bcryptjs.hash(data.password, 12)
+        const enabledCount = await prisma.user.count({
+            where: { clubId, role: "coach", clubAccessEnabled: true },
+        })
+        const club = await prisma.club.findUnique({ where: { id: clubId } })
+        const clubAccessEnabled = Boolean(club && enabledCount < club.maxMembers)
+
         const user = await prisma.user.create({
             data: {
                 firstName: data.firstName,
@@ -434,6 +451,7 @@ export async function clubCreateMember(
                 phoneNumber: data.phoneNumber?.trim() ? data.phoneNumber.trim() : null,
                 role: "coach",
                 clubId,
+                clubAccessEnabled,
                 passwordHash,
                 emailVerified: data.emailVerified ? new Date() : null,
             },

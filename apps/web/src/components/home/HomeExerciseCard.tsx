@@ -1,16 +1,19 @@
-import { ButtonLink } from "@/components/ui/button"
 import { ExercisePreviewThumb } from "@/components/exercises/ExercisePreviewThumb"
 import type { PublicHomeExercise } from "@/services/home-catalog.service"
+
+import { HomeExerciseCardActions } from "./HomeExerciseCardActions"
 
 const PLACEHOLDER = "/exercises/placeholder-preview.svg"
 
 type Props = {
     exercise: PublicHomeExercise
     isLoggedIn: boolean
+    currentUserId?: string | null
 }
 
-export function HomeExerciseCard({ exercise, isLoggedIn }: Props) {
+export function HomeExerciseCard({ exercise, isLoggedIn, currentUserId = null }: Props) {
     const templateHref = `/exercises/new?from=${encodeURIComponent(exercise.id)}&returnTo=${encodeURIComponent("/")}`
+    const isOwn = Boolean(currentUserId && exercise.creatorId === currentUserId)
 
     return (
         <article className="flex w-44 shrink-0 cursor-pointer snap-start flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:w-52 dark:border-zinc-800 dark:bg-zinc-950">
@@ -29,14 +32,12 @@ export function HomeExerciseCard({ exercise, isLoggedIn }: Props) {
                     Dificultad {exercise.difficulty} / 5
                 </p>
                 {isLoggedIn ? (
-                    <ButtonLink
-                        href={templateHref}
-                        variant="soft"
-                        size="sm"
-                        className="mt-auto w-full"
-                    >
-                        Usar plantilla
-                    </ButtonLink>
+                    <HomeExerciseCardActions
+                        exerciseId={exercise.id}
+                        title={exercise.title}
+                        templateHref={templateHref}
+                        isOwn={isOwn}
+                    />
                 ) : null}
             </div>
         </article>

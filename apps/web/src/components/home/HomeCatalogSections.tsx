@@ -7,9 +7,10 @@ import { HorizontalScrollStrip } from "./HorizontalScrollStrip"
 type Props = {
     catalog: PublicHomeCatalog
     isLoggedIn: boolean
+    currentUserId?: string | null
 }
 
-export function HomeCatalogSections({ catalog, isLoggedIn }: Props) {
+export function HomeCatalogSections({ catalog, isLoggedIn, currentUserId = null }: Props) {
     const { exerciseSections, classes, unavailable } = catalog
     const hasExercises = exerciseSections.some((s) => s.exercises.length > 0)
     const hasClasses = classes.length > 0
@@ -60,6 +61,7 @@ export function HomeCatalogSections({ catalog, isLoggedIn }: Props) {
                                             key={exercise.id}
                                             exercise={exercise}
                                             isLoggedIn={isLoggedIn}
+                                            currentUserId={currentUserId}
                                         />
                                     ))}
                                 </HorizontalScrollStrip>
@@ -83,6 +85,7 @@ export function HomeCatalogSections({ catalog, isLoggedIn }: Props) {
                                 key={trainingClass.id}
                                 trainingClass={trainingClass}
                                 isLoggedIn={isLoggedIn}
+                                currentUserId={currentUserId}
                             />
                         ))}
                     </div>
