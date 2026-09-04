@@ -1,8 +1,21 @@
-# Crítico
+# PWA / push (pendiente)
 
-- Hecho (sin PWA): Wake Lock en sesión de clase + vibración/sonido al fin de ejercicio y descanso.
+- Notificaciones push reales (pantalla bloqueada / app cerrada):
 
-- Pendiente opcional: PWA + push reales con pantalla bloqueada.
+  - Claves VAPID + env
+
+  - Guardar suscripciones en DB (por usuario/dispositivo)
+
+  - API subscribe/unsubscribe + permiso en UI
+
+  - Handler `push` / `notificationclick` en el service worker
+
+  - En iOS: solo funciona si la PWA está agregada al inicio
+
+- Prompt / hint de “Instalar app” o “Agregar a pantalla de inicio” (Android `beforeinstallprompt`; iOS instrucciones manuales)
+
+- Aviso al usuario cuando hay una nueva versión del service worker (actualizar / recargar)
+
 
 # Otros
 

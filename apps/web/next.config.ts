@@ -1,5 +1,18 @@
-import type { NextConfig } from "next";
+import { spawnSync } from "node:child_process";
 import path from "path";
+import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
+
+const revision =
+  spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() ||
+  crypto.randomUUID();
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  additionalPrecacheEntries: [{ url: "/~offline", revision }],
+  disable: process.env.NODE_ENV === "development",
+});
 
 // Monorepo: raíz del repo (apps/web → ../..). No usar ../../.. (sale del repo y rompe el trace en Vercel).
 const nextConfig: NextConfig = {
@@ -11,7 +24,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
     },
   },
-  
+
   serverExternalPackages: [
     "@prisma/client",
     "@prisma/adapter-pg",
@@ -40,7 +53,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  
+
   // Configuración de webpack para CanvasKit
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -61,7 +74,7 @@ const nextConfig: NextConfig = {
       // Regla para archivos WASM
       config.module.rules.push({
         test: /\.wasm$/,
-        type: 'asset/resource',
+        type: "asset/resource",
       });
     }
 
@@ -69,4 +82,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
