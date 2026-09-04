@@ -27,8 +27,22 @@ function playBeep(ctx: AudioContext, startAt: number, frequency: number, duratio
     osc.stop(startAt + duration + 0.05)
 }
 
-/** Tres tonos cortos para avisar fin de cronómetro (ejercicio o descanso). */
+/** Vibración corta (Android / algunos móviles; iOS suele ignorarla). */
+function vibrateTimerAlarm(): void {
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+        return
+    }
+    try {
+        navigator.vibrate([180, 80, 180, 80, 280])
+    } catch {
+        // Algunos navegadores lanzan si el permiso está denegado.
+    }
+}
+
+/** Tres tonos + vibración para avisar fin de cronómetro (ejercicio o descanso). */
 export function playTimerAlarm(): void {
+    vibrateTimerAlarm()
+
     const ctx = getAudioContext()
     if (!ctx) return
 

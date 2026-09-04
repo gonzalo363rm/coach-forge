@@ -1,8 +1,8 @@
 # Crítico
 
-- Agregar notificaciones push para mobile con sonido y/o evitar que se bloquee el telefono
+- Hecho (sin PWA): Wake Lock en sesión de clase + vibración/sonido al fin de ejercicio y descanso.
 
-- Poner un tiempo de gracia desde que se vence hasta que se paga otro mes, para no interrumpir el uso
+- Pendiente opcional: PWA + push reales con pantalla bloqueada.
 
 # Otros
 

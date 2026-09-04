@@ -532,6 +532,7 @@ export function useClassSessionTimer({
                 next[index] = true
                 return next
             })
+            playTimerAlarm()
             startRestForExercise(index, defaultRestSeconds)
         })
     }, [

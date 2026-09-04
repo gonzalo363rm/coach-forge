@@ -45,6 +45,7 @@ import {
     type TimerVisualVariant,
 } from "@/components/ui/CircularCountdownTimer"
 import { useClassSessionTimer } from "@/hooks/useClassSessionTimer"
+import { useScreenWakeLock } from "@/hooks/use-screen-wake-lock"
 import {
     formatClock,
     formatEstimatedMinutes,
@@ -157,6 +158,8 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
     })
 
     const isRestMode = timer.focusedResting
+    const keepScreenAwake = timer.runningCount > 0 || timer.restingCount > 0
+    useScreenWakeLock(keepScreenAwake)
 
     const [previewExercise, setPreviewExercise] = useState<ClassSessionExercise | null>(
         null,
