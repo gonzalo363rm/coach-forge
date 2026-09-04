@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { DEFAULT_REST_SECONDS } from "@/components/classes/class-session"
 import type { ClassSessionTimerHydration } from "@/stores/class-session.store"
-import { playTimerAlarm } from "@/utils/play-timer-alarm"
+import { playTimerAlarm, unlockTimerAudio } from "@/utils/play-timer-alarm"
 
 type Options = {
     exerciseCount: number
@@ -328,6 +328,8 @@ export function useClassSessionTimer({
     const playExercise = useCallback(
         (index: number) => {
             if (completed[index] || resting[index]) return
+            // iOS: el audio solo se habilita dentro del gesto del usuario.
+            unlockTimerAudio()
             setFocusedIndex(index)
             setExerciseRunning((prev) => {
                 const next = [...prev]
@@ -379,6 +381,7 @@ export function useClassSessionTimer({
     const completeExercise = useCallback(
         (index: number) => {
             if (completed[index] || resting[index]) return
+            unlockTimerAudio()
             startRestForExercise(index, defaultRestSeconds)
         },
         [completed, resting, defaultRestSeconds, startRestForExercise],

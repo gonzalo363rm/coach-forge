@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/CircularCountdownTimer"
 import { useClassSessionTimer } from "@/hooks/useClassSessionTimer"
 import { useScreenWakeLock } from "@/hooks/use-screen-wake-lock"
+import { unlockTimerAudio } from "@/utils/play-timer-alarm"
 import {
     formatClock,
     formatEstimatedMinutes,
@@ -160,6 +161,16 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
     const isRestMode = timer.focusedResting
     const keepScreenAwake = timer.runningCount > 0 || timer.restingCount > 0
     useScreenWakeLock(keepScreenAwake)
+
+    // iOS: el primer tap en la sesión desbloquea audio para las alarmas posteriores.
+    useEffect(() => {
+        const onPointerDown = () => {
+            unlockTimerAudio()
+            document.removeEventListener("pointerdown", onPointerDown)
+        }
+        document.addEventListener("pointerdown", onPointerDown, { passive: true })
+        return () => document.removeEventListener("pointerdown", onPointerDown)
+    }, [])
 
     const [previewExercise, setPreviewExercise] = useState<ClassSessionExercise | null>(
         null,
