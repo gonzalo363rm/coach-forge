@@ -61,8 +61,9 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user
       const isPublicRoute = publicRoutes.includes(nextUrl.pathname)
       const isHome = nextUrl.pathname === "/"
+      const isInstallGuide = nextUrl.pathname === "/app"
 
-      if (isHome) {
+      if (isHome || isInstallGuide) {
         return true
       }
 

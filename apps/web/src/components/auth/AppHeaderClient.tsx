@@ -313,6 +313,8 @@ export function AppHeaderClient({
                             <HeaderNavLink href="/plans" label="Planes" />
                         </>
                     ) : null}
+                    <NavDivider />
+                    <HeaderNavLink href="/app" label="App" />
                     {isClubManager ? (
                         <>
                             <NavDivider />
@@ -471,6 +473,11 @@ export function AppHeaderClient({
                                         onNavigate={closeMenu}
                                     />
                                 ) : null}
+                                <MobileNavLink
+                                    href="/app"
+                                    label="App"
+                                    onNavigate={closeMenu}
+                                />
                                 {isClubManager ? (
                                     <MobileClubLinks onNavigate={closeMenu} />
                                 ) : null}

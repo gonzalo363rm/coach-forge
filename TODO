@@ -1,5 +1,7 @@
 # PWA / push (pendiente)
 
+
+
 - Notificaciones push reales (pantalla bloqueada / app cerrada):
 
   - Claves VAPID + env
@@ -12,33 +14,63 @@
 
   - En iOS: solo funciona si la PWA está agregada al inicio
 
-- Prompt / hint de “Instalar app” o “Agregar a pantalla de inicio” (Android `beforeinstallprompt`; iOS instrucciones manuales)
 
-- Aviso al usuario cuando hay una nueva versión del service worker (actualizar / recargar)
+
+- Hecho: Página `/app` en el header con instructivo visual (iPhone + Android) + aviso de nueva versión del SW
+
 
 
 # Otros
 
-- Poder ordenar los ejercicios por fechas (el las clases al menos) y por default que sea ese el orden
+
+
+- Vista de explorar eje
+
+
+
+- Poder ordenar los ejercicios por fechas (el las clases al menos) y por default que sea ese el orden: tambien que se pueda filtrar por añadida o sin añadir
+
+
 
 - Que un elemento pueda tener mas de un orden (se vuelve a repetir el mismo paso)
 
+
+
 - Utilizar el video cargable de los ejercicios desde algun lado o quitarlo
 
-- Backup de la base de datos
+
+
+- (ver: hostinger ya lo hace a esto) Backup de la base de datos
+
+
 
 - Al eliminar un usuarios, deberia hacer un borrado logico.
 
+
+
 - Agregar opcion de imprimir ejercicio
+
+
 
 - Agregar settings para seleccionar el tema el tema, y quizas agregar una vista en el menu, como esta para el perfil
 
+
+
 - Agregar opcion de imprimir clase (podrian seleccionrse si se quieren todos los ejercicios o solo algunos mendiante preview con checks)
+
+
 
 - Agregar tracker
 
+
+
 - (opcional) En la vista de deportes, podriamos listar los elementos
+
+
 
 - (opcional) Al crear un coach desde un club, se podria mandar un email de bienvenida
 
+
+
 - (opcional) Ver de agregar TanStack Query para las listas al menos (quizas no)
+
