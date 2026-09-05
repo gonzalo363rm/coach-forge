@@ -288,7 +288,7 @@ export async function registerUser(
   })
 
   if (!emailResult.ok) {
-    await prisma.user.delete({ where: { email } })
+    await prisma.user.delete({ where: { id: user.id } })
     await deleteAuthToken(user.id, "email_verification")
     return emailResult
   }

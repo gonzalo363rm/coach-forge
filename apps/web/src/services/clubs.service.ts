@@ -89,6 +89,7 @@ function toUserSafe(user: {
     avatarUrl: string | null
     clubId: string | null
     clubAccessEnabled: boolean
+    deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
 }): UserSafe {
