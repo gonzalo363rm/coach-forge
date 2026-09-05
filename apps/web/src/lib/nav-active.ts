@@ -1,4 +1,4 @@
-export type NavSection = "classes-mine" | "exercises-mine"
+export type NavSection = "classes-mine" | "exercises-mine" | "explore"
 
 export function isNavActive(
     pathname: string,
@@ -13,6 +13,10 @@ export function isNavActive(
 
     if (section === "exercises-mine") {
         return pathname.startsWith("/exercises/") && pathname !== "/exercises/new"
+    }
+
+    if (section === "explore") {
+        return pathname === "/explore" || pathname.startsWith("/explore/")
     }
 
     return pathname.startsWith(`${href}/`)

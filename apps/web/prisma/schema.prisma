@@ -189,13 +189,14 @@ model User {
   firstName     String
   lastName      String
   phoneNumber   String?
-  email         String    @unique
+  email         String
   emailVerified DateTime?
   passwordHash  String
   role               Role      @default(coach)
   avatarUrl          String?
   clubId             String?
   clubAccessEnabled  Boolean   @default(true)
+  deletedAt          DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -208,6 +209,8 @@ model User {
 
   @@index([clubId])
   @@index([role])
+  @@index([email])
+  @@index([deletedAt])
 }
 
 model AuthToken {

@@ -229,16 +229,6 @@ export const SaveExerciseModal = ({
                             })}
                         </div>
                     </fieldset>
-                    <label className="cf-modal-label flex flex-col gap-1">
-                        <span>Link video</span>
-                        <input
-                            type="url"
-                            value={videoLink}
-                            onChange={(e) => setVideoLink(e.target.value)}
-                            placeholder="https://..."
-                            className="cf-modal-input"
-                        />
-                    </label>
                     <label className="cf-modal-label flex flex-col gap-1 sm:col-span-2">
                         <span>Visibilidad</span>
                         <VisibilitySelect

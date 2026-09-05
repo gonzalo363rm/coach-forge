@@ -180,7 +180,7 @@ function ExercisePreviewContent({
     return (
         <>
             <div
-                className={`flex items-start justify-between gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700 ${
+                className={`flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700 ${
                     isFullscreen ? "border-zinc-800 bg-zinc-950" : ""
                 }`}
             >
@@ -218,23 +218,23 @@ function ExercisePreviewContent({
             </div>
 
             <div
-                className={`flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 ${
+                className={`flex min-h-0 flex-1 flex-col gap-4 p-5 ${
                     isFullscreen
-                        ? "lg:flex-row lg:items-stretch lg:gap-8 lg:p-8"
-                        : "lg:flex-row lg:items-start"
+                        ? "overflow-hidden lg:flex-row lg:items-stretch lg:gap-8 lg:p-8"
+                        : "overflow-y-auto lg:flex-row lg:items-start"
                 }`}
             >
                 <div
                     className={
                         isFullscreen
-                            ? "relative flex min-h-0 w-full flex-1 items-center justify-center lg:min-h-[60vh]"
+                            ? "relative w-full shrink-0 lg:min-h-0 lg:flex-1 lg:self-stretch"
                             : "relative w-full shrink-0 lg:w-[min(100%,420px)]"
                     }
                 >
                     <div
                         className={`relative w-full overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 ${
                             isFullscreen
-                                ? "h-[min(70vh,900px)]"
+                                ? "mx-auto aspect-4/3 max-h-[40vh] lg:aspect-auto lg:h-full lg:max-h-none lg:min-h-[60vh]"
                                 : "aspect-4/3 min-h-[200px]"
                         }`}
                     >
@@ -255,7 +255,11 @@ function ExercisePreviewContent({
                     </div>
                 </div>
                 <div
-                    className={`min-w-0 flex-1 ${isFullscreen ? "lg:max-w-md lg:overflow-y-auto" : ""}`}
+                    className={`min-w-0 ${
+                        isFullscreen
+                            ? "min-h-0 flex-1 overflow-y-auto overscroll-contain lg:max-w-md"
+                            : "flex-1"
+                    }`}
                 >
                     {loading ? (
                         <p className="text-sm text-zinc-500">Cargando pasos del ejercicio…</p>
@@ -270,6 +274,11 @@ function ExercisePreviewContent({
                             playerOptions={playerOptions}
                             playerFilter={playerFilter}
                             setPlayerFilter={setPlayerFilter}
+                            listClassName={
+                                isFullscreen
+                                    ? "max-h-none overflow-visible"
+                                    : undefined
+                            }
                         />
                     )}
                 </div>

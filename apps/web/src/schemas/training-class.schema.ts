@@ -66,6 +66,8 @@ export const trainingClassListFiltersSchema = z.object({
     difficulty: z.number().int().min(1).max(5).optional().nullable(),
     visibility: z.enum(contentVisibilitySchemaValues).optional().nullable(),
     creatorId: z.string().min(1).optional().nullable(),
+    /** Contenido del club (creadores del club, visibility club|public). */
+    clubId: z.string().min(1).optional().nullable(),
 })
 
 export type TrainingClassListFilters = z.infer<typeof trainingClassListFiltersSchema>

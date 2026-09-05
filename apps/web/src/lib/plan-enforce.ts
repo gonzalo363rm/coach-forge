@@ -10,8 +10,8 @@ import { getPrisma } from "@/lib/prisma"
 export type EnforceResult = { ok: true } | { ok: false; error: string }
 
 async function assertActorMayUseApp(userId: string): Promise<EnforceResult> {
-    const user = await getPrisma().user.findUnique({
-        where: { id: userId },
+    const user = await getPrisma().user.findFirst({
+        where: { id: userId, deletedAt: null },
         select: { role: true, clubId: true, clubAccessEnabled: true },
     })
     if (!user) return { ok: false, error: "Usuario no encontrado" }
@@ -44,6 +44,7 @@ export async function countMonthlyCreations(
     if (subject.planType === "club" && subject.clubId) {
         const members = await getPrisma().user.findMany({
             where: {
+                deletedAt: null,
                 OR: [
                     { clubId: subject.clubId, role: "coach" },
                     { id: subject.titularUserId },

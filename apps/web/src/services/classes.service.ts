@@ -32,7 +32,12 @@ export type TrainingClassWithItems = TrainingClass & {
 
 export type TrainingClassListItem = TrainingClass & {
     sport: { name: string; slug: string } | null
-    creator: { id: string; firstName: string; lastName: string } | null
+    creator: {
+        id: string
+        firstName: string
+        lastName: string
+        avatarUrl: string | null
+    } | null
     exerciseCount: number
     totalMinutes: number
 }
@@ -71,6 +76,17 @@ function buildTrainingClassWhereFilters(
     if (filters.creatorId) {
         and.push({ creatorId: filters.creatorId })
     }
+    if (filters.clubId) {
+        and.push({
+            creator: {
+                OR: [
+                    { clubId: filters.clubId },
+                    { managedClub: { id: filters.clubId } },
+                ],
+            },
+            visibility: { in: ["club", "public"] },
+        })
+    }
 
     if (and.length === 0) return {}
     if (and.length === 1) return and[0]!
@@ -105,7 +121,7 @@ function trainingClassListOrderBy(
 
 const trainingClassListInclude = {
     sport: { select: { name: true, slug: true } },
-    creator: { select: { id: true, firstName: true, lastName: true } },
+    creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
     items: {
         select: {
             durationMinutes: true,

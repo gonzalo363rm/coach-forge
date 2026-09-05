@@ -258,6 +258,7 @@ export const exerciseListSortBySchema = z.enum([
     "sport",
     "visibility",
     "updatedAt",
+    "createdAt",
 ])
 
 export type ExerciseListSortBy = z.infer<typeof exerciseListSortBySchema>
@@ -286,6 +287,12 @@ export const exerciseListFiltersSchema = z.object({
     ),
     visibility: z.enum(contentVisibilitySchemaValues).optional().nullable(),
     creatorId: z.string().min(1).optional().nullable(),
+    /** Contenido del club (creadores del club, visibility club|public). */
+    clubId: z.string().min(1).optional().nullable(),
+    /** Incluir solo estos ids (p. ej. ya añadidos a una clase). */
+    includeIds: z.array(z.string().min(1)).optional().nullable(),
+    /** Excluir estos ids (p. ej. sin añadir a una clase). */
+    excludeIds: z.array(z.string().min(1)).optional().nullable(),
 })
 
 export type ExerciseListFilters = z.infer<typeof exerciseListFiltersSchema>

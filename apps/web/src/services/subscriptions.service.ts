@@ -158,7 +158,9 @@ export async function createPendingSubscription(input: {
         return { ok: false, error: "La oferta no está vigente" }
     }
 
-    const user = await getPrisma().user.findUnique({ where: { id: input.userId } })
+    const user = await getPrisma().user.findFirst({
+        where: { id: input.userId, deletedAt: null },
+    })
     if (!user) return { ok: false, error: "Usuario no encontrado" }
 
     const expectedType: PlanType = user.role === "club_manager" ? "club" : "individual"
@@ -346,8 +348,8 @@ export async function assignPlanBySuperadmin(input: {
         mode: "free" | "subscription"
     }>
 > {
-    const user = await getPrisma().user.findUnique({
-        where: { id: input.userId },
+    const user = await getPrisma().user.findFirst({
+        where: { id: input.userId, deletedAt: null },
         select: {
             id: true,
             role: true,
@@ -502,8 +504,8 @@ export type UserBillingAdminSummary = {
 export async function getUserBillingAdminSummary(
     userId: string,
 ): Promise<UserBillingAdminSummary> {
-    const user = await getPrisma().user.findUnique({
-        where: { id: userId },
+    const user = await getPrisma().user.findFirst({
+        where: { id: userId, deletedAt: null },
         select: {
             id: true,
             role: true,

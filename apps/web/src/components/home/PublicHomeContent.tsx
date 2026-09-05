@@ -1,135 +1,123 @@
 "use client"
 
-import clsx from "clsx"
-import { useState } from "react"
-
 import { GuestPricingSection } from "@/components/billing/GuestPricingSection"
+import { PlanPricingCards } from "@/components/billing/PlanPricingCards"
 import { UpgradePlanBanner } from "@/components/billing/UpgradePlanBanner"
-import type { PublicHomeCatalog } from "@/services/home-catalog.service"
+import { HomeVisualCollage } from "@/components/home/HomeVisualCollage"
+import { ButtonLink } from "@/components/ui/button"
 import type { plansListPublicByType } from "@/services/plans.service"
 
-import { HomeCatalogSections } from "./HomeCatalogSections"
-
-type Tab = "club" | "community"
 type PlanCard = Awaited<ReturnType<typeof plansListPublicByType>>[number]
 
+type LoggedInPlans = {
+    plans: PlanCard[]
+    description: string
+    showCheckout: boolean
+    currentPlanId: string | null
+    inGracePeriod: boolean
+    blockCheaperPlans: boolean
+}
+
 type Props = {
-    communityCatalog: PublicHomeCatalog
-    clubCatalog: PublicHomeCatalog | null
-    clubName: string | null
-    isLoggedIn: boolean
     firstName?: string
     individualPlans?: PlanCard[]
     clubPlans?: PlanCard[]
+    showGuestPlans?: boolean
+    loggedInPlans?: LoggedInPlans | null
     showUpgrade?: boolean
     upgradePlanName?: string | null
-    currentUserId?: string | null
 }
 
 export function PublicHomeContent({
-    communityCatalog,
-    clubCatalog,
-    clubName,
-    isLoggedIn,
     firstName,
     individualPlans = [],
     clubPlans = [],
+    showGuestPlans = false,
+    loggedInPlans = null,
     showUpgrade = false,
     upgradePlanName = null,
-    currentUserId = null,
 }: Props) {
-    const hasClubTab = Boolean(clubCatalog && clubName)
-    const [activeTab, setActiveTab] = useState<Tab>(hasClubTab ? "club" : "community")
-    const catalog = activeTab === "club" && clubCatalog ? clubCatalog : communityCatalog
-    const showGuestPricing =
-        !isLoggedIn && (individualPlans.length > 0 || clubPlans.length > 0)
-
     return (
         <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
-            <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 p-6 sm:p-8">
-                <header className="space-y-3">
-                    <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">
-                        {firstName ? `Hola, ${firstName}` : "Coach Forge"}
+            <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-14 p-6 sm:p-8">
+                <header className="space-y-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                        Coach Forge
+                    </p>
+                    <h1 className="max-w-3xl text-3xl font-bold text-zinc-800 sm:text-4xl dark:text-white">
+                        {firstName
+                            ? `Hola, ${firstName}`
+                            : "Creá ejercicios y clases de entrenamiento"}
                     </h1>
                     <p className="max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
-                        {isLoggedIn
-                            ? hasClubTab
-                                ? "Explorá el contenido de tu club o el de la comunidad."
-                                : "Explorá ejercicios y clases públicas. Usá una plantilla para crear tu versión o comenzá una sesión."
-                            : "Conocé los planes y explorá ejercicios y clases de la comunidad. Iniciá sesión para usar plantillas."}
+                        Editor visual 2D, plantillas públicas y sesiones en vivo. Organizá tu
+                        trabajo, compartí con tu club y llevá las clases al celular.
                     </p>
                 </header>
 
                 {showUpgrade ? <UpgradePlanBanner planName={upgradePlanName} /> : null}
 
-                {showGuestPricing ? (
+                <HomeVisualCollage />
+
+                <section className="mx-auto max-w-3xl space-y-4 text-center">
+                    <h2 className="text-2xl font-bold text-zinc-800 dark:text-white sm:text-3xl">
+                        Organizá, planificá y compartí con tu equipo
+                    </h2>
+                    <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        Armá ejercicios claros en el canvas, construí clases con tiempos y
+                        descansos, y compartilas con otros coaches o con tu club. Trabajá de
+                        forma conjunta, seguí lo que ya funciona y llevá mejoras reales a cada
+                        entrenamiento.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3 pt-1">
+                        <ButtonLink href="/explore/exercises" variant="soft">
+                            Ver ejercicios públicos
+                        </ButtonLink>
+                        <ButtonLink href="/explore/classes" variant="soft">
+                            Ver clases públicas
+                        </ButtonLink>
+                    </div>
+                </section>
+
+                <section className="mx-auto max-w-3xl space-y-3 text-center">
+                    <h2 className="text-xl font-semibold text-zinc-800 dark:text-white">
+                        Llevala a la cancha
+                    </h2>
+                    <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        Descubrí cómo instalar la app en iOS o Android y llevátela con vos a
+                        tus clases, con cronómetro y ejercicios a mano.
+                    </p>
+                    <div className="flex justify-center pt-1">
+                        <ButtonLink href="/app" variant="secondary">
+                            Ver instructivo de instalación
+                        </ButtonLink>
+                    </div>
+                </section>
+
+                {showGuestPlans ? (
                     <GuestPricingSection
                         individualPlans={individualPlans}
                         clubPlans={clubPlans}
                     />
-                ) : null}
-
-                <section
-                    className={clsx(
-                        "space-y-6",
-                        (showGuestPricing || showUpgrade) &&
-                            "border-t border-zinc-200 pt-10 dark:border-zinc-800",
-                    )}
-                >
-                    {!isLoggedIn ? (
-                        <div className="space-y-1">
-                            <h2 className="text-xl font-semibold text-zinc-800 dark:text-white">
-                                Explorá la comunidad
+                ) : loggedInPlans ? (
+                    <section className="space-y-4">
+                        <div className="space-y-2">
+                            <h2 className="text-3xl font-bold text-zinc-800 dark:text-white">
+                                Planes
                             </h2>
                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                Ejercicios y clases públicas para inspirarte.
+                                {loggedInPlans.description}
                             </p>
                         </div>
-                    ) : null}
-
-                    {hasClubTab ? (
-                        <div
-                            role="tablist"
-                            aria-label="Catálogo"
-                            className="flex gap-1 rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-950"
-                        >
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeTab === "club"}
-                                onClick={() => setActiveTab("club")}
-                                className={clsx(
-                                    "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                                    activeTab === "club"
-                                        ? "bg-emerald-600 text-white"
-                                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-                                )}
-                            >
-                                {clubName}
-                            </button>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeTab === "community"}
-                                onClick={() => setActiveTab("community")}
-                                className={clsx(
-                                    "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                                    activeTab === "community"
-                                        ? "bg-emerald-600 text-white"
-                                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-                                )}
-                            >
-                                Comunidad
-                            </button>
-                        </div>
-                    ) : null}
-
-                    <HomeCatalogSections
-                        catalog={catalog}
-                        isLoggedIn={isLoggedIn}
-                        currentUserId={currentUserId}
-                    />
-                </section>
+                        <PlanPricingCards
+                            plans={loggedInPlans.plans}
+                            showCheckout={loggedInPlans.showCheckout}
+                            currentPlanId={loggedInPlans.currentPlanId}
+                            inGracePeriod={loggedInPlans.inGracePeriod}
+                            blockCheaperPlans={loggedInPlans.blockCheaperPlans}
+                        />
+                    </section>
+                ) : null}
             </main>
         </div>
     )

@@ -21,6 +21,8 @@ interface ExerciseOrderPanelProps {
     readOnly?: boolean
     title?: string
     className?: string
+    /** Clases del contenedor scrolleable de la lista. */
+    listClassName?: string
 }
 
 export const ExerciseOrderPanel = ({
@@ -32,6 +34,7 @@ export const ExerciseOrderPanel = ({
     readOnly = false,
     title = "Lista del ejercicio",
     className = "w-80",
+    listClassName,
 }: ExerciseOrderPanelProps) => {
     const showPlayerFilter = playerOptions.length > 0
 
@@ -60,7 +63,13 @@ export const ExerciseOrderPanel = ({
                 </label>
             ) : null}
 
-            <div className="max-h-[520px] space-y-2 overflow-auto pr-1">
+            <div
+                className={
+                    listClassName
+                        ? `space-y-2 pr-1 ${listClassName}`
+                        : "max-h-[520px] space-y-2 overflow-auto pr-1"
+                }
+            >
                 {orderedItems.length === 0 ? (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                         No hay elementos con orden para este filtro.

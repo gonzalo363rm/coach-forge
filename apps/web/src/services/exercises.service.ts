@@ -61,6 +61,23 @@ function buildExerciseWhereFilters(
     if (filters.creatorId) {
         and.push({ creatorId: filters.creatorId })
     }
+    if (filters.clubId) {
+        and.push({
+            creator: {
+                OR: [
+                    { clubId: filters.clubId },
+                    { managedClub: { id: filters.clubId } },
+                ],
+            },
+            visibility: { in: ["club", "public"] },
+        })
+    }
+    if (filters.includeIds && filters.includeIds.length > 0) {
+        and.push({ id: { in: filters.includeIds } })
+    }
+    if (filters.excludeIds && filters.excludeIds.length > 0) {
+        and.push({ id: { notIn: filters.excludeIds } })
+    }
 
     if (and.length === 0) return {}
     if (and.length === 1) return and[0]!
@@ -103,6 +120,8 @@ function exerciseListOrderBy(
             return { difficulty: sortDir }
         case "visibility":
             return { visibility: sortDir }
+        case "createdAt":
+            return { createdAt: sortDir }
         case "updatedAt":
         default:
             return { updatedAt: sortDir }

@@ -2,60 +2,91 @@ import type { Metadata } from "next"
 
 import { auth } from "@/auth"
 import { PublicHomeContent } from "@/components/home/PublicHomeContent"
-import { canShowUpgradeCta, getEffectiveEntitlements } from "@/lib/entitlements"
-import { createPageMetadata } from "@/lib/seo"
-import { getUserClubContext } from "@/services/clubs.service"
 import {
-    getClubHomeCatalogSafe,
-    getPublicHomeCatalogSafe,
-} from "@/services/home-catalog.service"
+    canShowUpgradeCta,
+    getEffectiveEntitlements,
+} from "@/lib/entitlements"
+import { createPageMetadata } from "@/lib/seo"
+import { canViewPlansNav } from "@/lib/user-permissions"
 import { plansListPublicByType } from "@/services/plans.service"
 
 export const revalidate = 300
 
 export const metadata: Metadata = createPageMetadata({
-    title: "Coach Forge | Ejercicios y clases públicas",
+    title: "Coach Forge | Ejercicios y clases de entrenamiento",
     description:
-        "Explorá ejercicios y clases de entrenamiento públicas. Usá plantillas para crear tu contenido en Coach Forge.",
+        "Creá ejercicios y clases con un editor visual. Explorá la comunidad, instalá la app y elegí tu plan.",
     path: "/",
     absoluteTitle: true,
 })
 
 export default async function Home() {
     const session = await auth()
-    const clubContext = session?.user
-        ? await getUserClubContext(session.user.id)
-        : null
 
-    const [communityCatalog, clubCatalog, individualPlans, clubPlans, entitlements] =
-        await Promise.all([
-            getPublicHomeCatalogSafe(),
-            clubContext ? getClubHomeCatalogSafe(clubContext.clubId) : Promise.resolve(null),
-            session?.user
-                ? Promise.resolve([])
-                : plansListPublicByType("individual"),
-            session?.user ? Promise.resolve([]) : plansListPublicByType("club"),
-            session?.user
-                ? getEffectiveEntitlements(session.user.id)
-                : Promise.resolve(null),
-        ])
+    const entitlements = session?.user
+        ? await getEffectiveEntitlements(session.user.id)
+        : null
 
     const showUpgrade =
         entitlements != null &&
         canShowUpgradeCta(entitlements.subject, entitlements.catalogRole)
 
+    const showGuestPlans = !session?.user
+    const canShowLoggedInPlans =
+        Boolean(session?.user?.role) &&
+        canViewPlansNav(session!.user!.role) &&
+        Boolean(entitlements?.subject)
+
+    let individualPlans: Awaited<ReturnType<typeof plansListPublicByType>> = []
+    let clubPlans: Awaited<ReturnType<typeof plansListPublicByType>> = []
+    let loggedInPlans: {
+        plans: Awaited<ReturnType<typeof plansListPublicByType>>
+        description: string
+        showCheckout: boolean
+        currentPlanId: string | null
+        inGracePeriod: boolean
+        blockCheaperPlans: boolean
+    } | null = null
+
+    if (showGuestPlans) {
+        ;[individualPlans, clubPlans] = await Promise.all([
+            plansListPublicByType("individual"),
+            plansListPublicByType("club"),
+        ])
+    } else if (canShowLoggedInPlans && entitlements?.subject) {
+        const subject = entitlements.subject
+        const planType =
+            subject.actorRole === "admin" || subject.actorRole === "superadmin"
+                ? "individual"
+                : subject.planType
+
+        const plans = await plansListPublicByType(planType)
+        const description = subject.isClubMemberCoach
+            ? "Planes del club. Solo el manager puede suscribirse o cambiar el plan."
+            : subject.planType === "club"
+              ? "Planes para tu club. Podés suscribirte desde acá."
+              : "Planes individuales para tu cuenta de coach."
+
+        loggedInPlans = {
+            plans,
+            description,
+            showCheckout: subject.canManageBilling,
+            currentPlanId: entitlements.planId,
+            inGracePeriod: entitlements.inGracePeriod,
+            blockCheaperPlans:
+                entitlements.catalogRole === "full" && !entitlements.inGracePeriod,
+        }
+    }
+
     return (
         <PublicHomeContent
-            communityCatalog={communityCatalog}
-            clubCatalog={clubCatalog}
-            clubName={clubContext?.clubName ?? null}
-            isLoggedIn={Boolean(session?.user)}
             firstName={session?.user?.firstName}
             individualPlans={individualPlans}
             clubPlans={clubPlans}
+            showGuestPlans={showGuestPlans}
+            loggedInPlans={loggedInPlans}
             showUpgrade={showUpgrade}
             upgradePlanName={entitlements?.planName ?? null}
-            currentUserId={session?.user?.id ?? null}
         />
     )
 }

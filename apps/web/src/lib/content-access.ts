@@ -10,8 +10,8 @@ export type ActorWithClub = {
 }
 
 export async function getActorWithClub(userId: string): Promise<ActorWithClub | null> {
-    const user = await getPrisma().user.findUnique({
-        where: { id: userId },
+    const user = await getPrisma().user.findFirst({
+        where: { id: userId, deletedAt: null },
         select: {
             id: true,
             role: true,

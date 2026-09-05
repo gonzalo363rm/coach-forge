@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/auth/AppHeader";
 import { BillingGraceBanner } from "@/components/billing/BillingGraceBanner";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { getAppUrl } from "@/lib/app-url";
 import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
@@ -84,6 +85,7 @@ export default function RootLayout({
           <AppHeader />
           <BillingGraceBanner />
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <SiteFooter />
         </AppProviders>
       </body>
     </html>

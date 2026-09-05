@@ -58,6 +58,10 @@ export function AddExerciseModal({
     const [configureExercise, setConfigureExercise] = useState<ExerciseListItem | null>(null)
     const [difficultyMin, setDifficultyMin] = useState(1)
     const [difficultyMax, setDifficultyMax] = useState(5)
+    const [membershipFilter, setMembershipFilter] = useState<
+        "all" | "not_added" | "added"
+    >("all")
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
     const { register, handleSubmit, getValues } = useForm<FilterForm>({
         defaultValues: {
@@ -72,12 +76,22 @@ export function AddExerciseModal({
         (
             targetPage: number,
             difficultyOverride?: { min: number; max: number },
+            membershipOverride?: "all" | "not_added" | "added",
+            sortDirOverride?: "asc" | "desc",
         ) => {
             const data = getValues()
             const dMin = difficultyOverride?.min ?? difficultyMin
             const dMax = difficultyOverride?.max ?? difficultyMax
+            const membership = membershipOverride ?? membershipFilter
+            const dir = sortDirOverride ?? sortDir
             startTransition(async () => {
                 setError(null)
+                if (membership === "added" && excludeExerciseIds.length === 0) {
+                    setExercises([])
+                    setTotalPages(1)
+                    setPage(1)
+                    return
+                }
                 const result = await getExercisesPaginatedAction({
                     page: targetPage,
                     take: 8,
@@ -92,9 +106,15 @@ export function AddExerciseModal({
                             : undefined,
                         difficultyMin: dMin,
                         difficultyMax: dMax,
+                        includeIds:
+                            membership === "added" ? excludeExerciseIds : undefined,
+                        excludeIds:
+                            membership === "not_added" && excludeExerciseIds.length > 0
+                                ? excludeExerciseIds
+                                : undefined,
                     },
-                    sortBy: "title",
-                    sortDir: "asc",
+                    sortBy: "createdAt",
+                    sortDir: dir,
                 })
                 if (!result.ok) {
                     setError(result.error)
@@ -105,13 +125,22 @@ export function AddExerciseModal({
                 setPage(result.data.currentPage)
             })
         },
-        [difficultyMin, difficultyMax, getValues],
+        [
+            difficultyMin,
+            difficultyMax,
+            getValues,
+            membershipFilter,
+            sortDir,
+            excludeExerciseIds,
+        ],
     )
 
     useEffect(() => {
         if (!open) return
         setDifficultyMin(1)
         setDifficultyMax(5)
+        setMembershipFilter("all")
+        setSortDir("desc")
         setPage(1)
         setError(null)
         const data = getValues()
@@ -131,8 +160,8 @@ export function AddExerciseModal({
                     difficultyMin: 1,
                     difficultyMax: 5,
                 },
-                sortBy: "title",
-                sortDir: "asc",
+                sortBy: "createdAt",
+                sortDir: "desc",
             })
             if (!result.ok) {
                 setError(result.error)
@@ -234,6 +263,47 @@ export function AddExerciseModal({
                                 }}
                                 className="max-w-xs sm:max-w-sm"
                             />
+
+                            <label className="flex flex-col gap-1">
+                                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                    En la clase
+                                </span>
+                                <select
+                                    value={membershipFilter}
+                                    onChange={(e) => {
+                                        const next = e.target.value as
+                                            | "all"
+                                            | "not_added"
+                                            | "added"
+                                        setMembershipFilter(next)
+                                        fetchExercises(1, undefined, next)
+                                    }}
+                                    className={filterInputClass}
+                                >
+                                    <option value="all">Todos</option>
+                                    <option value="not_added">Sin añadir</option>
+                                    <option value="added">Ya en la clase</option>
+                                </select>
+                            </label>
+
+                            <label className="flex flex-col gap-1">
+                                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                    Orden por fecha
+                                </span>
+                                <select
+                                    value={sortDir}
+                                    onChange={(e) => {
+                                        const next =
+                                            e.target.value === "asc" ? "asc" : "desc"
+                                        setSortDir(next)
+                                        fetchExercises(1, undefined, undefined, next)
+                                    }}
+                                    className={filterInputClass}
+                                >
+                                    <option value="desc">Más recientes</option>
+                                    <option value="asc">Más antiguos</option>
+                                </select>
+                            </label>
 
                             <Button
                                 type="submit"

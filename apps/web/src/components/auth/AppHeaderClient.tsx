@@ -297,6 +297,12 @@ export function AppHeaderClient({
                     className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1"
                 >
                     <HeaderNavLink
+                        href="/explore/exercises"
+                        label="Explorar"
+                        section="explore"
+                    />
+                    <NavDivider />
+                    <HeaderNavLink
                         href="/classes/mine"
                         label="Mis clases"
                         section="classes-mine"
@@ -454,6 +460,12 @@ export function AppHeaderClient({
                             />
 
                             <nav aria-label="Navegación principal" className="space-y-0">
+                                <MobileNavLink
+                                    href="/explore/exercises"
+                                    label="Explorar"
+                                    section="explore"
+                                    onNavigate={closeMenu}
+                                />
                                 <MobileNavLink
                                     href="/classes/mine"
                                     label="Mis clases"

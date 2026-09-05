@@ -65,8 +65,17 @@ function mergeUserWhere(
     return { AND: clauses }
 }
 
+/** Solo usuarios no eliminados (borrado lógico). */
+export const activeUserWhere: Prisma.UserWhereInput = { deletedAt: null }
+
+export async function userFindActiveByEmail(email: string): Promise<User | null> {
+    return getPrisma().user.findFirst({
+        where: { email, deletedAt: null },
+    })
+}
+
 function buildUserWhereFilters(filters: UserListFilters): Prisma.UserWhereInput {
-    const and: Prisma.UserWhereInput[] = []
+    const and: Prisma.UserWhereInput[] = [{ deletedAt: null }]
 
     if (filters.search) {
         and.push({
@@ -114,7 +123,9 @@ function userListOrderBy(
 }
 
 export async function userGetById(id: string): Promise<UserSafe | null> {
-    const user = await getPrisma().user.findUnique({ where: { id } })
+    const user = await getPrisma().user.findFirst({
+        where: { id, deletedAt: null },
+    })
     return user ? toUserSafe(user) : null
 }
 
@@ -219,9 +230,7 @@ export async function usersSearchForSelect(
 
 export async function userCreate(data: UserCreateInput): Promise<UserMutationResult> {
     try {
-        const existing = await getPrisma().user.findUnique({
-            where: { email: data.email },
-        })
+        const existing = await userFindActiveByEmail(data.email)
         if (existing) {
             return { ok: false, error: "Ya existe un usuario con ese email" }
         }
@@ -257,15 +266,15 @@ export async function userCreate(data: UserCreateInput): Promise<UserMutationRes
 
 export async function userUpdate(data: UserUpdateInput): Promise<UserMutationResult> {
     try {
-        const current = await getPrisma().user.findUnique({ where: { id: data.id } })
+        const current = await getPrisma().user.findFirst({
+            where: { id: data.id, deletedAt: null },
+        })
         if (!current) {
             return { ok: false, error: "Usuario no encontrado" }
         }
 
         if (data.email !== current.email) {
-            const clash = await getPrisma().user.findUnique({
-                where: { email: data.email },
-            })
+            const clash = await userFindActiveByEmail(data.email)
             if (clash && clash.id !== data.id) {
                 return { ok: false, error: "Ya existe un usuario con ese email" }
             }
@@ -321,7 +330,9 @@ export async function userProfileUpdate(
     userId: string,
     data: UserProfileUpdateInput,
 ): Promise<UserMutationResult> {
-    const current = await getPrisma().user.findUnique({ where: { id: userId } })
+    const current = await getPrisma().user.findFirst({
+        where: { id: userId, deletedAt: null },
+    })
     if (!current) {
         return { ok: false, error: "Usuario no encontrado" }
     }
@@ -340,36 +351,15 @@ export async function userProfileUpdate(
     })
 }
 
-async function userOwnedContentCounts(
-    userId: string,
-): Promise<{ exercises: number; classes: number }> {
-    const [exercises, classes] = await Promise.all([
-        getPrisma().exercise.count({ where: { creatorId: userId } }),
-        getPrisma().trainingClass.count({ where: { creatorId: userId } }),
-    ])
-
-    return { exercises, classes }
-}
-
-function formatUserInUseMessage(counts: { exercises: number; classes: number }): string {
-    const parts: string[] = []
-    if (counts.exercises > 0) {
-        parts.push(`${counts.exercises} ejercicio${counts.exercises === 1 ? "" : "s"}`)
-    }
-    if (counts.classes > 0) {
-        parts.push(`${counts.classes} clase${counts.classes === 1 ? "" : "s"}`)
-    }
-
-    return `No se puede eliminar: es creador de ${parts.join(" y ")}`
-}
-
 export async function userSaveAvatar(
     userId: string,
     imageBase64: string,
     mime: string,
 ): Promise<UserMutationResult> {
     try {
-        const current = await getPrisma().user.findUnique({ where: { id: userId } })
+        const current = await getPrisma().user.findFirst({
+            where: { id: userId, deletedAt: null },
+        })
         if (!current) {
             return { ok: false, error: "Usuario no encontrado" }
         }
@@ -408,29 +398,33 @@ export async function userDelete(
     }
 
     try {
-        const counts = await userOwnedContentCounts(id)
-        if (counts.exercises > 0 || counts.classes > 0) {
-            return { ok: false, error: formatUserInUseMessage(counts) }
+        const current = await getPrisma().user.findFirst({
+            where: { id, deletedAt: null },
+            include: { managedClub: { select: { id: true } } },
+        })
+        if (!current) {
+            return { ok: false, error: "Usuario no encontrado" }
         }
 
-        const user = await getPrisma().user.delete({ where: { id } })
-
-        if (user.avatarUrl && isCloudinaryUrl(user.avatarUrl)) {
-            await deleteCloudinaryImage("avatars", avatarImagePublicId(id))
+        if (current.managedClub) {
+            return {
+                ok: false,
+                error: "No se puede eliminar: es manager de un club. Reasigná o eliminá el club primero.",
+            }
         }
+
+        const user = await getPrisma().$transaction(async (tx) => {
+            await tx.authToken.deleteMany({ where: { userId: id } })
+            return tx.user.update({
+                where: { id },
+                data: { deletedAt: new Date() },
+            })
+        })
 
         return { ok: true, data: toUserSafe(user) }
     } catch (e) {
-        if (e instanceof Prisma.PrismaClientKnownRequestError) {
-            if (e.code === "P2025") {
-                return { ok: false, error: "Usuario no encontrado" }
-            }
-            if (e.code === "P2003") {
-                return {
-                    ok: false,
-                    error: formatUserInUseMessage(await userOwnedContentCounts(id)),
-                }
-            }
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+            return { ok: false, error: "Usuario no encontrado" }
         }
         console.error("[userDelete]", e)
         return { ok: false, error: "Error al eliminar el usuario" }

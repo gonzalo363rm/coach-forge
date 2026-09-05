@@ -30,14 +30,14 @@ export async function applyMemberQuotaForClub(clubId: string): Promise<ClubBilli
     }
 
     const members = await getPrisma().user.findMany({
-        where: { clubId, role: "coach" },
+        where: { clubId, role: "coach", deletedAt: null },
         orderBy: { createdAt: "asc" },
         select: { id: true },
     })
 
     if (limit === null) {
         await getPrisma().user.updateMany({
-            where: { clubId, role: "coach" },
+            where: { clubId, role: "coach", deletedAt: null },
             data: { clubAccessEnabled: true },
         })
         return { ok: true }

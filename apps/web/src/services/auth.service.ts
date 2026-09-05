@@ -108,7 +108,7 @@ export async function authenticateUser(
 
   const { email, password } = parsed.data
   const prisma = getPrisma()
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } })
 
   if (!user) {
     return { ok: false, error: "Email o contraseña incorrectos" }
@@ -140,7 +140,7 @@ export async function resendVerificationEmail(
 
   const { email, password } = parsed.data
   const prisma = getPrisma()
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } })
 
   if (!user) {
     return { ok: false, error: "Email o contraseña incorrectos" }
@@ -190,7 +190,7 @@ export async function registerUser(
   } = parsed.data
   const prisma = getPrisma()
 
-  const existing = await prisma.user.findUnique({ where: { email } })
+  const existing = await prisma.user.findFirst({ where: { email, deletedAt: null } })
   if (existing) {
     if (existing.emailVerified) {
       return { ok: false, error: "Ya existe una cuenta con ese email" }
@@ -334,7 +334,7 @@ export async function requestPasswordReset(
 
   const { email } = parsed.data
   const prisma = getPrisma()
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } })
 
   if (user) {
     const token = await createAuthToken(

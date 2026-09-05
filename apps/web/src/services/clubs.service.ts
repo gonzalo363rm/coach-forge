@@ -120,7 +120,7 @@ export async function clubGetByManagerId(managerId: string): Promise<ClubWithMem
     if (!club) return null
 
     const memberCount = await prisma.user.count({
-        where: { clubId: club.id, role: "coach" },
+        where: { clubId: club.id, role: "coach", deletedAt: null },
     })
 
     return { ...club, memberCount }
@@ -132,7 +132,7 @@ export async function clubGetById(id: string): Promise<ClubWithMemberCount | nul
     if (!club) return null
 
     const memberCount = await prisma.user.count({
-        where: { clubId: club.id, role: "coach" },
+        where: { clubId: club.id, role: "coach", deletedAt: null },
     })
 
     return { ...club, memberCount }
@@ -156,7 +156,7 @@ export async function clubGetAdminById(id: string): Promise<ClubAdminDetail | nu
     if (!club) return null
 
     const memberCount = await prisma.user.count({
-        where: { clubId: club.id, role: "coach" },
+        where: { clubId: club.id, role: "coach", deletedAt: null },
     })
 
     return { ...club, memberCount }
@@ -232,7 +232,7 @@ export async function clubsListPaginated(
                     },
                     _count: {
                         select: {
-                            members: { where: { role: "coach" } },
+                            members: { where: { role: "coach", deletedAt: null } },
                         },
                     },
                 },
@@ -300,8 +300,8 @@ export async function clubAdminUpdate(
 
 export async function getUserClubContext(userId: string): Promise<UserClubContext> {
     const prisma = getPrisma()
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
+    const user = await prisma.user.findFirst({
+        where: { id: userId, deletedAt: null },
         select: {
             role: true,
             clubId: true,
@@ -409,7 +409,7 @@ async function assertMemberQuota(clubId: string): Promise<{ ok: true } | { ok: f
     }
 
     const memberCount = await prisma.user.count({
-        where: { clubId, role: "coach" },
+        where: { clubId, role: "coach", deletedAt: null },
     })
 
     if (memberCount >= refreshed.maxMembers) {
@@ -431,14 +431,16 @@ export async function clubCreateMember(
 
     try {
         const prisma = getPrisma()
-        const existing = await prisma.user.findUnique({ where: { email: data.email } })
+        const existing = await prisma.user.findFirst({
+            where: { email: data.email, deletedAt: null },
+        })
         if (existing) {
             return { ok: false, error: "Ya existe un usuario con ese email" }
         }
 
         const passwordHash = await bcryptjs.hash(data.password, 12)
         const enabledCount = await prisma.user.count({
-            where: { clubId, role: "coach", clubAccessEnabled: true },
+            where: { clubId, role: "coach", clubAccessEnabled: true, deletedAt: null },
         })
         const club = await prisma.club.findUnique({ where: { id: clubId } })
         const clubAccessEnabled = Boolean(club && enabledCount < club.maxMembers)
@@ -479,13 +481,17 @@ export async function clubUpdateMember(
 ): Promise<ClubMemberMutationResult> {
     try {
         const prisma = getPrisma()
-        const member = await prisma.user.findUnique({ where: { id: data.id } })
+        const member = await prisma.user.findFirst({
+            where: { id: data.id, deletedAt: null },
+        })
         if (!member || member.clubId !== clubId || member.role !== "coach") {
             return { ok: false, error: "Coach no encontrado en tu club" }
         }
 
         if (data.email !== member.email) {
-            const clash = await prisma.user.findUnique({ where: { email: data.email } })
+            const clash = await prisma.user.findFirst({
+                where: { email: data.email, deletedAt: null },
+            })
             if (clash && clash.id !== data.id) {
                 return { ok: false, error: "Ya existe un usuario con ese email" }
             }
@@ -551,7 +557,9 @@ export async function clubMembersListPaginated(
     const safePage = Math.max(1, Math.min(10_000, Math.floor(page)))
     const safeTake = Math.min(100, Math.max(1, Math.floor(take)))
 
-    const and: Prisma.UserWhereInput[] = [{ clubId, role: "coach" }]
+    const and: Prisma.UserWhereInput[] = [
+        { clubId, role: "coach", deletedAt: null },
+    ]
     const search = filters.search?.trim()
     if (search) {
         and.push({
@@ -581,7 +589,7 @@ export async function clubMembersListPaginated(
                 orderBy: clubMemberListOrderBy(sort.sortBy, sort.sortDir),
             }),
             prisma.user.count({ where }),
-            prisma.user.count({ where: { clubId, role: "coach" } }),
+            prisma.user.count({ where: { clubId, role: "coach", deletedAt: null } }),
         ])
 
         const totalPages = Math.max(1, Math.ceil(total / safeTake))
@@ -608,13 +616,21 @@ export async function clubDeleteMember(
 ): Promise<ClubMemberMutationResult> {
     try {
         const prisma = getPrisma()
-        const member = await prisma.user.findUnique({ where: { id: memberId } })
+        const member = await prisma.user.findFirst({
+            where: { id: memberId, deletedAt: null },
+        })
         if (!member || member.clubId !== clubId || member.role !== "coach") {
             return { ok: false, error: "Coach no encontrado en tu club" }
         }
 
-        await prisma.user.delete({ where: { id: memberId } })
-        return { ok: true, data: toUserSafe(member) }
+        const updated = await prisma.$transaction(async (tx) => {
+            await tx.authToken.deleteMany({ where: { userId: memberId } })
+            return tx.user.update({
+                where: { id: memberId },
+                data: { deletedAt: new Date() },
+            })
+        })
+        return { ok: true, data: toUserSafe(updated) }
     } catch (e) {
         console.error("[clubDeleteMember]", e)
         return { ok: false, error: "Error al eliminar el coach" }

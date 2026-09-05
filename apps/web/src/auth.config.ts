@@ -62,8 +62,11 @@ export const authConfig = {
       const isPublicRoute = publicRoutes.includes(nextUrl.pathname)
       const isHome = nextUrl.pathname === "/"
       const isInstallGuide = nextUrl.pathname === "/app"
+      const isExplore =
+        nextUrl.pathname === "/explore" ||
+        nextUrl.pathname.startsWith("/explore/")
 
-      if (isHome || isInstallGuide) {
+      if (isHome || isInstallGuide || isExplore) {
         return true
       }
 

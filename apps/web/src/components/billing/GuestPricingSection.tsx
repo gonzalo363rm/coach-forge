@@ -18,45 +18,47 @@ export function GuestPricingSection({ individualPlans, clubPlans }: Props) {
 
     return (
         <section className="space-y-4">
-            <div className="space-y-1">
-                <h2 className="text-xl font-semibold text-zinc-800 dark:text-white">Planes</h2>
+            <div className="space-y-2">
+                <h2 className="text-3xl font-bold text-zinc-800 dark:text-white">Planes</h2>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     Elegí el plan individual o de club. Iniciá sesión para suscribirte.
                 </p>
             </div>
-            <div
-                role="tablist"
-                aria-label="Tipo de plan"
-                className="flex gap-1 rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === "individual"}
-                    onClick={() => setTab("individual")}
-                    className={clsx(
-                        "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                        tab === "individual"
-                            ? "bg-emerald-600 text-white"
-                            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-                    )}
+            <div className="flex justify-center">
+                <div
+                    role="tablist"
+                    aria-label="Tipo de plan"
+                    className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-950"
                 >
-                    Individual
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === "club"}
-                    onClick={() => setTab("club")}
-                    className={clsx(
-                        "flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                        tab === "club"
-                            ? "bg-emerald-600 text-white"
-                            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-                    )}
-                >
-                    Club
-                </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === "individual"}
+                        onClick={() => setTab("individual")}
+                        className={clsx(
+                            "cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                            tab === "individual"
+                                ? "bg-emerald-600 text-white"
+                                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+                        )}
+                    >
+                        Individual
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === "club"}
+                        onClick={() => setTab("club")}
+                        className={clsx(
+                            "cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                            tab === "club"
+                                ? "bg-emerald-600 text-white"
+                                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+                        )}
+                    >
+                        Club
+                    </button>
+                </div>
             </div>
             <PlanPricingCards
                 plans={tab === "individual" ? individualPlans : clubPlans}

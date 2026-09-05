@@ -26,8 +26,8 @@ export type BillingSubject = {
 }
 
 export async function resolveBillingSubject(userId: string): Promise<BillingSubject | null> {
-    const user = await getPrisma().user.findUnique({
-        where: { id: userId },
+    const user = await getPrisma().user.findFirst({
+        where: { id: userId, deletedAt: null },
         select: {
             id: true,
             role: true,
