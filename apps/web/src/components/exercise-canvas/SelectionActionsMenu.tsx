@@ -8,6 +8,8 @@ type Props = {
     onDuplicate: () => void
     onDelete: () => void
     onMovePointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void
+    onOpenMore: () => void
+    moreDisabled?: boolean
 }
 
 const btnClass =
@@ -19,6 +21,8 @@ export function SelectionActionsMenu({
     onDuplicate,
     onDelete,
     onMovePointerDown,
+    onOpenMore,
+    moreDisabled = false,
 }: Props) {
     return (
         <div
@@ -50,6 +54,20 @@ export function SelectionActionsMenu({
                         strokeLinejoin="round"
                         d="M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"
                     />
+                </svg>
+            </button>
+            <button
+                type="button"
+                aria-label="Más opciones"
+                title="Más opciones"
+                disabled={moreDisabled}
+                className="inline-flex size-8 items-center justify-center rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-500"
+                onClick={onOpenMore}
+            >
+                <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+                    <circle cx="12" cy="5" r="1.75" />
+                    <circle cx="12" cy="12" r="1.75" />
+                    <circle cx="12" cy="19" r="1.75" />
                 </svg>
             </button>
         </div>

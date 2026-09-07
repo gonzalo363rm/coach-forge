@@ -5,6 +5,7 @@ import { BillingGraceBanner } from "@/components/billing/BillingGraceBanner";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { getAppUrl } from "@/lib/app-url";
+import { IOS_STARTUP_IMAGES } from "@/lib/ios-splash";
 import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "@/styles/exercise-canvas-modals.css";
@@ -33,6 +34,11 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: SITE_NAME,
+    startupImage: [...IOS_STARTUP_IMAGES],
+  },
+  // Next.js 15+ only emits mobile-web-app-capable; iOS still needs the Apple meta for splash.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
   },
   formatDetection: {
     telephone: false,
@@ -82,9 +88,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AppProviders>
-          <AppHeader />
-          <BillingGraceBanner />
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div className="flex min-h-dvh flex-col">
+            <AppHeader />
+            <BillingGraceBanner />
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          </div>
           <SiteFooter />
         </AppProviders>
       </body>

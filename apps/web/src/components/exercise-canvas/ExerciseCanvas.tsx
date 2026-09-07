@@ -303,7 +303,7 @@ export const ExerciseCanvas = ({
             x: Math.max(
                 8,
                 Math.min(
-                    canvasSize.width - 220,
+                    canvasSize.width - 280,
                     selectionBounds.left * canvasZoom + canvasPan.x,
                 ),
             ),
@@ -1427,6 +1427,45 @@ export const ExerciseCanvas = ({
         setContextMenu({ isOpen: false, x: 0, y: 0, target: null })
     }, [canvasElementsSnapshot, pushHistoryCheckpoint, selection])
 
+    const handleOpenSelectionMore = useCallback(() => {
+        if (selection.length !== 1) return
+        const item = selection[0]
+        if (!item) return
+
+        let index = -1
+        if (item.type === "image") index = images.findIndex((el) => el.id === item.id)
+        else if (item.type === "circle") index = circles.findIndex((el) => el.id === item.id)
+        else if (item.type === "rect") index = rects.findIndex((el) => el.id === item.id)
+        else if (item.type === "line") index = lines.findIndex((el) => el.id === item.id)
+        else index = arrows.findIndex((el) => el.id === item.id)
+
+        if (index < 0) return
+
+        const target: NonNullable<ContextTarget> = { type: item.type, index }
+        if (item.type === "arrow") {
+            setSelectedArrowId(arrows[index]?.id ?? null)
+        } else {
+            setSelectedArrowId(null)
+        }
+        setSelectedElement(target)
+        setShowSelectionMenu(false)
+        setContextMenu({
+            isOpen: true,
+            x: selectionMenuPosition.x,
+            y: selectionMenuPosition.y,
+            target,
+        })
+    }, [
+        arrows,
+        circles,
+        images,
+        lines,
+        rects,
+        selection,
+        selectionMenuPosition.x,
+        selectionMenuPosition.y,
+    ])
+
     const handlePasteClipboard = useCallback(() => {
         if (!clipboard || !clipboardHasContent(clipboard)) return
         pushHistoryCheckpoint()
@@ -2035,6 +2074,8 @@ export const ExerciseCanvas = ({
                             onDuplicate={handleDuplicateSelection}
                             onDelete={handleDeleteSelection}
                             onMovePointerDown={handleSelectionMovePointerDown}
+                            onOpenMore={handleOpenSelectionMore}
+                            moreDisabled={selection.length !== 1}
                         />
                     ) : null}
                     <button
