@@ -64,7 +64,7 @@ export function PublicHomeContent({
                         Organizá, planificá y compartí con tu equipo
                     </h2>
                     <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-                        Armá ejercicios claros en el canvas, construí clases con tiempos y
+                        Armá ejercicios claros en canvas, construí clases con tiempos y
                         descansos, y compartilas con otros coaches o con tu club. Trabajá de
                         forma conjunta, seguí lo que ya funciona y llevá mejoras reales a cada
                         entrenamiento.

@@ -67,7 +67,7 @@ export const ExerciseOrderPanel = ({
                 className={
                     listClassName
                         ? `space-y-2 pr-1 ${listClassName}`
-                        : "max-h-[520px] space-y-2 overflow-auto pr-1"
+                        : "max-h-130 space-y-2 overflow-auto pr-1"
                 }
             >
                 {orderedItems.length === 0 ? (

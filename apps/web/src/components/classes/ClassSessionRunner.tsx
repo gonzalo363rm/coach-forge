@@ -443,7 +443,7 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
                                 variant={timerRing.variant}
                             />
                         ) : (
-                            <div className="flex size-[168px] flex-col items-center justify-center rounded-full bg-zinc-800 text-center dark:bg-zinc-900">
+                            <div className="flex size-42 flex-col items-center justify-center rounded-full bg-zinc-800 text-center dark:bg-zinc-900">
                                 <span className="text-[10px] lowercase text-zinc-400">
                                     {timerRing.label}
                                 </span>
@@ -453,7 +453,7 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
                                     {formatMmSs(timerRing.elapsedSeconds)}
                                 </span>
                                 {focusedExercise ? (
-                                    <span className="mt-1 max-w-[140px] truncate px-2 text-[10px] text-zinc-500">
+                                    <span className="mt-1 max-w-35 truncate px-2 text-[10px] text-zinc-500">
                                         {focusedExercise.title}
                                     </span>
                                 ) : null}

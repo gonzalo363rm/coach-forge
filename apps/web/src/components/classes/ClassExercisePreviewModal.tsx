@@ -235,7 +235,7 @@ function ExercisePreviewContent({
                         className={`relative w-full overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 ${
                             isFullscreen
                                 ? "mx-auto aspect-4/3 max-h-[40vh] lg:aspect-auto lg:h-full lg:max-h-none lg:min-h-[60vh]"
-                                : "aspect-4/3 min-h-[200px]"
+                                : "aspect-4/3 min-h-50"
                         }`}
                     >
                         <Image

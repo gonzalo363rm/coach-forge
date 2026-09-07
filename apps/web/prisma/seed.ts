@@ -131,24 +131,31 @@ async function main(): Promise<void> {
   const prisma = createPrismaClient()
   const passwordHash = await bcryptjs.hash(SUPERADMIN_PASSWORD, 12)
 
-  const user = await prisma.user.upsert({
-    where: { email: SUPERADMIN_EMAIL },
-    update: {
-      firstName: "Super",
-      lastName: "Admin",
-      role: "superadmin",
-      passwordHash,
-      emailVerified: new Date(),
-    },
-    create: {
-      firstName: "Super",
-      lastName: "Admin",
-      email: SUPERADMIN_EMAIL,
-      passwordHash,
-      role: "superadmin",
-      emailVerified: new Date(),
-    },
+  const existing = await prisma.user.findFirst({
+    where: { email: SUPERADMIN_EMAIL, deletedAt: null },
   })
+
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          firstName: "Super",
+          lastName: "Admin",
+          role: "superadmin",
+          passwordHash,
+          emailVerified: new Date(),
+        },
+      })
+    : await prisma.user.create({
+        data: {
+          firstName: "Super",
+          lastName: "Admin",
+          email: SUPERADMIN_EMAIL,
+          passwordHash,
+          role: "superadmin",
+          emailVerified: new Date(),
+        },
+      })
 
   console.log(`Superadmin listo: ${user.email} (${user.role})`)
 

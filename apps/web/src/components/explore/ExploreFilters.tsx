@@ -106,7 +106,7 @@ export function ExploreFilters({
                             title={clubLabel}
                             className={clsx(
                                 scopeTabClass,
-                                "max-w-[14rem] truncate sm:max-w-xs",
+                                "max-w-56 truncate sm:max-w-xs",
                                 scope === "club"
                                     ? "bg-emerald-600 text-white"
                                     : "text-zinc-400 hover:text-zinc-200",

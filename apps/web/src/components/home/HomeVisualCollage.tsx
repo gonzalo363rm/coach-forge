@@ -4,7 +4,7 @@ const frame =
 export function HomeVisualCollage() {
     return (
         <div className="w-full overflow-hidden">
-            <div className="relative mx-auto aspect-[11/10] w-full max-w-4xl sm:aspect-[16/11]">
+            <div className="relative mx-auto aspect-11/10 w-full max-w-4xl sm:aspect-16/11">
                 {/* El contenido visual ocupa ~0–74%; se desplaza para centrarlo */}
                 <div className="absolute inset-0 translate-x-[13%]">
                     {/* Preview — atrás / arriba izquierda */}
@@ -36,7 +36,7 @@ export function HomeVisualCollage() {
                     </div>
 
                     {/* Orden vertical — esquina izq, un poco más arriba */}
-                    <div className="absolute bottom-[6%] left-[1%] z-20 w-[30%] max-w-[10.5rem] rotate-[3deg] sm:bottom-[8%] sm:left-[2%] sm:w-[24%] sm:max-w-[12rem]">
+                    <div className="absolute bottom-[6%] left-[1%] z-20 w-[30%] max-w-42 rotate-3 sm:bottom-[8%] sm:left-[2%] sm:w-[24%] sm:max-w-48">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/images/home/exercise-order-tt.png"
@@ -50,7 +50,7 @@ export function HomeVisualCollage() {
                     </div>
 
                     {/* Clase mobile — más cerca del centro, por encima de todo */}
-                    <div className="absolute bottom-[30%] right-[26%] z-40 w-[30%] max-w-[10.5rem] -rotate-[3deg] sm:bottom-[32%] sm:right-[28%] sm:w-[24%] sm:max-w-[12rem]">
+                    <div className="absolute bottom-[30%] right-[26%] z-40 w-[30%] max-w-42 -rotate-3 sm:bottom-[32%] sm:right-[28%] sm:w-[24%] sm:max-w-48">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/images/home/class-mobile-v2.png"
