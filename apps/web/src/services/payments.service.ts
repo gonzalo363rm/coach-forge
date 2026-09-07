@@ -162,7 +162,10 @@ export async function paymentsListForUser(
     params: GetPaymentsPaginatedParams,
 ): Promise<PaymentsPaginatedData> {
     return paymentsListPaginated(
-        { subscription: { userId } },
+        {
+            subscription: { userId },
+            status: { not: "pending" },
+        },
         params,
         false,
     )
