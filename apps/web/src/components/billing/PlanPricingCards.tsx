@@ -237,9 +237,7 @@ export function PlanPricingCards({
                                 "flex flex-col gap-3 rounded-xl border p-5",
                                 isCurrent
                                     ? "border-emerald-500 bg-emerald-50/40 dark:border-emerald-700 dark:bg-emerald-950/20"
-                                    : plan.catalogRole === "full"
-                                      ? "border-emerald-500/60 bg-white dark:border-emerald-800 dark:bg-zinc-950"
-                                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
+                                    : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
                             )}
                         >
                             <div className="flex items-start justify-between gap-2">
