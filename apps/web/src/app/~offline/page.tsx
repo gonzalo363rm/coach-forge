@@ -21,7 +21,8 @@ export default function OfflinePage() {
         Sin conexión
       </h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        No se pudo cargar esta página. Revisá tu red y volvé a intentarlo.
+        No hay conexión. Si ya visitaste esta sección antes, volvé atrás o al inicio
+        para ver la última versión guardada. Si es la primera vez, necesitás internet.
       </p>
       <Link
         href="/"

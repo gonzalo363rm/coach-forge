@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/auth/AppHeader";
 import { BillingGraceBanner } from "@/components/billing/BillingGraceBanner";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { OfflineGuard } from "@/components/pwa/OfflineGuard";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { getAppUrl } from "@/lib/app-url";
 import { IOS_STARTUP_IMAGES } from "@/lib/ios-splash";
@@ -91,6 +92,7 @@ export default function RootLayout({
           <div className="flex min-h-dvh flex-col">
             <AppHeader />
             <BillingGraceBanner />
+            <OfflineGuard />
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           </div>
           <SiteFooter />
