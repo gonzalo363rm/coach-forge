@@ -10,8 +10,8 @@ import {
     durationToMonths,
     formatBillingPeriodLabel,
     formatPlanCatalogRole,
-    formatPlanFeature,
 } from "@/lib/billing-labels"
+import { groupPlanFeaturesForDisplay } from "@/lib/plan-feature-groups"
 import { applyDiscounts, formatMoneyArs, getPlanFinalPriceForDuration } from "@/lib/plan-pricing"
 import type { plansListPublicByType } from "@/services/plans.service"
 
@@ -265,13 +265,13 @@ export function PlanPricingCards({
 
                             {plan.permissions.length > 0 ? (
                                 <ul className="space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-                                    {plan.permissions.map((permission) => (
-                                        <li key={permission.code} className="flex gap-2">
+                                    {groupPlanFeaturesForDisplay(plan.permissions).map((feature) => (
+                                        <li key={feature.id} className="flex gap-2">
                                             <span
                                                 className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500"
                                                 aria-hidden
                                             />
-                                            <span>{formatPlanFeature(permission)}</span>
+                                            <span>{feature.label}</span>
                                         </li>
                                     ))}
                                 </ul>
