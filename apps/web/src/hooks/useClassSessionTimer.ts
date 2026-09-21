@@ -549,6 +549,49 @@ export function useClassSessionTimer({
         startRestForExercise,
     ])
 
+    const getPersistableState = useCallback(() => {
+        const now = Date.now()
+        const nextSession =
+            sessionAnchorRef.current != null
+                ? elapsedFromWallAnchor(sessionAnchorRef.current, now)
+                : sessionSecondsRef.current
+
+        const nextExerciseElapsed = exerciseElapsed.map((sec, i) => {
+            const anchor = exerciseAnchorsRef.current[i]
+            if (exerciseRunningRef.current[i] && anchor != null) {
+                return elapsedFromWallAnchor(anchor, now)
+            }
+            return sec
+        })
+
+        const nextRestElapsed = restElapsed.map((sec, i) => {
+            const anchor = restAnchorsRef.current[i]
+            if (restingRef.current[i] && anchor != null) {
+                return elapsedFromWallAnchor(anchor, now)
+            }
+            return sec
+        })
+
+        return {
+            focusedIndex,
+            sessionSeconds: nextSession,
+            exerciseElapsed: nextExerciseElapsed,
+            exerciseRunning: [...exerciseRunningRef.current],
+            resting: [...restingRef.current],
+            restElapsed: nextRestElapsed,
+            restTargetSeconds,
+            completed,
+            exerciseAlarmFired,
+        }
+    }, [
+        focusedIndex,
+        exerciseElapsed,
+        restElapsed,
+        restTargetSeconds,
+        completed,
+        exerciseAlarmFired,
+    ])
+
     return {
         focusedIndex,
         focusExercise,
@@ -576,5 +619,6 @@ export function useClassSessionTimer({
         addRestTime,
         pauseRest,
         resumeRest,
+        getPersistableState,
     }
 }

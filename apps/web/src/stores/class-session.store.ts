@@ -122,15 +122,23 @@ export type ClassSessionTimerHydration = {
     exerciseAlarmFired: boolean[]
 }
 
-/** Mapea un snapshot a arrays alineados al orden actual de ejercicios. */
+/** Mapea un snapshot a arrays alineados al orden actual de ejercicios.
+ * Suma el tiempo real transcurrido desde `updatedAt` si había cronómetros activos.
+ */
 export function hydrateTimerFromSnapshot(
     snapshot: ClassSessionSnapshot | null | undefined,
     exerciseIds: string[],
     defaultRestSeconds: number,
+    now = Date.now(),
 ): ClassSessionTimerHydration | null {
     if (!snapshot || exerciseIds.length === 0) return null
 
     const normalized = normalizeSnapshot(snapshot)
+    const awaySeconds = Math.max(
+        0,
+        Math.floor((now - normalized.updatedAt) / 1000),
+    )
+
     const exerciseElapsed: number[] = []
     const exerciseRunning: boolean[] = []
     const resting: boolean[] = []
@@ -139,15 +147,28 @@ export function hydrateTimerFromSnapshot(
     const completed: boolean[] = []
     const exerciseAlarmFired: boolean[] = []
 
+    let clockWasActive = false
+
     for (const id of exerciseIds) {
         const progress = normalized.exercises[id]
-        exerciseElapsed.push(progress?.elapsed ?? 0)
-        exerciseRunning.push(progress?.running ?? false)
-        resting.push(progress?.resting ?? false)
-        restElapsed.push(progress?.restElapsed ?? 0)
+        const wasRunning = progress?.running ?? false
+        const wasResting = progress?.resting ?? false
+        if (wasRunning || wasResting) clockWasActive = true
+
+        exerciseRunning.push(wasRunning)
+        resting.push(wasResting)
         restTargetSeconds.push(progress?.restTargetSeconds ?? defaultRestSeconds)
         completed.push(progress?.completed ?? false)
         exerciseAlarmFired.push(progress?.alarmFired ?? false)
+
+        const baseElapsed = progress?.elapsed ?? 0
+        const baseRestElapsed = progress?.restElapsed ?? 0
+        exerciseElapsed.push(
+            wasRunning ? baseElapsed + awaySeconds : baseElapsed,
+        )
+        restElapsed.push(
+            wasResting ? baseRestElapsed + awaySeconds : baseRestElapsed,
+        )
     }
 
     let focusedIndex = 0
@@ -156,9 +177,14 @@ export function hydrateTimerFromSnapshot(
         if (idx >= 0) focusedIndex = idx
     }
 
+    const sessionSeconds = Math.max(
+        0,
+        normalized.sessionSeconds + (clockWasActive ? awaySeconds : 0),
+    )
+
     return {
         focusedIndex,
-        sessionSeconds: Math.max(0, normalized.sessionSeconds),
+        sessionSeconds,
         exerciseElapsed,
         exerciseRunning,
         resting,

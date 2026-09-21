@@ -113,7 +113,8 @@ export function ClassSessionRunner(props: Props) {
         )
     }
 
-    return <ClassSessionRunnerInner {...props} />
+    // Remount al cambiar de clase: si no, el timer queda con el estado de la sesión anterior.
+    return <ClassSessionRunnerInner key={props.session.classId} {...props} />
 }
 
 function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) {
@@ -200,24 +201,28 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
         focusedPaused,
     )
 
+    const getPersistableStateRef = useRef(timer.getPersistableState)
+    getPersistableStateRef.current = timer.getPersistableState
+
     useEffect(() => {
         if (!userId) return
 
         const persistNow = () => {
+            const state = getPersistableStateRef.current()
             saveSnapshot(
                 buildClassSessionSnapshot({
                     userId,
                     classId,
                     exerciseIds: exercises.map((ex) => ex.exerciseId),
-                    focusedIndex: timer.focusedIndex,
-                    sessionSeconds: timer.sessionSeconds,
-                    exerciseElapsed: timer.exerciseElapsed,
-                    exerciseRunning: timer.exerciseRunning,
-                    resting: timer.resting,
-                    restElapsed: timer.restElapsed,
-                    restTargetSeconds: timer.restTargetSeconds,
-                    completed: timer.completed,
-                    exerciseAlarmFired: timer.exerciseAlarmFired,
+                    focusedIndex: state.focusedIndex,
+                    sessionSeconds: state.sessionSeconds,
+                    exerciseElapsed: state.exerciseElapsed,
+                    exerciseRunning: state.exerciseRunning,
+                    resting: state.resting,
+                    restElapsed: state.restElapsed,
+                    restTargetSeconds: state.restTargetSeconds,
+                    completed: state.completed,
+                    exerciseAlarmFired: state.exerciseAlarmFired,
                 }),
             )
         }
@@ -242,7 +247,17 @@ function ClassSessionRunnerInner({ session, canManage, sports, userId }: Props) 
     ])
 
     useEffect(() => {
+        const onHide = () => {
+            if (document.visibilityState === "hidden") {
+                persistLatestRef.current()
+            }
+        }
+        const onPageHide = () => persistLatestRef.current()
+        document.addEventListener("visibilitychange", onHide)
+        window.addEventListener("pagehide", onPageHide)
         return () => {
+            document.removeEventListener("visibilitychange", onHide)
+            window.removeEventListener("pagehide", onPageHide)
             persistLatestRef.current()
         }
     }, [])
