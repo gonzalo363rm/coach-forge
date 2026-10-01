@@ -24,8 +24,9 @@ import {
     buildOrderedItemsFromCanvas,
     playerOptionsFromCanvas,
 } from "@/utils/exercise-ordered-items"
-import { buildOrderOverlayBadges, ORDER_BADGE_RADIUS } from "@/utils/order-overlay-badges"
-import { buildLabelOverlayItems } from "@/utils/label-overlay"
+import { buildOrderOverlayBadges, findOrderBadgeAt } from "@/utils/order-overlay-badges"
+import { buildLabelOverlayItems, findLabelAt } from "@/utils/label-overlay"
+import { getExerciseOverlayScale, getStrokeZoomBoost } from "@/utils/overlay-scale"
 import { ExerciseOrderPanel, type OrderedItemSummary } from "./ExerciseOrderPanel"
 import { ElementContextMenu } from "./ElementContextMenu"
 import { ResetConfirmModal } from "./ResetConfirmModal"
@@ -66,6 +67,7 @@ import {
     copySelectionToClipboard,
     expandBoundsWithMargin,
     getCanvasContentBounds,
+    getLargestElementBounds,
     getSelectionUnionBounds,
     normalizeMarquee,
     pasteClipboard,
@@ -148,6 +150,8 @@ const MIN_CANVAS_ZOOM = 0.05
 const MAX_CANVAS_ZOOM = 2.5
 /** Margen al encajar un elemento grande con zoom automático. */
 const FIT_ZOOM_PADDING = 0.92
+/** Margen extra al abrir un ejercicio (más zoom-out que al colocar). */
+const OPEN_VIEW_PADDING = 0.72
 
 export const ExerciseCanvas = ({
     currentTool,
@@ -183,6 +187,9 @@ export const ExerciseCanvas = ({
     const [canvasZoom, setCanvasZoom] = useState(1)
     /** Desplazamiento de vista (px pantalla) para zoom hacia el cursor. */
     const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 })
+    const [canvasCursor, setCanvasCursor] = useState("default")
+    const isPanningRef = useRef(false)
+    const lastPanScreenRef = useRef({ x: 0, y: 0 })
     const viewRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } })
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection | null>(null)
     const [images, setImages] = useState<ImageElementInstance[]>([])
@@ -230,8 +237,6 @@ export const ExerciseCanvas = ({
         const c = initialData.canvas
         setCanvasSize({ width: c.width, height: c.height })
         setCanvasBackgroundColor(c.backgroundColor)
-        setCanvasZoom(Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))))
-        setCanvasPan({ x: 0, y: 0 })
         setShowTitleOverlay(c.showTitleOverlay)
         setShowOrderOverlay(c.showOrderOverlay)
         setImages(c.images)
@@ -239,6 +244,37 @@ export const ExerciseCanvas = ({
         setRects(c.rects)
         setLines(c.lines)
         setArrows(c.arrows)
+
+        const largest = getLargestElementBounds({
+            images: c.images,
+            circles: c.circles,
+            rects: c.rects,
+            lines: c.lines,
+            arrows: c.arrows,
+        })
+        if (largest) {
+            const contentW = Math.max(1, largest.right - largest.left)
+            const contentH = Math.max(1, largest.bottom - largest.top)
+            const fit =
+                Math.min(c.width / contentW, c.height / contentH) * OPEN_VIEW_PADDING
+            const zoom = Math.min(
+                MAX_CANVAS_ZOOM,
+                Math.max(MIN_CANVAS_ZOOM, Number(fit.toFixed(2))),
+            )
+            const centerX = (largest.left + largest.right) / 2
+            const centerY = (largest.top + largest.bottom) / 2
+            setCanvasZoom(zoom)
+            setCanvasPan({
+                x: c.width / 2 - centerX * zoom,
+                y: c.height / 2 - centerY * zoom,
+            })
+        } else {
+            setCanvasZoom(
+                Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))),
+            )
+            setCanvasPan({ x: 0, y: 0 })
+        }
+
         history.clear()
     }, [history, initialData])
 
@@ -476,6 +512,11 @@ export const ExerciseCanvas = ({
         })
     }, [loadImages])
 
+    const overlayScale = useMemo(
+        () => getExerciseOverlayScale({ images, arrows, circles, rects, lines }, canvasZoom),
+        [arrows, canvasZoom, circles, images, lines, rects],
+    )
+
     const orderOverlayItems = useMemo(
         () =>
             showOrderOverlay
@@ -487,12 +528,14 @@ export const ExerciseCanvas = ({
                       lines,
                       canvasWidth: canvasSize.width,
                       canvasHeight: canvasSize.height,
+                      viewScale: canvasZoom,
                   })
                 : [],
         [
             arrows,
             canvasSize.height,
             canvasSize.width,
+            canvasZoom,
             circles,
             images,
             lines,
@@ -512,12 +555,14 @@ export const ExerciseCanvas = ({
                       lines,
                       canvasWidth: canvasSize.width,
                       canvasHeight: canvasSize.height,
+                      viewScale: canvasZoom,
                   })
                 : [],
         [
             arrows,
             canvasSize.height,
             canvasSize.width,
+            canvasZoom,
             circles,
             images,
             lines,
@@ -627,28 +672,28 @@ export const ExerciseCanvas = ({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawImageElement = useCallback((canvas: any, ck: any, img: ImageElementInstance) => {
-        drawImageElementHelper(canvas, ck, img, imagesCacheRef, showTitleOverlay)
-    }, [showTitleOverlay])
+        drawImageElementHelper(canvas, ck, img, imagesCacheRef, showTitleOverlay, overlayScale)
+    }, [overlayScale, showTitleOverlay])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawArrow = useCallback((canvas: any, ck: any, arrow: ArrowElementInstance, isTemp = false) => {
-        drawArrowHelper(canvas, ck, arrow, selectedArrowId, DEFAULT_ARROW_STROKE, DEFAULT_ARROW_COLOR, isTemp, showTitleOverlay)
-    }, [selectedArrowId, showTitleOverlay])
+        drawArrowHelper(canvas, ck, arrow, selectedArrowId, DEFAULT_ARROW_STROKE, DEFAULT_ARROW_COLOR, isTemp, showTitleOverlay, overlayScale, canvasZoom)
+    }, [canvasZoom, overlayScale, selectedArrowId, showTitleOverlay])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawCircleElement = useCallback((canvas: any, ck: any, circle: CircleElementInstance) => {
-        drawCircleElementHelper(canvas, ck, circle, showTitleOverlay)
-    }, [showTitleOverlay])
+        drawCircleElementHelper(canvas, ck, circle, showTitleOverlay, overlayScale, canvasZoom)
+    }, [canvasZoom, overlayScale, showTitleOverlay])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawRectElement = useCallback((canvas: any, ck: any, rect: RectElementInstance) => {
-        drawRectElementHelper(canvas, ck, rect, showTitleOverlay)
-    }, [showTitleOverlay])
+        drawRectElementHelper(canvas, ck, rect, showTitleOverlay, overlayScale, canvasZoom)
+    }, [canvasZoom, overlayScale, showTitleOverlay])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawLineElement = useCallback((canvas: any, ck: any, line: LineElementInstance) => {
-        drawLineElementHelper(canvas, ck, line, showTitleOverlay)
-    }, [showTitleOverlay])
+        drawLineElementHelper(canvas, ck, line, showTitleOverlay, overlayScale, canvasZoom)
+    }, [canvasZoom, overlayScale, showTitleOverlay])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleDraw = useCallback((canvas: any, ck: any) => {
@@ -685,7 +730,7 @@ export const ExerciseCanvas = ({
         }
 
         if (tempShape) {
-            drawTempShapeHelper(canvas, ck, tempShape)
+            drawTempShapeHelper(canvas, ck, tempShape, canvasZoom)
         }
 
         if (marquee) {
@@ -735,55 +780,8 @@ export const ExerciseCanvas = ({
     /** Vista previa: encuadra contenido + labels/order visibles + margen. */
     const previewFrame = useMemo(() => {
         const elementBounds = getCanvasContentBounds(canvasElementsSnapshot)
-        const overlayBounds: Bounds[] = []
 
-        if (showOrderOverlay) {
-            const badges = buildOrderOverlayBadges({
-                images,
-                arrows,
-                circles,
-                rects,
-                lines,
-                canvasWidth: canvasSize.width,
-                canvasHeight: canvasSize.height,
-            })
-            for (const badge of badges) {
-                overlayBounds.push({
-                    left: badge.x - ORDER_BADGE_RADIUS,
-                    top: badge.y - ORDER_BADGE_RADIUS,
-                    right: badge.x + ORDER_BADGE_RADIUS,
-                    bottom: badge.y + ORDER_BADGE_RADIUS,
-                })
-            }
-        }
-
-        if (showTitleOverlay) {
-            const labels = buildLabelOverlayItems({
-                images,
-                arrows,
-                circles,
-                rects,
-                lines,
-                canvasWidth: canvasSize.width,
-                canvasHeight: canvasSize.height,
-            })
-            for (const label of labels) {
-                // drawText usa baseline en y; el glifo queda mayormente por encima.
-                overlayBounds.push({
-                    left: label.x,
-                    top: label.y - label.height,
-                    right: label.x + label.width,
-                    bottom: label.y,
-                })
-            }
-        }
-
-        const contentBounds = unionBounds([
-            ...(elementBounds ? [elementBounds] : []),
-            ...overlayBounds,
-        ])
-
-        if (!contentBounds) {
+        if (!elementBounds) {
             return {
                 width: canvasSize.width,
                 height: canvasSize.height,
@@ -793,16 +791,74 @@ export const ExerciseCanvas = ({
             }
         }
 
-        const framed = expandBoundsWithMargin(
+        const maxSide = 1600
+        const collectOverlayBounds = (viewScale: number): Bounds[] => {
+            const overlayBounds: Bounds[] = []
+            if (showOrderOverlay) {
+                const badges = buildOrderOverlayBadges({
+                    images,
+                    arrows,
+                    circles,
+                    rects,
+                    lines,
+                    canvasWidth: canvasSize.width,
+                    canvasHeight: canvasSize.height,
+                    viewScale,
+                })
+                for (const badge of badges) {
+                    overlayBounds.push({
+                        left: badge.x - badge.radius,
+                        top: badge.y - badge.radius,
+                        right: badge.x + badge.radius,
+                        bottom: badge.y + badge.radius,
+                    })
+                }
+            }
+            if (showTitleOverlay) {
+                const labels = buildLabelOverlayItems({
+                    images,
+                    arrows,
+                    circles,
+                    rects,
+                    lines,
+                    canvasWidth: canvasSize.width,
+                    canvasHeight: canvasSize.height,
+                    viewScale,
+                })
+                for (const label of labels) {
+                    overlayBounds.push({
+                        left: label.x,
+                        top: label.y - label.height,
+                        right: label.x + label.width,
+                        bottom: label.y,
+                    })
+                }
+            }
+            return overlayBounds
+        }
+
+        // 1ª pasada: estimar fit con overlays a escala 1.
+        let contentBounds =
+            unionBounds([elementBounds, ...collectOverlayBounds(1)]) ?? elementBounds
+        let framed = expandBoundsWithMargin(
             contentBounds,
             EXERCISE_PREVIEW_CONTENT_MARGIN_RATIO,
         )
-        const contentWidth = Math.max(1, framed.right - framed.left)
-        const contentHeight = Math.max(1, framed.bottom - framed.top)
+        let contentWidth = Math.max(1, framed.right - framed.left)
+        let contentHeight = Math.max(1, framed.bottom - framed.top)
+        let fit = Math.min(maxSide / contentWidth, maxSide / contentHeight)
 
-        // Conservar aspect del contenido; limitar el lado mayor para un WebP manejable.
-        const maxSide = 1600
-        const fit = Math.min(maxSide / contentWidth, maxSide / contentHeight)
+        // 2ª pasada: overlays compensados al fit real (como zoom < 1).
+        contentBounds =
+            unionBounds([elementBounds, ...collectOverlayBounds(fit)]) ?? elementBounds
+        framed = expandBoundsWithMargin(
+            contentBounds,
+            EXERCISE_PREVIEW_CONTENT_MARGIN_RATIO,
+        )
+        contentWidth = Math.max(1, framed.right - framed.left)
+        contentHeight = Math.max(1, framed.bottom - framed.top)
+        fit = Math.min(maxSide / contentWidth, maxSide / contentHeight)
+
         const width = Math.max(1, Math.round(contentWidth * fit))
         const height = Math.max(1, Math.round(contentHeight * fit))
 
@@ -868,17 +924,22 @@ export const ExerciseCanvas = ({
             ...arrows.map((_, index) => ({ type: "arrow" as const, index, zIndex: getElementZ(arrows[index]), sequence: images.length + circles.length + rects.length + lines.length + index })),
         ]
 
+        const previewOverlayScale = getExerciseOverlayScale(
+            { images, arrows, circles, rects, lines },
+            previewFrame.contentScale,
+        )
+
         renderQueue
             .sort((a, b) => a.zIndex - b.zIndex || a.sequence - b.sequence)
             .forEach((item) => {
                 if (item.type === "image") {
-                    drawImageElementHelper(canvas, ck, images[item.index], imagesCacheRef, showTitleOverlay)
+                    drawImageElementHelper(canvas, ck, images[item.index], imagesCacheRef, showTitleOverlay, previewOverlayScale)
                 } else if (item.type === "circle") {
-                    drawCircleElementHelper(canvas, ck, circles[item.index], showTitleOverlay)
+                    drawCircleElementHelper(canvas, ck, circles[item.index], showTitleOverlay, previewOverlayScale, previewFrame.contentScale)
                 } else if (item.type === "rect") {
-                    drawRectElementHelper(canvas, ck, rects[item.index], showTitleOverlay)
+                    drawRectElementHelper(canvas, ck, rects[item.index], showTitleOverlay, previewOverlayScale, previewFrame.contentScale)
                 } else if (item.type === "line") {
-                    drawLineElementHelper(canvas, ck, lines[item.index], showTitleOverlay)
+                    drawLineElementHelper(canvas, ck, lines[item.index], showTitleOverlay, previewOverlayScale, previewFrame.contentScale)
                 } else {
                     drawArrowHelper(
                         canvas,
@@ -889,6 +950,8 @@ export const ExerciseCanvas = ({
                         DEFAULT_ARROW_COLOR,
                         false,
                         showTitleOverlay,
+                        previewOverlayScale,
+                        previewFrame.contentScale,
                     )
                 }
             })
@@ -902,6 +965,7 @@ export const ExerciseCanvas = ({
                 lines,
                 canvasWidth: canvasSize.width,
                 canvasHeight: canvasSize.height,
+                viewScale: previewFrame.contentScale,
             })
             if (previewOrderBadges.length > 0) {
                 drawOrderBadgesHelper(canvas, ck, previewOrderBadges)
@@ -995,13 +1059,16 @@ export const ExerciseCanvas = ({
                 }
             } else if (item.type === "line") {
                 const line = lines[item.index]
+                const strokeBoost = getStrokeZoomBoost(canvasZoom)
+                const hitPad = Math.max(8, line.style?.strokeWidth ?? 3) * strokeBoost
                 const d = distanceToLine(x, y, line.data.start[0], line.data.start[1], line.data.end[0], line.data.end[1])
-                if (d <= Math.max(8, line.style?.strokeWidth ?? 3)) {
+                if (d <= hitPad) {
                     return { type: "line", index: item.index }
                 }
             } else {
                 const arrow = arrows[item.index]
-                if (isPointNearArrow(x, y, arrow.data.points, 8)) {
+                const hitPad = 8 * getStrokeZoomBoost(canvasZoom)
+                if (isPointNearArrow(x, y, arrow.data.points, hitPad)) {
                     return { type: "arrow", index: item.index }
                 }
             }
@@ -1696,6 +1763,7 @@ export const ExerciseCanvas = ({
         orderOverlayItems,
         showTitleOverlay,
         labelOverlayItems,
+        overlayScale,
         images,
         arrows,
         circles,
@@ -1747,7 +1815,42 @@ export const ExerciseCanvas = ({
         y: (y - canvasPan.y) / canvasZoom,
     }), [canvasPan.x, canvasPan.y, canvasZoom])
 
-    const handleCanvasPointerDown = useCallback((x: number, y: number) => {
+    const startCanvasPan = useCallback((screenX: number, screenY: number) => {
+        isPanningRef.current = true
+        lastPanScreenRef.current = { x: screenX, y: screenY }
+        setCanvasCursor("grabbing")
+    }, [])
+
+    const isEmptyCanvasPoint = useCallback((worldX: number, worldY: number) => {
+        if (findTopElementAt(worldX, worldY)) return false
+        if (findArrowHandleAt(worldX, worldY)) return false
+        if (showOrderOverlay && findOrderBadgeAt(worldX, worldY, orderOverlayItems)) return false
+        if (showTitleOverlay && findLabelAt(worldX, worldY, labelOverlayItems)) return false
+        return true
+    }, [
+        findArrowHandleAt,
+        findTopElementAt,
+        labelOverlayItems,
+        orderOverlayItems,
+        showOrderOverlay,
+        showTitleOverlay,
+    ])
+
+    const handleCanvasPointerDown = useCallback((
+        x: number,
+        y: number,
+        button: number,
+        modifiers: { ctrlKey: boolean; metaKey: boolean },
+    ) => {
+        // Pan: botón de la rueda, o Ctrl/Cmd + clic izquierdo
+        const wantsPan =
+            button === 1 || (button === 0 && (modifiers.ctrlKey || modifiers.metaKey))
+        if (wantsPan) {
+            startCanvasPan(x, y)
+            return
+        }
+        if (button !== 0) return
+
         const world = toWorldCoords(x, y)
         if (currentTool === "select" && selectedPaletteElement) {
             const imageRef = selectedPaletteElement.image
@@ -1757,18 +1860,66 @@ export const ExerciseCanvas = ({
             placePaletteImage(world.x, world.y, selectedPaletteElement)
             return
         }
+
+        // Clic izquierdo en vacío → marquee / selección de grupo (en el hook)
         pointer.handlePointerDown(world.x, world.y)
     }, [
         currentTool,
         placePaletteImage,
         pointer,
         selectedPaletteElement,
+        startCanvasPan,
         toWorldCoords,
     ])
-    const handleCanvasPointerMove = useCallback((x: number, y: number) => {
+
+    const handleCanvasPointerMove = useCallback((
+        x: number,
+        y: number,
+        modifiers: { ctrlKey: boolean; metaKey: boolean },
+    ) => {
+        if (isPanningRef.current) {
+            const dx = x - lastPanScreenRef.current.x
+            const dy = y - lastPanScreenRef.current.y
+            lastPanScreenRef.current = { x, y }
+            setCanvasPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+            return
+        }
+
         const world = toWorldCoords(x, y)
+        if (
+            !draggingRef.current &&
+            !isDrawingShapeRef.current &&
+            !isDrawingMarqueeRef.current
+        ) {
+            const panModifier = modifiers.ctrlKey || modifiers.metaKey
+            if (
+                panModifier &&
+                currentTool === "select" &&
+                !selectedPaletteElement &&
+                isEmptyCanvasPoint(world.x, world.y)
+            ) {
+                setCanvasCursor("grab")
+            } else {
+                setCanvasCursor("default")
+            }
+        }
         pointer.handlePointerMove(world.x, world.y)
-    }, [pointer, toWorldCoords])
+    }, [
+        currentTool,
+        isEmptyCanvasPoint,
+        pointer,
+        selectedPaletteElement,
+        toWorldCoords,
+    ])
+
+    const handleCanvasPointerUp = useCallback((_button: number) => {
+        if (isPanningRef.current) {
+            isPanningRef.current = false
+            setCanvasCursor("default")
+            return
+        }
+        pointer.handlePointerUp()
+    }, [pointer])
 
     const handleCanvasContextMenu = useCallback((x: number, y: number) => {
         const world = toWorldCoords(x, y)
@@ -2018,9 +2169,10 @@ export const ExerciseCanvas = ({
                         onReady={() => setIsSkiaReady(true)}
                         onPointerDown={handleCanvasPointerDown}
                         onPointerMove={handleCanvasPointerMove}
-                        onPointerUp={pointer.handlePointerUp}
+                        onPointerUp={handleCanvasPointerUp}
                         onContextMenu={handleCanvasContextMenu}
                         onDrop={handleCanvasDrop}
+                        cursor={canvasCursor}
                     />
 
                     {isCanvasBusy && (

@@ -134,6 +134,32 @@ export function getCanvasContentBounds(canvas: CanvasElementsSnapshot): Bounds |
     return unionBounds(boundsList)
 }
 
+function boundsArea(bounds: Bounds): number {
+    return Math.max(0, bounds.right - bounds.left) * Math.max(0, bounds.bottom - bounds.top)
+}
+
+/** Bounds del elemento con mayor área en el canvas (para centrar la vista al abrir). */
+export function getLargestElementBounds(canvas: CanvasElementsSnapshot): Bounds | null {
+    const candidates: Bounds[] = [
+        ...canvas.images.map(getImageBounds),
+        ...canvas.circles.map(getCircleBounds),
+        ...canvas.rects.map(getRectBounds),
+        ...canvas.lines.map(getLineBounds),
+        ...canvas.arrows.map(getArrowBounds),
+    ]
+
+    let best: Bounds | null = null
+    let bestArea = -1
+    for (const bounds of candidates) {
+        const area = boundsArea(bounds)
+        if (area > bestArea) {
+            bestArea = area
+            best = bounds
+        }
+    }
+    return best
+}
+
 /** Une varios bounds en el AABB mínimo que los contiene a todos. */
 export function unionBounds(boundsList: Bounds[]): Bounds | null {
     if (boundsList.length === 0) return null

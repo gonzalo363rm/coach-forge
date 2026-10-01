@@ -29,7 +29,7 @@ function loadCanvasKit(): Promise<any> {
  * Compatible con Next.js sin necesidad de react-native-skia
  */
 export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
-  function SkiaCanvas({ width, height, onDraw, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDrop, onReady, className }, ref) {
+  function SkiaCanvas({ width, height, onDraw, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDrop, onReady, className, cursor }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -216,24 +216,42 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
     };
   };
 
+  const getModifiers = (e: React.PointerEvent<HTMLCanvasElement>) => ({
+    ctrlKey: e.ctrlKey,
+    metaKey: e.metaKey,
+    shiftKey: e.shiftKey,
+    altKey: e.altKey,
+  });
+
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0) return;
+    // 0 = izquierdo, 1 = rueda (pan)
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.button === 1) {
+      e.preventDefault();
+    }
     const { x, y } = getCanvasCoords(e);
-    onPointerDown?.(x, y);
+    onPointerDown?.(x, y, e.button, getModifiers(e));
     (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { x, y } = getCanvasCoords(e);
-    onPointerMove?.(x, y);
+    onPointerMove?.(x, y, getModifiers(e));
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0) return;
-    onPointerUp?.();
+    if (e.button !== 0 && e.button !== 1) return;
+    onPointerUp?.(e.button);
     const target = e.target as HTMLCanvasElement;
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const handleAuxClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Evita el autoscroll del navegador con el botón central.
+    if (e.button === 1) {
+      e.preventDefault();
     }
   };
 
@@ -315,11 +333,12 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
         ref={canvasRef}
         width={width}
         height={height}
-        style={{ width, height, touchAction: "none" }}
+        style={{ width, height, touchAction: "none", cursor: cursor ?? "default" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onMouseUp={handleMouseUp}
+        onAuxClick={handleAuxClick}
         onContextMenu={handleContextMenu}
         onDragOver={handleDragOver}
         onDrop={handleDropEvent}

@@ -1,8 +1,9 @@
 import type { ArrowElementInstance, CircleElementInstance, ImageElementInstance, LineElementInstance, RectElementInstance } from "@/interfaces"
 import type { MutableRefObject } from "react"
 
-import { ORDER_BADGE_RADIUS, type OrderOverlayBadge } from "@/utils/order-overlay-badges"
-import { getDefaultLabelAnchor, LABEL_FONT_SIZE } from "@/utils/label-overlay"
+import type { OrderOverlayBadge } from "@/utils/order-overlay-badges"
+import { getDefaultLabelAnchor } from "@/utils/label-overlay"
+import { getLabelFontSize, getStrokeZoomBoost } from "@/utils/overlay-scale"
 
 import type { TempShape } from "./canvas-helpers"
 import { getShapeBounds, getReadableTextColor, hexToColor } from "./canvas-helpers"
@@ -49,7 +50,7 @@ export const drawBackground = (canvas: any, ck: any, width: number, height: numb
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance, imagesCacheRef: MutableRefObject<Map<string, any>>, showLabels = true) => {
+export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance, imagesCacheRef: MutableRefObject<Map<string, any>>, showLabels = true, overlayScale = 1) => {
     if (!img.data.imageRef) return
 
     const cached = imagesCacheRef.current.get(img.data.imageRef)
@@ -109,12 +110,13 @@ export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
+        const labelFontSize = getLabelFontSize(overlayScale)
+        const labelFont = createSafeFont(ck, labelFontSize)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        const [anchorX, anchorY] = getDefaultLabelAnchor("image", img)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("image", img, overlayScale)
         const ox = img.labelOffset?.[0] ?? 0
         const oy = img.labelOffset?.[1] ?? 0
         canvas.drawText(img.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
@@ -124,10 +126,11 @@ export const drawImageElement = (canvas: any, ck: any, img: ImageElementInstance
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, selectedArrowId: string | null, defaultStroke: number, defaultColor: string, isTemp = false, showLabels = true) => {
+export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, selectedArrowId: string | null, defaultStroke: number, defaultColor: string, isTemp = false, showLabels = true, overlayScale = 1, viewScale = 1) => {
     const points = arrow.data.points
     if (points.length < 2) return
 
+    const strokeBoost = getStrokeZoomBoost(viewScale)
     const isSelected = arrow.id !== null && arrow.id === selectedArrowId
     const path = new ck.Path()
     path.moveTo(points[0][0], points[0][1])
@@ -151,10 +154,11 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
         }
     }
 
+    const baseStroke = arrow.style?.strokeWidth ?? defaultStroke
     const paint = new ck.Paint()
     paint.setAntiAlias(true)
     paint.setStyle(ck.PaintStyle.Stroke)
-    paint.setStrokeWidth(arrow.style?.strokeWidth ?? defaultStroke)
+    paint.setStrokeWidth(baseStroke * strokeBoost)
     paint.setStrokeCap(ck.StrokeCap.Round)
     paint.setColor(ck.Color(...hexToColor(arrow.style?.strokeColor ?? defaultColor)))
     canvas.drawPath(path, paint)
@@ -163,7 +167,7 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
     const penultimate = points[Math.max(0, points.length - 2)]
     const angle = Math.atan2(end[1] - penultimate[1], end[0] - penultimate[0])
 
-    const arrowHeadSize = 12
+    const arrowHeadSize = 12 * strokeBoost
     const arrowPath = new ck.Path()
     arrowPath.moveTo(end[0], end[1])
     arrowPath.lineTo(
@@ -182,14 +186,15 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
     if (!isTemp && isSelected) {
         const handlePaint = new ck.Paint()
         handlePaint.setAntiAlias(true)
+        const handleR = 6 * strokeBoost
 
         handlePaint.setColor(ck.Color(34, 197, 94, 210))
-        canvas.drawCircle(points[0][0], points[0][1], 6, handlePaint)
+        canvas.drawCircle(points[0][0], points[0][1], handleR, handlePaint)
         handlePaint.setColor(ck.Color(239, 68, 68, 210))
-        canvas.drawCircle(end[0], end[1], 6, handlePaint)
+        canvas.drawCircle(end[0], end[1], handleR, handlePaint)
         handlePaint.setColor(ck.Color(59, 130, 246, 210))
         for (let i = 1; i < points.length - 1; i++) {
-            canvas.drawCircle(points[i][0], points[i][1], 5, handlePaint)
+            canvas.drawCircle(points[i][0], points[i][1], 5 * strokeBoost, handlePaint)
         }
 
         if (points.length > 2) {
@@ -197,7 +202,7 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
             guidePaint.setAntiAlias(true)
             guidePaint.setColor(ck.Color(150, 150, 150, 80))
             guidePaint.setStyle(ck.PaintStyle.Stroke)
-            guidePaint.setStrokeWidth(1)
+            guidePaint.setStrokeWidth(strokeBoost)
             for (let i = 0; i < points.length - 1; i++) {
                 canvas.drawLine(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], guidePaint)
             }
@@ -211,13 +216,14 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
+        const labelFontSize = getLabelFontSize(overlayScale)
+        const labelFont = createSafeFont(ck, labelFontSize)
         if (!labelFont) {
             labelPaint.delete()
             paint.delete()
             return
         }
-        const [anchorX, anchorY] = getDefaultLabelAnchor("arrow", arrow)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("arrow", arrow, overlayScale)
         const ox = arrow.labelOffset?.[0] ?? 0
         const oy = arrow.labelOffset?.[1] ?? 0
         canvas.drawText(arrow.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
@@ -229,11 +235,12 @@ export const drawArrow = (canvas: any, ck: any, arrow: ArrowElementInstance, sel
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawCircleElement = (canvas: any, ck: any, circle: CircleElementInstance, showLabels = true) => {
+export const drawCircleElement = (canvas: any, ck: any, circle: CircleElementInstance, showLabels = true, overlayScale = 1, viewScale = 1) => {
+    const strokeBoost = getStrokeZoomBoost(viewScale)
     const paint = new ck.Paint()
     paint.setAntiAlias(true)
     paint.setStyle(ck.PaintStyle.Stroke)
-    paint.setStrokeWidth(circle.style?.strokeWidth ?? 3)
+    paint.setStrokeWidth((circle.style?.strokeWidth ?? 3) * strokeBoost)
     paint.setColor(ck.Color(...hexToColor(circle.style?.strokeColor ?? "#3b82f6", 230)))
     canvas.drawCircle(circle.x, circle.y, circle.data.radius, paint)
     paint.delete()
@@ -242,12 +249,13 @@ export const drawCircleElement = (canvas: any, ck: any, circle: CircleElementIns
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
+        const labelFontSize = getLabelFontSize(overlayScale)
+        const labelFont = createSafeFont(ck, labelFontSize)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        const [anchorX, anchorY] = getDefaultLabelAnchor("circle", circle)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("circle", circle, overlayScale)
         const ox = circle.labelOffset?.[0] ?? 0
         const oy = circle.labelOffset?.[1] ?? 0
         canvas.drawText(circle.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
@@ -257,11 +265,12 @@ export const drawCircleElement = (canvas: any, ck: any, circle: CircleElementIns
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawRectElement = (canvas: any, ck: any, rect: RectElementInstance, showLabels = true) => {
+export const drawRectElement = (canvas: any, ck: any, rect: RectElementInstance, showLabels = true, overlayScale = 1, viewScale = 1) => {
+    const strokeBoost = getStrokeZoomBoost(viewScale)
     const paint = new ck.Paint()
     paint.setAntiAlias(true)
     paint.setStyle(ck.PaintStyle.Stroke)
-    paint.setStrokeWidth(rect.style?.strokeWidth ?? 3)
+    paint.setStrokeWidth((rect.style?.strokeWidth ?? 3) * strokeBoost)
     paint.setColor(ck.Color(...hexToColor(rect.style?.strokeColor ?? "#a855f7", 230)))
     const cornerRadius = rect.data.cornerRadius ?? 0
     const rectBounds = ck.LTRBRect(rect.x, rect.y, rect.x + rect.data.width, rect.y + rect.data.height)
@@ -276,12 +285,13 @@ export const drawRectElement = (canvas: any, ck: any, rect: RectElementInstance,
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
+        const labelFontSize = getLabelFontSize(overlayScale)
+        const labelFont = createSafeFont(ck, labelFontSize)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        const [anchorX, anchorY] = getDefaultLabelAnchor("rect", rect)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("rect", rect, overlayScale)
         const ox = rect.labelOffset?.[0] ?? 0
         const oy = rect.labelOffset?.[1] ?? 0
         canvas.drawText(rect.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
@@ -291,11 +301,12 @@ export const drawRectElement = (canvas: any, ck: any, rect: RectElementInstance,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance, showLabels = true) => {
+export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance, showLabels = true, overlayScale = 1, viewScale = 1) => {
+    const strokeBoost = getStrokeZoomBoost(viewScale)
     const paint = new ck.Paint()
     paint.setAntiAlias(true)
     paint.setStyle(ck.PaintStyle.Stroke)
-    paint.setStrokeWidth(line.style?.strokeWidth ?? 3)
+    paint.setStrokeWidth((line.style?.strokeWidth ?? 3) * strokeBoost)
     paint.setStrokeCap(ck.StrokeCap.Round)
     paint.setColor(ck.Color(...hexToColor(line.style?.strokeColor ?? "#22c55e", 230)))
     const dashPattern = line.style?.dash
@@ -304,8 +315,8 @@ export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance,
             canvas,
             line.data.start,
             line.data.end,
-            Math.max(1, dashPattern[0]),
-            Math.max(1, dashPattern[1]),
+            Math.max(1, dashPattern[0] * strokeBoost),
+            Math.max(1, dashPattern[1] * strokeBoost),
             paint,
         )
     } else {
@@ -317,12 +328,13 @@ export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance,
         const labelPaint = new ck.Paint()
         labelPaint.setColor(ck.Color(255, 255, 255, 240))
         labelPaint.setAntiAlias(true)
-        const labelFont = createSafeFont(ck, LABEL_FONT_SIZE)
+        const labelFontSize = getLabelFontSize(overlayScale)
+        const labelFont = createSafeFont(ck, labelFontSize)
         if (!labelFont) {
             labelPaint.delete()
             return
         }
-        const [anchorX, anchorY] = getDefaultLabelAnchor("line", line)
+        const [anchorX, anchorY] = getDefaultLabelAnchor("line", line, overlayScale)
         const ox = line.labelOffset?.[0] ?? 0
         const oy = line.labelOffset?.[1] ?? 0
         canvas.drawText(line.label, anchorX + ox, anchorY + oy, labelPaint, labelFont)
@@ -332,12 +344,13 @@ export const drawLineElement = (canvas: any, ck: any, line: LineElementInstance,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
+export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape, viewScale = 1) => {
+    const strokeBoost = getStrokeZoomBoost(viewScale)
     const { left, top, width, height } = getShapeBounds(tempShape)
     const previewPaint = new ck.Paint()
     previewPaint.setAntiAlias(true)
     previewPaint.setStyle(ck.PaintStyle.Stroke)
-    previewPaint.setStrokeWidth(2)
+    previewPaint.setStrokeWidth(2 * strokeBoost)
     previewPaint.setColor(
         tempShape.tool === "circle"
             ? ck.Color(59, 130, 246, 230)
@@ -355,8 +368,8 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
                 canvas,
                 [tempShape.startX, tempShape.startY],
                 [tempShape.endX, tempShape.endY],
-                12,
-                8,
+                12 * strokeBoost,
+                8 * strokeBoost,
                 previewPaint,
             )
         } else {
@@ -368,8 +381,6 @@ export const drawTempShape = (canvas: any, ck: any, tempShape: TempShape) => {
     previewPaint.delete()
 }
 
-const ORDER_BADGE_FONT_SIZE = 11
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const drawOrderBadges = (canvas: any, ck: any, badges: OrderOverlayBadge[]) => {
     if (badges.length === 0) return
@@ -378,24 +389,25 @@ export const drawOrderBadges = (canvas: any, ck: any, badges: OrderOverlayBadge[
     for (const badge of badges) {
         const bg = hexToColor(badge.bgColor)
         const textColor = hexToColor(getReadableTextColor(badge.bgColor))
+        const fontSize = badge.fontSize
 
         const fillPaint = new ck.Paint()
         fillPaint.setAntiAlias(true)
         fillPaint.setColor(ck.Color(...bg))
-        canvas.drawCircle(badge.x, badge.y, ORDER_BADGE_RADIUS, fillPaint)
+        canvas.drawCircle(badge.x, badge.y, badge.radius, fillPaint)
         fillPaint.delete()
 
         const label = String(badge.order)
         if (typeof canvas.drawText !== "function" || typeof ck.Font !== "function") continue
 
-        const font = createSafeFont(ck, ORDER_BADGE_FONT_SIZE)
+        const font = createSafeFont(ck, fontSize)
         if (!font) continue
 
         const textPaint = new ck.Paint()
         textPaint.setAntiAlias(true)
         textPaint.setColor(ck.Color(...textColor))
 
-        let textX = badge.x - ORDER_BADGE_FONT_SIZE * 0.35 * label.length
+        let textX = badge.x - fontSize * 0.35 * label.length
         if (typeof font.measureText === "function") {
             const measured = font.measureText(label)
             const width =
@@ -407,7 +419,7 @@ export const drawOrderBadges = (canvas: any, ck: any, badges: OrderOverlayBadge[
             if (width != null) textX = badge.x - width / 2
         }
 
-        canvas.drawText(label, textX, badge.y + ORDER_BADGE_FONT_SIZE * 0.35, textPaint, font)
+        canvas.drawText(label, textX, badge.y + fontSize * 0.35, textPaint, font)
         textPaint.delete()
         font.delete()
     }

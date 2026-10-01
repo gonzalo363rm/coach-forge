@@ -40,10 +40,10 @@ export function ElementForm(props: Props) {
         props.mode === "edit" ? (props.element.sportId ?? "") : "",
     )
     const [width, setWidth] = useState(
-        props.mode === "edit" ? String(props.element.width) : "",
+        props.mode === "edit" ? String(props.element.width).replace(".", ",") : "",
     )
     const [height, setHeight] = useState(
-        props.mode === "edit" ? String(props.element.height) : "",
+        props.mode === "edit" ? String(props.element.height).replace(".", ",") : "",
     )
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(
@@ -77,12 +77,22 @@ export function ElementForm(props: Props) {
         setPreviewUrl(URL.createObjectURL(file))
     }
 
+    function parseCmValue(raw: string): number {
+        return parseFloat(raw.trim().replace(",", "."))
+    }
+
+    function onCmChange(raw: string, setter: (value: string) => void) {
+        if (raw === "" || /^\d*[.,]?\d*$/.test(raw)) {
+            setter(raw)
+        }
+    }
+
     function onSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError(null)
 
-        const widthNum = parseFloat(width)
-        const heightNum = parseFloat(height)
+        const widthNum = parseCmValue(width)
+        const heightNum = parseCmValue(height)
         if (Number.isNaN(widthNum) || widthNum <= 0) {
             setError("Indica un ancho válido en centímetros")
             return
@@ -211,12 +221,12 @@ export function ElementForm(props: Props) {
                         </label>
                         <input
                             id="element-width"
-                            type="number"
-                            step="1"
-                            min="1"
+                            type="text"
+                            inputMode="decimal"
                             value={width}
-                            onChange={(e) => setWidth(e.target.value)}
+                            onChange={(e) => onCmChange(e.target.value, setWidth)}
                             required
+                            placeholder="ej. 12,5"
                             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:border-emerald-500 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                         />
                     </div>
@@ -226,12 +236,12 @@ export function ElementForm(props: Props) {
                         </label>
                         <input
                             id="element-height"
-                            type="number"
-                            step="1"
-                            min="1"
+                            type="text"
+                            inputMode="decimal"
                             value={height}
-                            onChange={(e) => setHeight(e.target.value)}
+                            onChange={(e) => onCmChange(e.target.value, setHeight)}
                             required
+                            placeholder="ej. 12,5"
                             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:border-emerald-500 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                         />
                     </div>

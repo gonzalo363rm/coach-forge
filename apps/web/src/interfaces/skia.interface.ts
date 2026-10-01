@@ -17,15 +17,23 @@ export interface SkiaCanvasHandle {
     saveAsImage: (filename?: string) => void
 }
 
+export type SkiaPointerModifiers = {
+    ctrlKey: boolean
+    metaKey: boolean
+    shiftKey: boolean
+    altKey: boolean
+}
+
 export interface SkiaCanvasProps {
     width: number
     height: number
     onDraw: (canvas: any, ck: any) => void
-    onPointerDown?: (x: number, y: number) => void
-    onPointerMove?: (x: number, y: number) => void
-    onPointerUp?: () => void
+    onPointerDown?: (x: number, y: number, button: number, modifiers: SkiaPointerModifiers) => void
+    onPointerMove?: (x: number, y: number, modifiers: SkiaPointerModifiers) => void
+    onPointerUp?: (button: number) => void
     onContextMenu?: (x: number, y: number) => void
     onDrop?: (x: number, y: number, data: string) => void
     onReady?: () => void
     className?: string
+    cursor?: string
 }

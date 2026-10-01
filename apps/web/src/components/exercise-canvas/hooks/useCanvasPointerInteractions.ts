@@ -24,15 +24,12 @@ import {
     type SelectionItem,
 } from "../canvas-selection"
 import {
-    clampPointToBounds,
     findOrderBadgeAt,
     getDefaultOrderBadgeAnchor,
-    getOrderBadgeMoveBounds,
     type OrderBadgeElementType,
     type OrderOverlayBadge,
 } from "@/utils/order-overlay-badges"
 import {
-    clampLabelPosition,
     findLabelAt,
     getDefaultLabelAnchor,
     type LabelOverlayItem,
@@ -79,6 +76,7 @@ interface Args {
     orderOverlayItems: OrderOverlayBadge[]
     showTitleOverlay: boolean
     labelOverlayItems: LabelOverlayItem[]
+    overlayScale: number
     images: ImageElementInstance[]
     arrows: ArrowElementInstance[]
     circles: CircleElementInstance[]
@@ -133,6 +131,7 @@ export const useCanvasPointerInteractions = ({
     orderOverlayItems,
     showTitleOverlay,
     labelOverlayItems,
+    overlayScale,
     images,
     arrows,
     circles,
@@ -323,7 +322,11 @@ export const useCanvasPointerInteractions = ({
                     setSelectedElement({ type: badge.elementType, index: badge.index })
                     setSelectedArrowId(badge.elementType === "arrow" ? element.id : null)
 
-                    const [anchorX, anchorY] = getDefaultOrderBadgeAnchor(badge.elementType, element)
+                    const [anchorX, anchorY] = getDefaultOrderBadgeAnchor(
+                        badge.elementType,
+                        element,
+                        overlayScale,
+                    )
                     onHistoryCheckpoint()
                     draggingRef.current = {
                         type: "order-badge",
@@ -357,7 +360,11 @@ export const useCanvasPointerInteractions = ({
                     setSelectedElement({ type: labelHit.elementType, index: labelHit.index })
                     setSelectedArrowId(labelHit.elementType === "arrow" ? element.id : null)
 
-                    const [anchorX, anchorY] = getDefaultLabelAnchor(labelHit.elementType, element)
+                    const [anchorX, anchorY] = getDefaultLabelAnchor(
+                        labelHit.elementType,
+                        element,
+                        overlayScale,
+                    )
                     onHistoryCheckpoint()
                     draggingRef.current = {
                         type: "label",
@@ -459,6 +466,7 @@ export const useCanvasPointerInteractions = ({
         lines,
         onHistoryCheckpoint,
         orderOverlayItems,
+        overlayScale,
         rects,
         selection,
         setContextMenu,
@@ -506,22 +514,9 @@ export const useCanvasPointerInteractions = ({
 
             const desiredX = x - offsetRef.current.x
             const desiredY = y - offsetRef.current.y
-            const nextSelection =
-                element.id && isSelected(selectionRef.current, dragTarget.elementType, element.id)
-                    ? selectionRef.current
-                    : element.id
-                      ? [{ type: dragTarget.elementType, id: element.id }]
-                      : selectionRef.current
-            const moveBounds = getOrderBadgeMoveBounds(
-                dragTarget.elementType,
-                element,
-                nextSelection,
-                canvasSnapshot(),
-            )
-            const [clampedX, clampedY] = clampPointToBounds(desiredX, desiredY, moveBounds)
             const orderOffset: Point = [
-                clampedX - dragTarget.anchorX,
-                clampedY - dragTarget.anchorY,
+                desiredX - dragTarget.anchorX,
+                desiredY - dragTarget.anchorY,
             ]
             applyOrderOffset(dragTarget.elementType, dragTarget.index, orderOffset)
             return
@@ -533,23 +528,9 @@ export const useCanvasPointerInteractions = ({
 
             const desiredX = x - offsetRef.current.x
             const desiredY = y - offsetRef.current.y
-            const nextSelection =
-                element.id && isSelected(selectionRef.current, dragTarget.elementType, element.id)
-                    ? selectionRef.current
-                    : element.id
-                      ? [{ type: dragTarget.elementType, id: element.id }]
-                      : selectionRef.current
-            const [clampedX, clampedY] = clampLabelPosition(
-                desiredX,
-                desiredY,
-                dragTarget.elementType,
-                element,
-                nextSelection,
-                canvasSnapshot(),
-            )
             const labelOffset: Point = [
-                clampedX - dragTarget.anchorX,
-                clampedY - dragTarget.anchorY,
+                desiredX - dragTarget.anchorX,
+                desiredY - dragTarget.anchorY,
             ]
             applyLabelOffset(dragTarget.elementType, dragTarget.index, labelOffset)
             return
