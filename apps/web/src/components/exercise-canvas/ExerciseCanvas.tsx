@@ -215,6 +215,7 @@ export const ExerciseCanvas = ({
     const viewRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } })
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection | null>(null)
     const [mobileSheet, setMobileSheet] = useState<MobileSheetId>(null)
+    const [viewportReady, setViewportReady] = useState(false)
     const viewportHostRef = useRef<HTMLDivElement>(null)
     const didFitMobileView = useRef(false)
     const [images, setImages] = useState<ImageElementInstance[]>([])
@@ -268,11 +269,13 @@ export const ExerciseCanvas = ({
         const applySize = (width: number, height: number) => {
             const nextW = Math.max(1, Math.round(width))
             const nextH = Math.max(1, Math.round(height))
+            if (nextW < 40 || nextH < 40) return
             setViewportSize((prev) =>
                 prev.width === nextW && prev.height === nextH
                     ? prev
                     : { width: nextW, height: nextH },
             )
+            setViewportReady(true)
         }
 
         const observer = new ResizeObserver((entries) => {
@@ -305,42 +308,45 @@ export const ExerciseCanvas = ({
         setLines(c.lines)
         setArrows(c.arrows)
 
-        const fitW = isMobile ? viewportSize.width : c.width
-        const fitH = isMobile ? viewportSize.height : c.height
-
-        const largest = getLargestElementBounds({
-            images: c.images,
-            circles: c.circles,
-            rects: c.rects,
-            lines: c.lines,
-            arrows: c.arrows,
-        })
-        if (largest) {
-            const contentW = Math.max(1, largest.right - largest.left)
-            const contentH = Math.max(1, largest.bottom - largest.top)
-            const fit =
-                Math.min(fitW / contentW, fitH / contentH) * OPEN_VIEW_PADDING
-            const zoom = Math.min(
-                MAX_CANVAS_ZOOM,
-                Math.max(MIN_CANVAS_ZOOM, Number(fit.toFixed(2))),
-            )
-            const centerX = (largest.left + largest.right) / 2
-            const centerY = (largest.top + largest.bottom) / 2
-            setCanvasZoom(zoom)
-            setCanvasPan({
-                x: fitW / 2 - centerX * zoom,
-                y: fitH / 2 - centerY * zoom,
+        // En mobile el encaje lo hace fitContentToView cuando el viewport real está listo.
+        if (!isMobile) {
+            const largest = getLargestElementBounds({
+                images: c.images,
+                circles: c.circles,
+                rects: c.rects,
+                lines: c.lines,
+                arrows: c.arrows,
             })
-            if (isMobile) didFitMobileView.current = true
+            if (largest) {
+                const contentW = Math.max(1, largest.right - largest.left)
+                const contentH = Math.max(1, largest.bottom - largest.top)
+                const fit =
+                    Math.min(c.width / contentW, c.height / contentH) * OPEN_VIEW_PADDING
+                const zoom = Math.min(
+                    MAX_CANVAS_ZOOM,
+                    Math.max(MIN_CANVAS_ZOOM, Number(fit.toFixed(2))),
+                )
+                const centerX = (largest.left + largest.right) / 2
+                const centerY = (largest.top + largest.bottom) / 2
+                setCanvasZoom(zoom)
+                setCanvasPan({
+                    x: c.width / 2 - centerX * zoom,
+                    y: c.height / 2 - centerY * zoom,
+                })
+            } else {
+                setCanvasZoom(
+                    Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))),
+                )
+                setCanvasPan({ x: 0, y: 0 })
+            }
         } else {
-            setCanvasZoom(
-                Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))),
-            )
+            didFitMobileView.current = false
+            setCanvasZoom(1)
             setCanvasPan({ x: 0, y: 0 })
         }
 
         history.clear()
-    }, [history, initialData, isMobile, viewportSize.height, viewportSize.width])
+    }, [history, initialData, isMobile])
 
     useEffect(() => {
         selectionRef.current = selection
@@ -1549,12 +1555,44 @@ export const ExerciseCanvas = ({
     }, [arrows, circles, images, isMobile, lines, rects, viewWidth])
 
     useEffect(() => {
-        if (!isMobile || didFitMobileView.current) return
-        if (!didHydrateInitial.current && initialData) return
-        if (viewportSize.width < 40 || viewportSize.height < 40) return
-        fitContentToView()
-        didFitMobileView.current = true
-    }, [fitContentToView, initialData, isMobile, viewportSize.height, viewportSize.width])
+        if (!isMobile || didFitMobileView.current || !viewportReady) return
+        if (initialData && !didHydrateInitial.current) return
+
+        if (initialData) {
+            const c = initialData.canvas
+            const expected =
+                c.images.length +
+                c.circles.length +
+                c.rects.length +
+                c.lines.length +
+                c.arrows.length
+            const current =
+                images.length +
+                circles.length +
+                rects.length +
+                lines.length +
+                arrows.length
+            if (expected > 0 && current === 0) return
+        }
+
+        const frame = requestAnimationFrame(() => {
+            fitContentToView()
+            didFitMobileView.current = true
+        })
+        return () => cancelAnimationFrame(frame)
+    }, [
+        arrows.length,
+        circles.length,
+        fitContentToView,
+        images.length,
+        initialData,
+        isMobile,
+        lines.length,
+        rects.length,
+        viewportReady,
+        viewportSize.height,
+        viewportSize.width,
+    ])
 
     useEffect(() => {
         if (!showCanvasOptions) return
