@@ -3,18 +3,33 @@
 import { useEffect, useState } from "react"
 
 const MOBILE_LAYOUT_QUERY = "(max-width: 767px)"
+/** Celulares en vertical o horizontal: no incluye tablets. */
+const MOBILE_EDITOR_QUERY =
+    "(max-width: 767px), (max-height: 500px) and (pointer: coarse)"
 
-export function useIsMobileLayout() {
-    const [isMobile, setIsMobile] = useState(false)
+function useMatchMedia(query: string) {
+    const [matches, setMatches] = useState(false)
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia(MOBILE_LAYOUT_QUERY)
-        const update = () => setIsMobile(mediaQuery.matches)
+        const mediaQuery = window.matchMedia(query)
+        const update = () => setMatches(mediaQuery.matches)
 
         update()
         mediaQuery.addEventListener("change", update)
         return () => mediaQuery.removeEventListener("change", update)
-    }, [])
+    }, [query])
 
-    return isMobile
+    return matches
+}
+
+export function useIsMobileLayout() {
+    return useMatchMedia(MOBILE_LAYOUT_QUERY)
+}
+
+export function useIsMobileEditor() {
+    return useMatchMedia(MOBILE_EDITOR_QUERY)
+}
+
+export function useIsLandscape() {
+    return useMatchMedia("(orientation: landscape)")
 }

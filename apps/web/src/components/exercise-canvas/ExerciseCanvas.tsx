@@ -78,6 +78,11 @@ import {
     type MarqueeRect,
     type SelectionItem,
 } from "./canvas-selection"
+import { useIsLandscape } from "@/hooks/use-mobile-layout"
+import { MobileEditorHeader } from "./MobileEditorHeader"
+import { MobileEditorToolbar, type MobileSheetId } from "./MobileEditorToolbar"
+import { MobileSheet } from "./MobileSheet"
+import { ToolsPanel } from "./ToolsPanel"
 
 interface Props {
     currentTool: ToolType
@@ -89,6 +94,11 @@ interface Props {
     initialData?: ExerciseEditorInitialData | null
     sports?: SportListOption[]
     visibilityUser?: { role: string; clubId?: string | null }
+    layout?: "desktop" | "mobile"
+    paletteElements?: ElementDefinition[]
+    paletteElementsLoading?: boolean
+    returnTo?: string | null
+    editorTitle?: string
 }
 
 type DragTarget =
@@ -152,6 +162,8 @@ const MAX_CANVAS_ZOOM = 2.5
 const FIT_ZOOM_PADDING = 0.92
 /** Margen extra al abrir un ejercicio (más zoom-out que al colocar). */
 const OPEN_VIEW_PADDING = 0.72
+const MOBILE_HIT_RADIUS = 18
+const DESKTOP_HIT_RADIUS = 10
 
 export const ExerciseCanvas = ({
     currentTool,
@@ -163,7 +175,15 @@ export const ExerciseCanvas = ({
     initialData = null,
     sports = [],
     visibilityUser,
+    layout = "desktop",
+    paletteElements = [],
+    paletteElementsLoading = false,
+    returnTo = null,
+    editorTitle = "Ejercicio",
 }: Props) => {
+    const isMobile = layout === "mobile"
+    const isLandscape = useIsLandscape()
+    const hitRadius = isMobile ? MOBILE_HIT_RADIUS : DESKTOP_HIT_RADIUS
     const canvasRef = useRef<SkiaCanvasHandle>(null)
     const didHydrateInitial = useRef(false)
     const isCanvasHoveredRef = useRef(false)
@@ -183,6 +203,8 @@ export const ExerciseCanvas = ({
     const history = useCanvasHistory()
 
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 })
+    /** Tamaño visible del SkiaCanvas en mobile (no se persiste). */
+    const [viewportSize, setViewportSize] = useState({ width: 360, height: 480 })
     const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
     const [canvasZoom, setCanvasZoom] = useState(1)
     /** Desplazamiento de vista (px pantalla) para zoom hacia el cursor. */
@@ -192,6 +214,9 @@ export const ExerciseCanvas = ({
     const lastPanScreenRef = useRef({ x: 0, y: 0 })
     const viewRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } })
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection | null>(null)
+    const [mobileSheet, setMobileSheet] = useState<MobileSheetId>(null)
+    const viewportHostRef = useRef<HTMLDivElement>(null)
+    const didFitMobileView = useRef(false)
     const [images, setImages] = useState<ImageElementInstance[]>([])
     const [circles, setCircles] = useState<CircleElementInstance[]>([])
     const [rects, setRects] = useState<RectElementInstance[]>([])
@@ -231,6 +256,41 @@ export const ExerciseCanvas = ({
     const canvasContainerRef = useRef<HTMLDivElement>(null)
     const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, width: 1200, height: 600 })
 
+    const viewWidth = isMobile ? viewportSize.width : canvasSize.width
+    const viewHeight = isMobile ? viewportSize.height : canvasSize.height
+
+    useEffect(() => {
+        if (!isMobile) return
+        const host = viewportHostRef.current
+        if (!host) return
+
+        let frame = 0
+        const applySize = (width: number, height: number) => {
+            const nextW = Math.max(1, Math.round(width))
+            const nextH = Math.max(1, Math.round(height))
+            setViewportSize((prev) =>
+                prev.width === nextW && prev.height === nextH
+                    ? prev
+                    : { width: nextW, height: nextH },
+            )
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0]
+            if (!entry) return
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(() => {
+                applySize(entry.contentRect.width, entry.contentRect.height)
+            })
+        })
+        observer.observe(host)
+        applySize(host.clientWidth, host.clientHeight)
+        return () => {
+            cancelAnimationFrame(frame)
+            observer.disconnect()
+        }
+    }, [isMobile])
+
     useEffect(() => {
         if (!initialData || didHydrateInitial.current) return
         didHydrateInitial.current = true
@@ -245,6 +305,9 @@ export const ExerciseCanvas = ({
         setLines(c.lines)
         setArrows(c.arrows)
 
+        const fitW = isMobile ? viewportSize.width : c.width
+        const fitH = isMobile ? viewportSize.height : c.height
+
         const largest = getLargestElementBounds({
             images: c.images,
             circles: c.circles,
@@ -256,7 +319,7 @@ export const ExerciseCanvas = ({
             const contentW = Math.max(1, largest.right - largest.left)
             const contentH = Math.max(1, largest.bottom - largest.top)
             const fit =
-                Math.min(c.width / contentW, c.height / contentH) * OPEN_VIEW_PADDING
+                Math.min(fitW / contentW, fitH / contentH) * OPEN_VIEW_PADDING
             const zoom = Math.min(
                 MAX_CANVAS_ZOOM,
                 Math.max(MIN_CANVAS_ZOOM, Number(fit.toFixed(2))),
@@ -265,9 +328,10 @@ export const ExerciseCanvas = ({
             const centerY = (largest.top + largest.bottom) / 2
             setCanvasZoom(zoom)
             setCanvasPan({
-                x: c.width / 2 - centerX * zoom,
-                y: c.height / 2 - centerY * zoom,
+                x: fitW / 2 - centerX * zoom,
+                y: fitH / 2 - centerY * zoom,
             })
+            if (isMobile) didFitMobileView.current = true
         } else {
             setCanvasZoom(
                 Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Number(c.zoom.toFixed(2)))),
@@ -276,7 +340,7 @@ export const ExerciseCanvas = ({
         }
 
         history.clear()
-    }, [history, initialData])
+    }, [history, initialData, isMobile, viewportSize.height, viewportSize.width])
 
     useEffect(() => {
         selectionRef.current = selection
@@ -339,13 +403,13 @@ export const ExerciseCanvas = ({
             x: Math.max(
                 8,
                 Math.min(
-                    canvasSize.width - 280,
+                    viewWidth - 280,
                     selectionBounds.left * canvasZoom + canvasPan.x,
                 ),
             ),
             y: Math.max(8, selectionBounds.top * canvasZoom + canvasPan.y - 44),
         }
-    }, [canvasPan.x, canvasPan.y, canvasSize.width, canvasZoom, selectionBounds])
+    }, [canvasPan.x, canvasPan.y, canvasZoom, selectionBounds, viewWidth])
 
     useEffect(() => {
         viewRef.current = { zoom: canvasZoom, pan: canvasPan }
@@ -377,11 +441,11 @@ export const ExerciseCanvas = ({
         (contentWidth: number, contentHeight: number, currentZoom: number) => {
             if (contentWidth <= 0 || contentHeight <= 0) return currentZoom
             const fit =
-                Math.min(canvasSize.width / contentWidth, canvasSize.height / contentHeight) *
+                Math.min(viewWidth / contentWidth, viewHeight / contentHeight) *
                 FIT_ZOOM_PADDING
             return Math.min(currentZoom, clampZoom(fit))
         },
-        [canvasSize.height, canvasSize.width, clampZoom],
+        [clampZoom, viewHeight, viewWidth],
     )
 
     /** Zoom manteniendo fijo el punto del mundo bajo (screenX, screenY). */
@@ -404,17 +468,37 @@ export const ExerciseCanvas = ({
 
     const nudgeZoom = useCallback(
         (delta: number, screenX?: number, screenY?: number) => {
-            const sx = screenX ?? canvasSize.width / 2
-            const sy = screenY ?? canvasSize.height / 2
+            const sx = screenX ?? viewWidth / 2
+            const sy = screenY ?? viewHeight / 2
             zoomAtScreenPoint(sx, sy, viewRef.current.zoom + delta)
         },
-        [canvasSize.height, canvasSize.width, zoomAtScreenPoint],
+        [viewHeight, viewWidth, zoomAtScreenPoint],
     )
 
     const resetZoom = useCallback(() => {
         setCanvasZoom(1)
         setCanvasPan({ x: 0, y: 0 })
     }, [])
+
+    const fitContentToView = useCallback(() => {
+        const largest = getLargestElementBounds(elementsRef.current)
+        if (!largest) {
+            resetZoom()
+            return
+        }
+        const contentW = Math.max(1, largest.right - largest.left)
+        const contentH = Math.max(1, largest.bottom - largest.top)
+        const fit =
+            Math.min(viewWidth / contentW, viewHeight / contentH) * OPEN_VIEW_PADDING
+        const zoom = clampZoom(fit)
+        const centerX = (largest.left + largest.right) / 2
+        const centerY = (largest.top + largest.bottom) / 2
+        setCanvasZoom(zoom)
+        setCanvasPan({
+            x: viewWidth / 2 - centerX * zoom,
+            y: viewHeight / 2 - centerY * zoom,
+        })
+    }, [clampZoom, resetZoom, viewHeight, viewWidth])
 
     const withInitializedControls = (arrow: ArrowElementInstance): ArrowElementInstance => {
         const start = arrow.data.points[0]
@@ -656,19 +740,19 @@ export const ExerciseCanvas = ({
     const drawBackground = useCallback((canvas: any, ck: any) => {
         const viewLeft = -canvasPan.x / canvasZoom
         const viewTop = -canvasPan.y / canvasZoom
-        const viewWidth = canvasSize.width / canvasZoom
-        const viewHeight = canvasSize.height / canvasZoom
+        const worldViewWidth = viewWidth / canvasZoom
+        const worldViewHeight = viewHeight / canvasZoom
         canvas.save()
         canvas.translate(viewLeft, viewTop)
         drawBackgroundHelper(
             canvas,
             ck,
-            viewWidth,
-            viewHeight,
+            worldViewWidth,
+            worldViewHeight,
             hexToColor(canvasBackgroundColor),
         )
         canvas.restore()
-    }, [canvasBackgroundColor, canvasPan.x, canvasPan.y, canvasSize.height, canvasSize.width, canvasZoom])
+    }, [canvasBackgroundColor, canvasPan.x, canvasPan.y, canvasZoom, viewHeight, viewWidth])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const drawImageElement = useCallback((canvas: any, ck: any, img: ImageElementInstance) => {
@@ -1000,7 +1084,6 @@ export const ExerciseCanvas = ({
         const points = arrows[selectedIndex].data.points
         if (points.length < 2) return null
 
-        const hitRadius = 10
         const hitRadiusSquared = hitRadius * hitRadius
 
         for (let i = 1; i < points.length - 1; i++) {
@@ -1060,14 +1143,14 @@ export const ExerciseCanvas = ({
             } else if (item.type === "line") {
                 const line = lines[item.index]
                 const strokeBoost = getStrokeZoomBoost(canvasZoom)
-                const hitPad = Math.max(8, line.style?.strokeWidth ?? 3) * strokeBoost
+                const hitPad = Math.max(hitRadius, line.style?.strokeWidth ?? 3) * strokeBoost
                 const d = distanceToLine(x, y, line.data.start[0], line.data.start[1], line.data.end[0], line.data.end[1])
                 if (d <= hitPad) {
                     return { type: "line", index: item.index }
                 }
             } else {
                 const arrow = arrows[item.index]
-                const hitPad = 8 * getStrokeZoomBoost(canvasZoom)
+                const hitPad = hitRadius * getStrokeZoomBoost(canvasZoom)
                 if (isPointNearArrow(x, y, arrow.data.points, hitPad)) {
                     return { type: "arrow", index: item.index }
                 }
@@ -1219,8 +1302,8 @@ export const ExerciseCanvas = ({
         const { id, type, ...rest } = elementDefinition
         const placedWidth = elementDefinition.width * DEFAULT_SCALE
         const placedHeight = elementDefinition.height * DEFAULT_SCALE
-        const worldWidth = canvasSize.width / zoom
-        const worldHeight = canvasSize.height / zoom
+        const worldWidth = viewWidth / zoom
+        const worldHeight = viewHeight / zoom
         const pan = options?.pan ?? canvasPan
 
         let left: number
@@ -1271,7 +1354,7 @@ export const ExerciseCanvas = ({
                 strokeColor: DEFAULT_ELEMENT_COLOR,
             },
         }
-    }, [canvasPan.x, canvasPan.y, canvasSize.height, canvasSize.width])
+    }, [canvasPan, viewHeight, viewWidth])
 
     const placePaletteImage = useCallback((
         x: number,
@@ -1458,11 +1541,20 @@ export const ExerciseCanvas = ({
         setSelectedElement(target)
         setContextMenu({
             isOpen: true,
-            x: Math.max(16, canvasSize.width - 300),
+            x: Math.max(16, viewWidth - 300),
             y: 16,
             target,
         })
-    }, [arrows, canvasSize.width, circles, images, lines, rects])
+        if (isMobile) setMobileSheet(null)
+    }, [arrows, circles, images, isMobile, lines, rects, viewWidth])
+
+    useEffect(() => {
+        if (!isMobile || didFitMobileView.current) return
+        if (!didHydrateInitial.current && initialData) return
+        if (viewportSize.width < 40 || viewportSize.height < 40) return
+        fitContentToView()
+        didFitMobileView.current = true
+    }, [fitContentToView, initialData, isMobile, viewportSize.height, viewportSize.width])
 
     useEffect(() => {
         if (!showCanvasOptions) return
@@ -1941,7 +2033,11 @@ export const ExerciseCanvas = ({
             y,
             target,
         })
-    }, [arrows, findTopElementAt, toWorldCoords])
+        if (isMobile) {
+            setShowSelectionMenu(false)
+            setMobileSheet(null)
+        }
+    }, [arrows, findTopElementAt, isMobile, toWorldCoords])
 
     const handleCanvasDrop = useCallback((x: number, y: number, data: string) => {
         const world = toWorldCoords(x, y)
@@ -1968,6 +2064,35 @@ export const ExerciseCanvas = ({
         container.addEventListener("wheel", handleCanvasWheel, { passive: false })
         return () => container.removeEventListener("wheel", handleCanvasWheel)
     }, [handleCanvasWheel])
+
+    const handlePinch = useCallback(
+        (centerX: number, centerY: number, scaleDelta: number, panDx: number, panDy: number) => {
+            const nextZoom = clampZoom(viewRef.current.zoom * scaleDelta)
+            zoomAtScreenPoint(centerX, centerY, nextZoom)
+            if (panDx !== 0 || panDy !== 0) {
+                setCanvasPan((prev) => ({ x: prev.x + panDx, y: prev.y + panDy }))
+            }
+        },
+        [clampZoom, zoomAtScreenPoint],
+    )
+
+    const handleGestureCancel = useCallback(() => {
+        draggingRef.current = null
+        isDrawingShapeRef.current = false
+        isDrawingMarqueeRef.current = false
+        isPanningRef.current = false
+        setMarquee(null)
+        setTempArrow(null)
+        setTempShape(null)
+        setIsDrawingArrow(false)
+        setIsDrawingShape(false)
+        setCanvasCursor("default")
+    }, [])
+
+    const closeContextMenu = useCallback(() => {
+        contextEditCheckpointRef.current = false
+        setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
+    }, [])
 
     const isCanvasBusy = !isSkiaReady || isLoadingImages || isPreloadingPaletteImage
 
@@ -2061,14 +2186,322 @@ export const ExerciseCanvas = ({
         ],
     )
 
+    const backHref = returnTo?.trim() ? returnTo.trim() : "/exercises/mine"
+    const sheetPlacement = isLandscape ? "side" : "bottom"
+    const contextMenuNode =
+        contextMenu.isOpen && contextElement && contextMenu.target ? (
+            <ElementContextMenu
+                isOpen={contextMenu.isOpen}
+                x={contextMenu.x}
+                y={contextMenu.y}
+                targetType={contextMenu.target.type}
+                contextElement={contextElement}
+                assignedPlayersDraft={assignedPlayersDraft}
+                maxRotation={MAX_ROTATION}
+                defaultElementColor={getDefaultColorForTarget(contextMenu.target.type)}
+                onAssignedPlayersDraftChange={setAssignedPlayersDraft}
+                onAssignedPlayersCommit={() => {
+                    const players = parsePlayersInput(assignedPlayersDraft)
+                    updateContextElement((element) => ({
+                        ...element,
+                        assignedPlayers: players.length === 0 ? undefined : players,
+                    }))
+                }}
+                onUpdate={updateContextElement}
+                onClose={closeContextMenu}
+                onDelete={deleteContextElement}
+                onDuplicate={handleDuplicateContextElement}
+                onRotateArrow={(value) => handleRotateArrow(clampRotation(value, MAX_ROTATION))}
+                presentation={isMobile ? "sheet" : "floating"}
+            />
+        ) : null
+
+    const selectionMenuNode =
+        showSelectionMenu && selection.length > 0 && !contextMenu.isOpen && !marquee ? (
+            <SelectionActionsMenu
+                x={selectionMenuPosition.x}
+                y={selectionMenuPosition.y}
+                onDuplicate={handleDuplicateSelection}
+                onDelete={handleDeleteSelection}
+                onMovePointerDown={handleSelectionMovePointerDown}
+                onOpenMore={handleOpenSelectionMore}
+                moreDisabled={selection.length !== 1}
+            />
+        ) : null
+
+    const busyOverlay =
+        isCanvasBusy ? (
+            <div
+                className="absolute inset-0 z-30 flex items-center justify-center rounded-xl bg-zinc-900/35 backdrop-blur-[1px]"
+                aria-busy="true"
+                aria-live="polite"
+            >
+                <div className="flex flex-col items-center gap-2 rounded-lg bg-zinc-900/80 px-4 py-3 text-white shadow-lg">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-white" />
+                    <span className="text-xs">
+                        {!isSkiaReady ? "Iniciando canvas…" : "Preparando imágenes…"}
+                    </span>
+                </div>
+            </div>
+        ) : null
+
+    const sharedModals = (
+        <>
+            <ResetConfirmModal
+                open={showResetModal}
+                isTemplateExercise={isTemplateExercise}
+                onClose={() => setShowResetModal(false)}
+                onClearCanvas={handleClearCanvasConfirm}
+                onResetTemplate={handleResetTemplateConfirm}
+            />
+            <SaveExerciseModal
+                open={showSaveModal}
+                canvas={exerciseCanvasData}
+                onClose={() => setShowSaveModal(false)}
+                onSave={onExerciseSave ? handleSaveExerciseFromModal : undefined}
+                fieldDefaults={saveModalFieldDefaults}
+                sports={sports}
+                visibilityUser={visibilityUser}
+            />
+        </>
+    )
+
+    const canvasOptionsControls = (
+        <>
+            <div className="flex items-center justify-between py-1">
+                <span className="text-zinc-600 dark:text-zinc-300">Mostrar orden</span>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOrderOverlay}
+                    onClick={() => setShowOrderOverlay((prev) => !prev)}
+                    className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showOrderOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"}`}
+                >
+                    <span
+                        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showOrderOverlay ? "translate-x-5" : "translate-x-0"}`}
+                    />
+                </button>
+            </div>
+            <div className="flex items-center justify-between py-1">
+                <span className="text-zinc-600 dark:text-zinc-300">Mostrar titulos</span>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showTitleOverlay}
+                    onClick={() => setShowTitleOverlay((prev) => !prev)}
+                    className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showTitleOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"}`}
+                >
+                    <span
+                        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showTitleOverlay ? "translate-x-5" : "translate-x-0"}`}
+                    />
+                </button>
+            </div>
+            <label className="mt-1 flex items-center justify-between gap-2 py-1">
+                <span className="text-zinc-600 dark:text-zinc-300">Fondo</span>
+                <input
+                    type="color"
+                    value={canvasBackgroundColor}
+                    onChange={(e) => setCanvasBackgroundColor(e.target.value)}
+                    className="h-6 w-8 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700"
+                />
+            </label>
+            <div className="mt-1 flex items-center justify-between gap-2 py-1">
+                <span className="text-zinc-600 dark:text-zinc-300">Zoom</span>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => nudgeZoom(-0.1)}
+                        className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
+                    >
+                        -
+                    </button>
+                    <button
+                        type="button"
+                        onClick={resetZoom}
+                        className="min-w-12 rounded bg-zinc-100 px-1 py-0.5 text-[11px] text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
+                    >
+                        {Math.round(canvasZoom * 100)}%
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => nudgeZoom(0.1)}
+                        className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
+                    >
+                        +
+                    </button>
+                </div>
+            </div>
+        </>
+    )
+
+    if (isMobile) {
+        return (
+            <div
+                className="fixed inset-0 z-50 flex flex-col bg-zinc-950"
+                style={{ height: "100dvh" }}
+            >
+                <MobileEditorHeader
+                    title={editorTitle}
+                    backHref={backHref}
+                    backLabel={returnTo ? "Volver" : "Mis ejercicios"}
+                    onSave={() => setShowSaveModal(true)}
+                    saveDisabled={!hasPreviewableCanvasContent}
+                    saveDisabledReason="Añade al menos un elemento al canvas para poder guardar"
+                    onClear={() => setShowResetModal(true)}
+                    clearLabel={isTemplateExercise ? "Reset" : "Clear"}
+                />
+                <div
+                    className={`relative flex min-h-0 flex-1 ${isLandscape ? "flex-row" : "flex-col"}`}
+                >
+                    {isLandscape ? (
+                        <MobileEditorToolbar
+                            orientation="landscape"
+                            currentTool={currentTool}
+                            setCurrentTool={(tool) => {
+                                setSelectedPaletteElement(null)
+                                setCurrentTool(tool)
+                            }}
+                            onOpenSheet={setMobileSheet}
+                            canUndo={history.canUndo}
+                            canRedo={history.canRedo}
+                            onUndo={handleUndo}
+                            onRedo={handleRedo}
+                            onFitView={fitContentToView}
+                            hasPaletteStamp={Boolean(selectedPaletteElement)}
+                        />
+                    ) : null}
+                    <div
+                        ref={viewportHostRef}
+                        className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-zinc-900"
+                    >
+                        <div
+                            ref={canvasContainerRef}
+                            className="absolute inset-0"
+                            onPointerEnter={() => {
+                                isCanvasHoveredRef.current = true
+                            }}
+                            onPointerLeave={() => {
+                                isCanvasHoveredRef.current = false
+                            }}
+                        >
+                            <SkiaCanvas
+                                ref={canvasRef}
+                                width={viewWidth}
+                                height={viewHeight}
+                                onDraw={handleDraw}
+                                onReady={() => setIsSkiaReady(true)}
+                                onPointerDown={handleCanvasPointerDown}
+                                onPointerMove={handleCanvasPointerMove}
+                                onPointerUp={handleCanvasPointerUp}
+                                onContextMenu={handleCanvasContextMenu}
+                                onDrop={handleCanvasDrop}
+                                cursor={canvasCursor}
+                                touchGestures
+                                onPinch={handlePinch}
+                                onGestureCancel={handleGestureCancel}
+                                className="max-h-full max-w-full"
+                            />
+                            {busyOverlay}
+                            {selectionMenuNode}
+                        </div>
+
+                        <MobileSheet
+                            open={mobileSheet === "elements"}
+                            title="Figuras y elementos"
+                            placement={sheetPlacement}
+                            onClose={() => setMobileSheet(null)}
+                        >
+                            <ToolsPanel
+                                sections="elements"
+                                elements={paletteElements}
+                                elementsLoading={paletteElementsLoading}
+                                sports={sports}
+                                currentTool={currentTool}
+                                setCurrentTool={setCurrentTool}
+                                selectedPaletteElement={selectedPaletteElement}
+                                setSelectedPaletteElement={setSelectedPaletteElement}
+                                onPaletteElementPicked={() => setMobileSheet(null)}
+                                onShapePicked={() => setMobileSheet(null)}
+                            />
+                        </MobileSheet>
+
+                        <MobileSheet
+                            open={mobileSheet === "order"}
+                            title="Lista del ejercicio"
+                            placement={sheetPlacement}
+                            onClose={() => setMobileSheet(null)}
+                        >
+                            <ExerciseOrderPanel
+                                orderedItems={orderedItems}
+                                playerOptions={playerOptions}
+                                playerFilter={playerFilter}
+                                setPlayerFilter={setPlayerFilter}
+                                onEditItem={handleEditOrderedItem}
+                                className="w-full bg-transparent p-0 dark:bg-transparent"
+                                listClassName="max-h-[50dvh] overflow-auto"
+                            />
+                        </MobileSheet>
+
+                        <MobileSheet
+                            open={mobileSheet === "options"}
+                            title="Opciones"
+                            placement={sheetPlacement}
+                            onClose={() => setMobileSheet(null)}
+                        >
+                            <div className="space-y-1 text-sm">{canvasOptionsControls}</div>
+                            <p className="mt-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                Tamaño del ejercicio: {canvasSize.width} × {canvasSize.height}
+                            </p>
+                        </MobileSheet>
+
+                        <MobileSheet
+                            open={Boolean(contextMenu.isOpen && contextMenu.target)}
+                            title={
+                                contextMenu.target?.type === "arrow"
+                                    ? "Configurar flecha"
+                                    : "Configurar elemento"
+                            }
+                            placement={sheetPlacement}
+                            onClose={closeContextMenu}
+                        >
+                            {contextMenuNode}
+                        </MobileSheet>
+                    </div>
+                    {!isLandscape ? (
+                        <MobileEditorToolbar
+                            orientation="portrait"
+                            currentTool={currentTool}
+                            setCurrentTool={(tool) => {
+                                setSelectedPaletteElement(null)
+                                setCurrentTool(tool)
+                            }}
+                            onOpenSheet={setMobileSheet}
+                            canUndo={history.canUndo}
+                            canRedo={history.canRedo}
+                            onUndo={handleUndo}
+                            onRedo={handleRedo}
+                            onFitView={fitContentToView}
+                            hasPaletteStamp={Boolean(selectedPaletteElement)}
+                        />
+                    ) : null}
+                </div>
+                {sharedModals}
+            </div>
+        )
+    }
+
     return (
         <div className="flex w-full items-start gap-4">
             <div className="flex flex-col gap-2">
                 <div
                     ref={canvasContainerRef}
                     className="relative overflow-visible rounded-xl shadow-2xl"
-                    onPointerEnter={() => { isCanvasHoveredRef.current = true }}
-                    onPointerLeave={() => { isCanvasHoveredRef.current = false }}
+                    onPointerEnter={() => {
+                        isCanvasHoveredRef.current = true
+                    }}
+                    onPointerLeave={() => {
+                        isCanvasHoveredRef.current = false
+                    }}
                 >
                     <div className="absolute right-2 top-2 z-40">
                         <button
@@ -2091,73 +2524,7 @@ export const ExerciseCanvas = ({
                                 className="absolute right-0 mt-1 w-56 rounded-lg border border-zinc-300 bg-white p-2 text-xs shadow-lg dark:border-zinc-600 dark:bg-zinc-800"
                                 onPointerDown={(event) => event.stopPropagation()}
                             >
-                                <div className="flex items-center justify-between py-1">
-                                    <span className="text-zinc-600 dark:text-zinc-300">Mostrar orden</span>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={showOrderOverlay}
-                                        onClick={() => setShowOrderOverlay((prev) => !prev)}
-                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showOrderOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
-                                            }`}
-                                    >
-                                        <span
-                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showOrderOverlay ? "translate-x-5" : "translate-x-0"
-                                                }`}
-                                        />
-                                    </button>
-                                </div>
-                                <div className="flex items-center justify-between py-1">
-                                    <span className="text-zinc-600 dark:text-zinc-300">Mostrar titulos</span>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={showTitleOverlay}
-                                        onClick={() => setShowTitleOverlay((prev) => !prev)}
-                                        className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${showTitleOverlay ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
-                                            }`}
-                                    >
-                                        <span
-                                            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${showTitleOverlay ? "translate-x-5" : "translate-x-0"
-                                                }`}
-                                        />
-                                    </button>
-                                </div>
-                                <label className="mt-1 flex items-center justify-between gap-2 py-1">
-                                    <span className="text-zinc-600 dark:text-zinc-300">Fondo</span>
-                                    <input
-                                        type="color"
-                                        value={canvasBackgroundColor}
-                                        onChange={(e) => setCanvasBackgroundColor(e.target.value)}
-                                        className="h-6 w-8 rounded border border-zinc-300 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-700"
-                                    />
-                                </label>
-                                <div className="mt-1 flex items-center justify-between gap-2 py-1">
-                                    <span className="text-zinc-600 dark:text-zinc-300">Zoom</span>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => nudgeZoom(-0.1)}
-                                            className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
-                                        >
-                                            -
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={resetZoom}
-                                            className="min-w-12 rounded bg-zinc-100 px-1 py-0.5 text-[11px] text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
-                                        >
-                                            {Math.round(canvasZoom * 100)}%
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => nudgeZoom(0.1)}
-                                            className="h-6 w-6 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
+                                {canvasOptionsControls}
                             </div>
                         )}
                     </div>
@@ -2175,61 +2542,9 @@ export const ExerciseCanvas = ({
                         cursor={canvasCursor}
                     />
 
-                    {isCanvasBusy && (
-                        <div
-                            className="absolute inset-0 z-30 flex items-center justify-center rounded-xl bg-zinc-900/35 backdrop-blur-[1px]"
-                            aria-busy="true"
-                            aria-live="polite"
-                        >
-                            <div className="flex flex-col items-center gap-2 rounded-lg bg-zinc-900/80 px-4 py-3 text-white shadow-lg">
-                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-white" />
-                                <span className="text-xs">
-                                    {!isSkiaReady ? "Iniciando canvas…" : "Preparando imágenes…"}
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {contextMenu.isOpen && contextElement && contextMenu.target && (
-                        <ElementContextMenu
-                            isOpen={contextMenu.isOpen}
-                            x={contextMenu.x}
-                            y={contextMenu.y}
-                            targetType={contextMenu.target.type}
-                            contextElement={contextElement}
-                            assignedPlayersDraft={assignedPlayersDraft}
-                            maxRotation={MAX_ROTATION}
-                            defaultElementColor={getDefaultColorForTarget(contextMenu.target.type)}
-                            onAssignedPlayersDraftChange={setAssignedPlayersDraft}
-                            onAssignedPlayersCommit={() => {
-                                const players = parsePlayersInput(assignedPlayersDraft)
-                                updateContextElement((element) => ({
-                                    ...element,
-                                    assignedPlayers: players.length === 0 ? undefined : players,
-                                }))
-                            }}
-                            onUpdate={updateContextElement}
-                            onClose={() => {
-                                contextEditCheckpointRef.current = false
-                                setContextMenu((prev) => ({ ...prev, isOpen: false, target: null }))
-                            }}
-                            onDelete={deleteContextElement}
-                            onDuplicate={handleDuplicateContextElement}
-                            onRotateArrow={(value) => handleRotateArrow(clampRotation(value, MAX_ROTATION))}
-                        />
-                    )}
-
-                    {showSelectionMenu && selection.length > 0 && !contextMenu.isOpen && !marquee ? (
-                        <SelectionActionsMenu
-                            x={selectionMenuPosition.x}
-                            y={selectionMenuPosition.y}
-                            onDuplicate={handleDuplicateSelection}
-                            onDelete={handleDeleteSelection}
-                            onMovePointerDown={handleSelectionMovePointerDown}
-                            onOpenMore={handleOpenSelectionMore}
-                            moreDisabled={selection.length !== 1}
-                        />
-                    ) : null}
+                    {busyOverlay}
+                    {contextMenuNode}
+                    {selectionMenuNode}
                     <button
                         type="button"
                         aria-label="Redimensionar ancho"
@@ -2284,23 +2599,7 @@ export const ExerciseCanvas = ({
                 onEditItem={handleEditOrderedItem}
             />
 
-            <ResetConfirmModal
-                open={showResetModal}
-                isTemplateExercise={isTemplateExercise}
-                onClose={() => setShowResetModal(false)}
-                onClearCanvas={handleClearCanvasConfirm}
-                onResetTemplate={handleResetTemplateConfirm}
-            />
-
-            <SaveExerciseModal
-                open={showSaveModal}
-                canvas={exerciseCanvasData}
-                onClose={() => setShowSaveModal(false)}
-                onSave={onExerciseSave ? handleSaveExerciseFromModal : undefined}
-                fieldDefaults={saveModalFieldDefaults}
-                sports={sports}
-                visibilityUser={visibilityUser}
-            />
+            {sharedModals}
         </div>
     )
 }

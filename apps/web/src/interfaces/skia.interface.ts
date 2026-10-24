@@ -36,4 +36,19 @@ export interface SkiaCanvasProps {
     onReady?: () => void
     className?: string
     cursor?: string
+    /**
+     * Activa gestos táctiles (pinch-zoom/pan, long-press).
+     * Solo afecta `pointerType === "touch"`; el mouse sigue igual.
+     */
+    touchGestures?: boolean
+    /** Pinch con 2 dedos: centro, factor de escala relativo y pan en px de pantalla. */
+    onPinch?: (
+        centerX: number,
+        centerY: number,
+        scaleDelta: number,
+        panDx: number,
+        panDy: number,
+    ) => void
+    /** Cancela la acción del primer dedo al iniciar un gesto de 2 dedos. */
+    onGestureCancel?: () => void
 }

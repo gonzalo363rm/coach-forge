@@ -24,22 +24,68 @@ function loadCanvasKit(): Promise<any> {
   return canvasKitPromise;
 }
 
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_PX = 8;
+
+type ActivePointer = {
+  id: number;
+  x: number;
+  y: number;
+  startX: number;
+  startY: number;
+};
+
 /**
  * Componente de Canvas usando CanvasKit (Skia WebAssembly) directamente
  * Compatible con Next.js sin necesidad de react-native-skia
  */
 export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
-  function SkiaCanvas({ width, height, onDraw, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDrop, onReady, className, cursor }, ref) {
+  function SkiaCanvas({
+    width,
+    height,
+    onDraw,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onContextMenu,
+    onDrop,
+    onReady,
+    className,
+    cursor,
+    touchGestures = false,
+    onPinch,
+    onGestureCancel,
+  }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const surfaceRef = useRef<any>(null);
   const ckRef = useRef<any>(null);
+  const skipNextContextMenuRef = useRef(false);
+  const activePointersRef = useRef<Map<number, ActivePointer>>(new Map());
+  const pinchBaseDistanceRef = useRef(0);
+  const pinchBaseCenterRef = useRef({ x: 0, y: 0 });
+  const isPinchingRef = useRef(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const suppressNextClickUpRef = useRef(false);
   const onDrawRef = useRef(onDraw);
   const onReadyRef = useRef(onReady);
-  const skipNextContextMenuRef = useRef(false);
+  const onPinchRef = useRef(onPinch);
+  const onGestureCancelRef = useRef(onGestureCancel);
+  const onContextMenuRef = useRef(onContextMenu);
   onDrawRef.current = onDraw;
   onReadyRef.current = onReady;
+  onPinchRef.current = onPinch;
+  onGestureCancelRef.current = onGestureCancel;
+  onContextMenuRef.current = onContextMenu;
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
 
   // Exponer funciones via ref
   useImperativeHandle(ref, () => {
@@ -199,6 +245,7 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
 
     return () => {
       mounted = false;
+      clearLongPress();
       if (surfaceRef.current) {
         surfaceRef.current.delete();
         surfaceRef.current = null;
@@ -223,7 +270,60 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
     altKey: e.altKey,
   });
 
+  const pointerDistance = (a: ActivePointer, b: ActivePointer) => {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.hypot(dx, dy);
+  };
+
+  const pointerCenter = (a: ActivePointer, b: ActivePointer) => ({
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  });
+
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const isTouch = touchGestures && e.pointerType === "touch";
+
+    if (isTouch) {
+      const { x, y } = getCanvasCoords(e);
+      activePointersRef.current.set(e.pointerId, {
+        id: e.pointerId,
+        x,
+        y,
+        startX: x,
+        startY: y,
+      });
+      (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+
+      if (activePointersRef.current.size === 2) {
+        clearLongPress();
+        longPressFiredRef.current = false;
+        if (!isPinchingRef.current) {
+          onGestureCancelRef.current?.();
+          suppressNextClickUpRef.current = true;
+        }
+        isPinchingRef.current = true;
+        const pts = [...activePointersRef.current.values()];
+        pinchBaseDistanceRef.current = Math.max(1, pointerDistance(pts[0], pts[1]));
+        pinchBaseCenterRef.current = pointerCenter(pts[0], pts[1]);
+        return;
+      }
+
+      if (activePointersRef.current.size === 1) {
+        longPressFiredRef.current = false;
+        clearLongPress();
+        longPressTimerRef.current = setTimeout(() => {
+          longPressFiredRef.current = true;
+          suppressNextClickUpRef.current = true;
+          onGestureCancelRef.current?.();
+          onContextMenuRef.current?.(x, y);
+        }, LONG_PRESS_MS);
+
+        onPointerDown?.(x, y, 0, getModifiers(e));
+      }
+      return;
+    }
+
     // 0 = izquierdo, 1 = rueda (pan)
     if (e.button !== 0 && e.button !== 1) return;
     if (e.button === 1) {
@@ -235,17 +335,84 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const isTouch = touchGestures && e.pointerType === "touch";
     const { x, y } = getCanvasCoords(e);
+
+    if (isTouch) {
+      const existing = activePointersRef.current.get(e.pointerId);
+      if (existing) {
+        existing.x = x;
+        existing.y = y;
+      }
+
+      if (isPinchingRef.current && activePointersRef.current.size >= 2) {
+        const pts = [...activePointersRef.current.values()];
+        const dist = Math.max(1, pointerDistance(pts[0], pts[1]));
+        const center = pointerCenter(pts[0], pts[1]);
+        const scaleDelta = dist / pinchBaseDistanceRef.current;
+        const panDx = center.x - pinchBaseCenterRef.current.x;
+        const panDy = center.y - pinchBaseCenterRef.current.y;
+        pinchBaseDistanceRef.current = dist;
+        pinchBaseCenterRef.current = center;
+        onPinchRef.current?.(center.x, center.y, scaleDelta, panDx, panDy);
+        return;
+      }
+
+      if (existing && activePointersRef.current.size === 1) {
+        const moved = Math.hypot(x - existing.startX, y - existing.startY);
+        if (moved > LONG_PRESS_MOVE_PX) {
+          clearLongPress();
+        }
+      }
+    }
+
     onPointerMove?.(x, y, getModifiers(e));
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const isTouch = touchGestures && e.pointerType === "touch";
+
+    if (isTouch) {
+      activePointersRef.current.delete(e.pointerId);
+      clearLongPress();
+
+      if (activePointersRef.current.size < 2) {
+        isPinchingRef.current = false;
+      }
+
+      const target = e.target as HTMLCanvasElement;
+      if (target.hasPointerCapture(e.pointerId)) {
+        target.releasePointerCapture(e.pointerId);
+      }
+
+      if (suppressNextClickUpRef.current || longPressFiredRef.current) {
+        suppressNextClickUpRef.current = false;
+        longPressFiredRef.current = false;
+        return;
+      }
+
+      if (activePointersRef.current.size === 0) {
+        onPointerUp?.(0);
+      }
+      return;
+    }
+
     if (e.button !== 0 && e.button !== 1) return;
     onPointerUp?.(e.button);
     const target = e.target as HTMLCanvasElement;
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
     }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!touchGestures || e.pointerType !== "touch") return;
+    activePointersRef.current.delete(e.pointerId);
+    clearLongPress();
+    if (activePointersRef.current.size < 2) {
+      isPinchingRef.current = false;
+    }
+    onGestureCancelRef.current?.();
   };
 
   const handleAuxClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -337,6 +504,7 @@ export const SkiaCanvas = forwardRef<SkiaCanvasHandle, SkiaCanvasProps>(
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onMouseUp={handleMouseUp}
         onAuxClick={handleAuxClick}
         onContextMenu={handleContextMenu}

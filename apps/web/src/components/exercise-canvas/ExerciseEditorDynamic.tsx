@@ -4,8 +4,7 @@ import dynamic from "next/dynamic"
 import { useEffect, useState } from "react"
 
 import type { ExerciseEditorInitialData, SportListOption } from "@/interfaces"
-import { useIsMobileLayout } from "@/hooks/use-mobile-layout"
-import { ExerciseEditorMobileUnavailable } from "./ExerciseEditorMobileUnavailable"
+import { useIsMobileEditor } from "@/hooks/use-mobile-layout"
 
 type Props = {
     initialExercise?: ExerciseEditorInitialData | null
@@ -39,7 +38,7 @@ export function ExerciseEditorDynamic({
     returnTo = null,
     visibilityUser,
 }: Props) {
-    const isMobile = useIsMobileLayout()
+    const isMobile = useIsMobileEditor()
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -50,16 +49,13 @@ export function ExerciseEditorDynamic({
         return <EditorLoading />
     }
 
-    if (isMobile) {
-        return <ExerciseEditorMobileUnavailable returnTo={returnTo} />
-    }
-
     return (
         <ExerciseEditor
             initialExercise={initialExercise}
             sports={sports}
             returnTo={returnTo}
             visibilityUser={visibilityUser}
+            layout={isMobile ? "mobile" : "desktop"}
         />
     )
 }

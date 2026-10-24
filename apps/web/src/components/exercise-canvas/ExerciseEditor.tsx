@@ -26,6 +26,7 @@ type EditorProps = {
     /** Ruta a la que volver tras guardar (p. ej. creación de clase). */
     returnTo?: string | null
     visibilityUser?: { role: string; clubId?: string | null }
+    layout?: "desktop" | "mobile"
 }
 
 async function saveExercisePreviewIfPresent(
@@ -48,12 +49,14 @@ export const ExerciseEditor = ({
     sports = [],
     returnTo = null,
     visibilityUser,
+    layout = "desktop",
 }: EditorProps) => {
     const router = useRouter()
     const [currentTool, setCurrentTool] = useState<ToolType>("select")
     const [selectedPaletteElement, setSelectedPaletteElement] = useState<ElementDefinition | null>(null)
     const [elements, setElements] = useState<ElementDefinition[]>([])
     const [elementsLoading, setElementsLoading] = useState(true)
+    const isMobile = layout === "mobile"
 
     useEffect(() => {
         let cancelled = false
@@ -118,6 +121,34 @@ export const ExerciseEditor = ({
         [initialExercise?.id, navigateAfterSave],
     )
 
+    const canvas = (
+        <ExerciseCanvas
+            currentTool={currentTool}
+            setCurrentTool={setCurrentTool}
+            selectedPaletteElement={selectedPaletteElement}
+            setSelectedPaletteElement={setSelectedPaletteElement}
+            onExerciseSave={handleExerciseSave}
+            initialData={initialExercise ?? undefined}
+            sports={sports}
+            visibilityUser={visibilityUser}
+            layout={layout}
+            paletteElements={elements}
+            paletteElementsLoading={elementsLoading}
+            returnTo={returnTo}
+            editorTitle={
+                initialExercise?.id
+                    ? "Editar ejercicio"
+                    : initialExercise
+                      ? "Nuevo desde plantilla"
+                      : "Nuevo ejercicio"
+            }
+        />
+    )
+
+    if (isMobile) {
+        return canvas
+    }
+
     return (
         <div className="flex w-full gap-6">
             <div className="w-[20%]">
@@ -131,18 +162,7 @@ export const ExerciseEditor = ({
                     setSelectedPaletteElement={setSelectedPaletteElement}
                 />
             </div>
-            <div className="w-[80%]">
-                <ExerciseCanvas
-                    currentTool={currentTool}
-                    setCurrentTool={setCurrentTool}
-                    selectedPaletteElement={selectedPaletteElement}
-                    setSelectedPaletteElement={setSelectedPaletteElement}
-                    onExerciseSave={handleExerciseSave}
-                    initialData={initialExercise ?? undefined}
-                    sports={sports}
-                    visibilityUser={visibilityUser}
-                />
-            </div>
+            <div className="w-[80%]">{canvas}</div>
         </div>
     )
 }
