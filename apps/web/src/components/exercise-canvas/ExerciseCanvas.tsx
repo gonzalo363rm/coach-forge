@@ -218,6 +218,9 @@ export const ExerciseCanvas = ({
     const [viewportReady, setViewportReady] = useState(false)
     const viewportHostRef = useRef<HTMLDivElement>(null)
     const didFitMobileView = useRef(false)
+    /** Hasta cuándo (ms) re-encajar ante cambios de tamaño tras rotar. */
+    const orientationFitUntilRef = useRef(0)
+    const lastOrientationRef = useRef(isLandscape)
     const [images, setImages] = useState<ImageElementInstance[]>([])
     const [circles, setCircles] = useState<CircleElementInstance[]>([])
     const [rects, setRects] = useState<RectElementInstance[]>([])
@@ -1593,6 +1596,23 @@ export const ExerciseCanvas = ({
         viewportSize.height,
         viewportSize.width,
     ])
+
+    useEffect(() => {
+        if (!isMobile || !didFitMobileView.current) return
+
+        if (lastOrientationRef.current !== isLandscape) {
+            lastOrientationRef.current = isLandscape
+            // El viewport puede redimensionarse antes o después del cambio de orientación.
+            orientationFitUntilRef.current = Date.now() + 800
+        }
+
+        if (Date.now() > orientationFitUntilRef.current) return
+
+        const frame = requestAnimationFrame(() => {
+            fitContentToView()
+        })
+        return () => cancelAnimationFrame(frame)
+    }, [fitContentToView, isLandscape, isMobile, viewportSize.height, viewportSize.width])
 
     useEffect(() => {
         if (!showCanvasOptions) return
